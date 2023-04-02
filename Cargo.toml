@@ -1,6 +1,6 @@
 [package]
 name = "ac-outpost"
-version = "0.1.152"
+version = "0.1.154"
 authors = ["Kaku <obiekaku@gmail.com>"]
 edition = "2021"
 

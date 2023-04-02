@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Uint128, WasmMsg};
 
 use crate::{
-    msg::{CompoundPrefs, ExecuteMsg},
+    msg::{CompoundPrefs, DestinationAction, ExecuteMsg, RelativeQty},
     ContractError,
 };
 
@@ -29,7 +29,7 @@ impl CwTemplateContract {
     }
 }
 
-///
+/// sums the coins in a vec given denom name youre looking for
 pub fn sum_coins(denom: &String, coins: &Vec<Coin>) -> Coin {
     coins
         .iter()
@@ -39,22 +39,19 @@ pub fn sum_coins(denom: &String, coins: &Vec<Coin>) -> Coin {
         })
 }
 
+/// calculates the amounts that should be sent to each destination project
 pub fn calculate_compound_amounts(
     percentages: &Vec<Decimal>,
     total_amount: &Uint128,
 ) -> Result<Vec<Uint128>, ContractError> {
-    let mut remaining = total_amount.clone();
+    let mut remaining = *total_amount;
     let mut amounts = vec![];
     for (i, pct) in percentages.iter().enumerate() {
         if (i + 1) == percentages.len() {
             amounts.push(remaining);
             break;
         }
-        let pct_amount = Decimal::new(total_amount.clone())
-            .checked_mul(pct.clone())
-            .unwrap()
-            .atomics()
-            .into();
+        let pct_amount = Decimal::new(*total_amount).checked_mul(*pct)?.atomics();
         amounts.push(pct_amount);
         remaining = remaining.checked_sub(pct_amount)?;
     }
@@ -62,17 +59,36 @@ pub fn calculate_compound_amounts(
     Ok(amounts)
 }
 
+/// checks that the prefs are both summing to 1 and that they are all positive and nonzero
 pub fn prefs_sum_to_one(comp_prefs: &CompoundPrefs) -> Result<bool, ContractError> {
-    // TODO: should also ensure that none of them are zero
-    let total_pref_amounts =
-        comp_prefs
-            .relative
-            .iter()
-            .map(|x| x.amount.quantity)
-            .fold(Decimal::zero(), |acc, x| {
-                // need to remove this unwrap
-                acc + Decimal::from_atomics(x, 18).unwrap()
-            });
+    let total_pref_amounts = comp_prefs.relative.iter().map(|x| x.amount.quantity).fold(
+        Ok(Decimal::zero()),
+        |acc, x| match (acc, Decimal::from_atomics(x, 18)) {
+            (Ok(acc), Ok(x)) if x.gt(&Decimal::zero()) => Ok(acc + x),
+            _ => Err(ContractError::InvalidPrefQtys),
+        },
+    )?;
 
     Ok(total_pref_amounts == Decimal::one())
+}
+
+/// try from to a vector of decimals will give the relative percentages
+/// that should be used for compounding the rewards
+impl TryFrom<CompoundPrefs> for Vec<Decimal> {
+    type Error = ContractError;
+
+    fn try_from(prefs: CompoundPrefs) -> Result<Self, ContractError> {
+        prefs
+            .relative
+            .iter()
+            .map(
+                |DestinationAction {
+                     amount: RelativeQty { quantity },
+                     ..
+                 }| {
+                    Decimal::from_atomics(*quantity, 18).map_err(|_| ContractError::InvalidPrefQtys)
+                },
+            )
+            .collect::<Result<Vec<Decimal>, ContractError>>()
+    }
 }

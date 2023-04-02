@@ -56,11 +56,11 @@ where
         msg: to_binary(&msg)
             .map_err(|_| ContractError::GenerateExecFailure)?
             .to_vec(),
-        funds: funds.unwrap_or(vec![]),
+        funds: funds.unwrap_or_default(),
     })
 }
 
-pub fn create_exec_msg(grantee: &Addr, msgs: &Vec<Any>) -> CosmosMsg {
+pub fn create_exec_msg(grantee: &Addr, msgs: &[Any]) -> CosmosMsg {
     let exec = MsgExec {
         grantee: grantee.to_string(),
         msgs: msgs.to_vec(),
