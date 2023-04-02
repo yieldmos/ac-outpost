@@ -40,14 +40,15 @@ impl TryFrom<&CosmosProtoMsg> for Any {
     type Error = ContractError;
 }
 
-pub fn create_exec_contract_msg<T>(
+pub fn create_exec_contract_msg<T, N>(
     contract_addr: &String,
-    sender: &Addr,
+    sender: &N,
     msg: &T,
     funds: Option<Vec<Coin>>,
 ) -> Result<MsgExecuteContract, ContractError>
 where
     T: Serialize + ?Sized,
+    N: Into<String> + std::fmt::Display,
 {
     Ok(MsgExecuteContract {
         contract: contract_addr.to_string(),
@@ -59,16 +60,16 @@ where
     })
 }
 
-pub fn create_exec_msg(grantee: &Addr, msgs: &Vec<Any>) -> Result<CosmosMsg, ContractError> {
+pub fn create_exec_msg(grantee: &Addr, msgs: &Vec<Any>) -> CosmosMsg {
     let exec = MsgExec {
         grantee: grantee.to_string(),
         msgs: msgs.to_vec(),
     };
 
-    Ok(CosmosMsg::Stargate {
+    CosmosMsg::Stargate {
         type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
         value: Binary::from(exec.encode_to_vec()),
-    })
+    }
 }
 
 // pub fn create_exec_msg<T>(grantee: &Addr, msgs: &Vec<T>) -> Result<CosmosMsg, ContractError>

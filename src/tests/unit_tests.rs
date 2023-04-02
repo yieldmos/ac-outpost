@@ -14,7 +14,30 @@ use crate::{
 };
 
 #[test]
-fn calculate_compound_amounts_test() {
+fn calculate_compound_amounts_even_test() {
+    let percentages = vec![
+        Decimal::from_str("0.25").unwrap(),
+        Decimal::from_str("0.25").unwrap(),
+        Decimal::from_str("0.25").unwrap(),
+        Decimal::from_str("0.25").unwrap(),
+    ];
+
+    let total_amount = Uint128::from(100u128);
+
+    let expected_amounts = vec![
+        Uint128::from(25u128),
+        Uint128::from(25u128),
+        Uint128::from(25u128),
+        Uint128::from(25u128),
+    ];
+
+    let amounts = calculate_compound_amounts(&percentages, &total_amount).unwrap();
+
+    assert_eq!(amounts, expected_amounts);
+}
+
+#[test]
+fn calculate_compound_amounts_with_remainder_test() {
     let percentages = vec![
         Decimal::from_str("0.25").unwrap(),
         Decimal::from_str("0.3333").unwrap(),
@@ -52,7 +75,7 @@ fn pref_conversion_compounding_to_single_validator() {
                 validator_address: "testvaloper_delegationtarget".to_string(),
             },
             amount: RelativeQty {
-                quantity: Decimal::one(),
+                quantity: 1000000000000000000u128,
             },
         }],
     };
@@ -81,7 +104,6 @@ fn pref_conversion_compounding_to_single_validator() {
 #[test]
 fn pref_conversion_compounding_to_multiple_validators() {
     let _target_address = Addr::unchecked("test1");
-    // let 0
 
     let _comp_prefs = CompoundPrefs {
         relative: vec![
@@ -90,7 +112,7 @@ fn pref_conversion_compounding_to_multiple_validators() {
                     validator_address: "testvaloper_delegationtarget".to_string(),
                 },
                 amount: RelativeQty {
-                    quantity: Decimal::from_str("0.2").unwrap(),
+                    quantity: 200000000000000000u128,
                 },
             },
             DestinationAction {
@@ -98,7 +120,7 @@ fn pref_conversion_compounding_to_multiple_validators() {
                     validator_address: "testvaloper_delegationtarget2".to_string(),
                 },
                 amount: RelativeQty {
-                    quantity: Decimal::from_str("0.8").unwrap(),
+                    quantity: 800000000000000000u128,
                 },
             },
         ],
@@ -157,7 +179,7 @@ fn pref_conversion_compounding_to_multiple_validators_with_multiple_rewards() {
                     validator_address: "testvaloper_delegationtarget".to_string(),
                 },
                 amount: RelativeQty {
-                    quantity: Decimal::from_str("0.2").unwrap(),
+                    quantity: 200000000000000000u128,
                 },
             },
             DestinationAction {
@@ -165,7 +187,7 @@ fn pref_conversion_compounding_to_multiple_validators_with_multiple_rewards() {
                     validator_address: "testvaloper_delegationtarget2".to_string(),
                 },
                 amount: RelativeQty {
-                    quantity: Decimal::from_str("0.8").unwrap(),
+                    quantity: 800000000000000000u128,
                 },
             },
         ],

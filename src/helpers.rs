@@ -63,6 +63,7 @@ pub fn calculate_compound_amounts(
 }
 
 pub fn prefs_sum_to_one(comp_prefs: &CompoundPrefs) -> Result<bool, ContractError> {
+    // TODO: should also ensure that none of them are zero
     let total_pref_amounts =
         comp_prefs
             .relative

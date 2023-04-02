@@ -6,6 +6,9 @@ use wyndex::asset::AssetInfo;
 pub struct InstantiateMsg {}
 
 #[cw_serde]
+pub struct MigrateMsg {}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(VersionResponse)]
@@ -23,7 +26,6 @@ pub enum ExecuteMsg {
         comp_prefs: CompoundPrefs,
         delegator_address: String,
     },
-    Test {},
 }
 
 #[cw_serde]

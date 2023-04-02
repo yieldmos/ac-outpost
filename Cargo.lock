@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "ac-outpost"
-version = "0.1.0"
+version = "0.1.152"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -15,9 +15,13 @@ dependencies = [
  "cw2 1.0.1",
  "cw20 1.0.1",
  "cw20-stake 2.0.3",
+ "cw20-vesting",
+ "cw4-stake",
  "schemars",
+ "semver",
  "serde",
  "thiserror",
+ "wynd-stake",
  "wyndex",
  "wyndex-multi-hop",
  "wyndex-pair",
@@ -290,6 +294,28 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "cw-core-interface"
+version = "1.1.1"
+source = "git+https://github.com/cosmorama/dao-contracts.git?tag=v1.1.1#a59341b962e6755c84632590e48beaf5bcf934ca"
+dependencies = [
+ "cosmwasm-std",
+ "cw-core-macros",
+ "cw2 0.16.0",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw-core-macros"
+version = "1.1.1"
+source = "git+https://github.com/cosmorama/dao-contracts.git?tag=v1.1.1#a59341b962e6755c84632590e48beaf5bcf934ca"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -594,6 +620,67 @@ dependencies = [
  "cw20 0.16.0",
  "cw20-base 0.16.0",
  "cw20-stake 0.2.6",
+ "thiserror",
+]
+
+[[package]]
+name = "cw20-vesting"
+version = "1.6.0"
+source = "git+https://github.com/wynddao/wynddao.git#fe7c22942f578088c923932276ee8df640651ca7"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw20 0.16.0",
+ "schemars",
+ "serde",
+ "thiserror",
+ "wynd-utils 1.6.0 (git+https://github.com/wynddao/wynddao.git)",
+]
+
+[[package]]
+name = "cw4"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86a93c2764ddb44038b948d9a9a8aadc9f92f5ef3e61249af2fad16091e43412"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw4"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c236e0bae02ce97e89235a681dd0e07d099524b369f1ef908d704db3e6b049b"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw4-stake"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcd2728a91f2fd9812f30c1a6e22a56e8cf0fb2324e0c9583172eb93b355bfa3"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-controllers 1.0.1",
+ "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cw-utils 1.0.1",
+ "cw2 1.0.1",
+ "cw20 1.0.1",
+ "cw4 1.0.1",
+ "schemars",
+ "serde",
  "thiserror",
 ]
 
@@ -1255,9 +1342,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
+name = "wynd-stake"
+version = "1.6.0"
+source = "git+https://github.com/wynddao/wynddao.git#fe7c22942f578088c923932276ee8df640651ca7"
+dependencies = [
+ "cosmwasm-std",
+ "cw-controllers 0.16.0",
+ "cw-core-interface",
+ "cw-core-macros",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw20 0.16.0",
+ "cw20-vesting",
+ "cw4 0.16.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "wynd-utils"
 version = "1.6.0"
 source = "git+https://github.com/cosmorama/wynddao.git?tag=v1.6.0#fe7c22942f578088c923932276ee8df640651ca7"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "wynd-utils"
+version = "1.6.0"
+source = "git+https://github.com/wynddao/wynddao.git#fe7c22942f578088c923932276ee8df640651ca7"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -1341,7 +1459,7 @@ dependencies = [
  "cw20 1.0.1",
  "serde",
  "thiserror",
- "wynd-utils",
+ "wynd-utils 1.6.0 (git+https://github.com/cosmorama/wynddao.git?tag=v1.6.0)",
  "wyndex",
 ]
 

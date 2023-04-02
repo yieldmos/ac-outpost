@@ -1,1 +1,1 @@
-0550803b64e3ad815e022c3981a5db86f0077385970967a1e2f33a539a4d9847  ./target/wasm32-unknown-unknown/release/ac_outpost.wasm
+0b1a5aad29322a30b840d6be4db3810bb33fd772de352b20a08347e631f9e7cb  ./target/wasm32-unknown-unknown/release/ac_outpost.wasm

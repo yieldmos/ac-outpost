@@ -9,7 +9,7 @@ use crate::{
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
-        version: "1.1".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
     }
 }
 

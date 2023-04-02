@@ -7,6 +7,9 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("Semver parsing error: {0}")]
+    SemVer(String),
+
     #[error("{0}")]
     CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
@@ -15,6 +18,9 @@ pub enum ContractError {
 
     #[error("Invalid prefs: Relative quantities must sum to 1")]
     InvalidPrefQtys,
+
+    #[error("Target Not Implemented")]
+    NotImplemented {},
 
     #[error("Unauthorized")]
     Unauthorized {},
@@ -27,6 +33,13 @@ pub enum ContractError {
 
     #[error("Could not encode msg as any")]
     EncodeError(#[from] prost::EncodeError),
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+
+    #[error("Could not simulate swap of {from} to {to}")]
+    SwapSimulationError { from: String, to: String },
+}
+
+impl From<semver::Error> for ContractError {
+    fn from(err: semver::Error) -> Self {
+        Self::SemVer(err.to_string())
+    }
 }
