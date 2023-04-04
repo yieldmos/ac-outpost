@@ -40,8 +40,9 @@ impl TryFrom<&CosmosProtoMsg> for Any {
     type Error = ContractError;
 }
 
+/// Creates a MsgExecuteContract message
 pub fn create_exec_contract_msg<T, N>(
-    contract_addr: &String,
+    contract_addr: String,
     sender: &N,
     msg: &T,
     funds: Option<Vec<Coin>>,
@@ -51,7 +52,7 @@ where
     N: Into<String> + std::fmt::Display,
 {
     Ok(MsgExecuteContract {
-        contract: contract_addr.to_string(),
+        contract: contract_addr,
         sender: sender.to_string(),
         msg: to_binary(&msg)
             .map_err(|_| ContractError::GenerateExecFailure)?
@@ -60,77 +61,23 @@ where
     })
 }
 
-pub fn create_exec_msg(grantee: &Addr, msgs: &[Any]) -> CosmosMsg {
+/// Creates a MsgExec message
+pub fn create_exec_msg(
+    grantee: &Addr,
+    msgs: Vec<CosmosProtoMsg>,
+) -> Result<CosmosMsg, ContractError> {
+    let any_msgs: Vec<Any> = msgs
+        .iter()
+        .map(|msg| -> Result<Any, ContractError> { msg.try_into() })
+        .collect::<Result<Vec<Any>, ContractError>>()?;
+
     let exec = MsgExec {
         grantee: grantee.to_string(),
-        msgs: msgs.to_vec(),
+        msgs: any_msgs,
     };
 
-    CosmosMsg::Stargate {
+    Ok(CosmosMsg::Stargate {
         type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
         value: Binary::from(exec.encode_to_vec()),
-    }
+    })
 }
-
-// pub fn create_exec_msg<T>(grantee: &Addr, msgs: &Vec<T>) -> Result<CosmosMsg, ContractError>
-// where
-//     T: MessageExt + TypeUrl,
-// {
-//     let any_msgs = msgs
-//         .into_iter()
-//         .map(|msg| {
-//             msg.to_any()
-//                 .map_err(|_| ContractError::GenerateExecFailure {})
-//         })
-//         .collect::<Result<Vec<_>, _>>()?;
-
-//     let exec = MsgExec {
-//         grantee: grantee.to_string(),
-//         msgs: any_msgs,
-//     };
-
-//     Ok(CosmosMsg::Stargate {
-//         type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
-//         value: Binary::from(exec.encode_to_vec()),
-//     })
-
-//     // // let example_msg = MsgExecuteContract {
-//     // //     contract: "testcontractAddr".to_string(),
-//     // //     sender: "testwallet".to_string(),
-//     // //     msg: to_binary(&BowStakingExecuteMsg::Stake {}).unwrap().to_vec(),
-//     // //     funds: vec![amount_to_stake.clone()],
-//     // // }
-
-//     // let exec_msg = CosmosMsg::Stargate {
-//     //     type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
-//     //     value: Binary(
-//     //         MsgExec {
-//     //             grantee: grantee.to_string(),
-//     //             msgs: vec![Any {
-//     //                 type_url: "/cosmwasm.wasm.v1.MsgExecuteContract".to_string(),
-//     //                 value: buffer,
-//     //             }],
-//     //         }
-//     //         .encode_to_vec(),
-//     //     ),
-//     // };
-
-//     // let mut coin = Coin::new();
-
-//     // coin.denom = amount.denom.to_string();
-//     // coin.amount = amount.amount.to_string();
-
-//     // let mut delegation_msg = MsgDelegate::new();
-
-//     // delegation_msg.delegator_address = granter.to_string();
-//     // delegation_msg.validator_address = valaddress.to_string();
-//     // delegation_msg.amount = MessageField::some(coin);
-
-//     // let mut any = Any::new();
-//     // any.type_url = "/cosmos.staking.v1beta1.MsgDelegate".to_string();
-//     // any.value = delegation_msg.write_to_bytes().unwrap();
-//     // let mut messages: Vec<Any> = Vec::new();
-//     // messages.push(any);
-
-//     //If the granter didn't grant this contract permission to delegate in his place, this execution will fail.
-// }
