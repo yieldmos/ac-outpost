@@ -50,7 +50,7 @@ pub fn compound(
     let sub_msgs = prefs_to_msgs(
         deps.querier.query_bonded_denom()?,
         &delegator,
-        &queries::query_pending_rewards(&deps.querier, &delegator)?,
+        queries::query_pending_rewards(&deps.querier, &delegator)?,
         comp_prefs,
         deps.querier,
     )?;
@@ -68,7 +68,7 @@ pub fn prefs_to_msgs(
     AllPendingRewards {
         rewards: pending_rewards,
         total: total_rewards,
-    }: &AllPendingRewards,
+    }: AllPendingRewards,
     comp_prefs: CompoundPrefs,
     querier: QuerierWrapper,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
@@ -87,7 +87,7 @@ pub fn prefs_to_msgs(
     // calculates the amount of ujuno that will be used for each target project accurately
     let compound_token_amounts = iter::zip(
         calculate_compound_amounts(&comp_prefs.clone().try_into()?, &total_rewards.amount)?,
-        comp_prefs.relative.clone(),
+        comp_prefs.relative,
     );
 
     let compounding_msgs: Result<Vec<CosmosProtoMsg>, ContractError> = compound_token_amounts
@@ -142,7 +142,7 @@ pub fn prefs_to_msgs(
                         bonding_period,
                          pool_info.clone(),
                          querier.query_wasm_smart(
-                            pool_info.liquidity_token.clone(),
+                            pool_info.liquidity_token,
                             &cw20::Cw20QueryMsg::Balance {
                                 address: target_address.to_string(),
                             },
