@@ -1,6 +1,6 @@
 [package]
 name = "ac-outpost"
-version = "0.1.154"
+version = "0.2.0"
 authors = ["Kaku <obiekaku@gmail.com>"]
 edition = "2021"
 
@@ -51,10 +51,10 @@ thiserror = { version = "1.0.31" }
 semver = "1"
 cosmos-sdk-proto = {version="0.17", default-features = false, features=["cosmwasm"]}
 cw20 = "1.0.1"
-cw20-stake = {git = "https://github.com/DA0-DA0/dao-contracts.git", features=["library"]}
+cw20-stake = {git = "https://github.com/DA0-DA0/dao-contracts.git", tag="v2.1.0", features=["library"]}
 cw20-vesting = {git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
-wyndex = {git = "https://github.com/wynddao/wynddex.git"}
-wyndex-multi-hop = {git = "https://github.com/wynddao/wynddex.git", features=["library"]}
+wyndex = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.2"}
+wyndex-multi-hop = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.2", features=["library"]}
 wynd-stake = {git = "https://github.com/wynddao/wynddao.git", tag="v1.6.0", features=["library"]}
 
 [dev-dependencies]

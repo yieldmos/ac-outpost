@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "ac-outpost"
-version = "0.1.154"
+version = "0.2.0"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -14,7 +14,7 @@ dependencies = [
  "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw2 1.0.1",
  "cw20 1.0.1",
- "cw20-stake 2.0.3",
+ "cw20-stake 2.1.0",
  "cw20-vesting",
  "schemars",
  "semver",
@@ -249,6 +249,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-address-like"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "451a4691083a88a3c0630a8a88799e9d4cd6679b7ce8ff22b8da2873ff31d380"
+dependencies = [
+ "cosmwasm-std",
+]
+
+[[package]]
 name = "cw-controllers"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -320,11 +329,13 @@ dependencies = [
 
 [[package]]
 name = "cw-ownable"
-version = "0.3.0"
-source = "git+https://github.com/steak-enjoyers/cw-plus-plus?rev=50d4d9333305894457e5028072a0465f4635b15b#50d4d9333305894457e5028072a0465f4635b15b"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "093dfb4520c48b5848274dd88ea99e280a04bc08729603341c7fb0d758c74321"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-address-like",
  "cw-ownable-derive",
  "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw-utils 1.0.1",
@@ -333,8 +344,9 @@ dependencies = [
 
 [[package]]
 name = "cw-ownable-derive"
-version = "0.2.0"
-source = "git+https://github.com/steak-enjoyers/cw-plus-plus?rev=50d4d9333305894457e5028072a0465f4635b15b#50d4d9333305894457e5028072a0465f4635b15b"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1d3bf2e0f341bb6cc100d7d441d31cf713fbd3ce0c511f91e79f14b40a889af"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -343,12 +355,12 @@ dependencies = [
 
 [[package]]
 name = "cw-paginate"
-version = "2.0.3"
-source = "git+https://github.com/DA0-DA0/dao-contracts.git#2a047b31d30339fc82ef8b3261f9b0d8fc9a1905"
+version = "2.1.0"
+source = "git+https://github.com/DA0-DA0/dao-contracts.git?tag=v2.1.0#b09db5a672204229fdd4722c9294b9dd25f4ed03"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
+ "cw-storage-plus 1.0.1 (git+https://github.com/CosmWasm/cw-storage-plus?rev=6db957ce730a95141a3ab4dc5ab76fb38e8c0c42)",
  "serde",
 ]
 
@@ -388,7 +400,7 @@ dependencies = [
 [[package]]
 name = "cw-storage-plus"
 version = "1.0.1"
-source = "git+https://github.com/DA0-DA0/cw-storage-plus.git#284b3ffb16f02145a89ba687443c5c440b0c3303"
+source = "git+https://github.com/CosmWasm/cw-storage-plus?rev=6db957ce730a95141a3ab4dc5ab76fb38e8c0c42#6db957ce730a95141a3ab4dc5ab76fb38e8c0c42"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -585,8 +597,8 @@ dependencies = [
 
 [[package]]
 name = "cw20-stake"
-version = "2.0.3"
-source = "git+https://github.com/DA0-DA0/dao-contracts.git#2a047b31d30339fc82ef8b3261f9b0d8fc9a1905"
+version = "2.1.0"
+source = "git+https://github.com/DA0-DA0/dao-contracts.git?tag=v2.1.0#b09db5a672204229fdd4722c9294b9dd25f4ed03"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -594,7 +606,7 @@ dependencies = [
  "cw-controllers 0.16.0",
  "cw-ownable",
  "cw-paginate",
- "cw-storage-plus 1.0.1 (git+https://github.com/DA0-DA0/cw-storage-plus.git)",
+ "cw-storage-plus 1.0.1 (git+https://github.com/CosmWasm/cw-storage-plus?rev=6db957ce730a95141a3ab4dc5ab76fb38e8c0c42)",
  "cw-utils 0.13.4",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
@@ -1323,8 +1335,8 @@ dependencies = [
 
 [[package]]
 name = "wyndex"
-version = "2.0.0"
-source = "git+https://github.com/wynddao/wynddex.git#e55b733d4f5d4e4dd68c4c4b2b2040e705d041a8"
+version = "2.0.2"
+source = "git+https://github.com/wynddao/wynddex.git?tag=v2.0.2#592cee00712aa0c7840afc2dbfcaeb4fec1c57d9"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1339,12 +1351,13 @@ dependencies = [
 
 [[package]]
 name = "wyndex-multi-hop"
-version = "2.0.0"
-source = "git+https://github.com/wynddao/wynddex.git#e55b733d4f5d4e4dd68c4c4b2b2040e705d041a8"
+version = "2.0.2"
+source = "git+https://github.com/wynddao/wynddex.git?tag=v2.0.2#592cee00712aa0c7840afc2dbfcaeb4fec1c57d9"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cw-utils 1.0.1",
  "cw2 1.0.1",
  "cw20 1.0.1",
  "thiserror",
