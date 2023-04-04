@@ -1,7 +1,7 @@
 [package]
-name = "ac-outpost"
+name = "ymos-junostake-outpost"
 version = "0.2.0"
-authors = ["Kaku <obiekaku@gmail.com>"]
+authors = ["Marc <marc@yieldmos.com>"]
 edition = "2021"
 
 exclude = [
@@ -52,7 +52,7 @@ semver = "1"
 cosmos-sdk-proto = {version="0.17", default-features = false, features=["cosmwasm"]}
 cw20 = "1.0.1"
 cw20-stake = {git = "https://github.com/DA0-DA0/dao-contracts.git", tag="v2.1.0", features=["library"]}
-cw20-vesting = { package = "cw20-vesting", git = "https://github.com/cosmorama/wynddao", version = "1.1.0" }
+cw20-vesting = {package="cw20-vesting", git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
 wyndex = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.2"}
 wyndex-multi-hop = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.2", features=["library"]}
 wynd-stake = {git = "https://github.com/wynddao/wynddao.git", tag="v1.6.0", features=["library"]}
