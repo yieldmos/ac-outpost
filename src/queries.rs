@@ -46,7 +46,10 @@ pub fn query_pending_rewards(
 
     let total = sum_coins(
         &staking_denom,
-        &rewards.iter().map(|x| x.amount.clone()).collect(),
+        &rewards
+            .iter()
+            .map(|x| x.amount.clone())
+            .collect::<Vec<cosmwasm_std::Coin>>()[..],
     );
 
     Ok(AllPendingRewards { rewards, total })

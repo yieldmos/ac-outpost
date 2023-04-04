@@ -30,7 +30,7 @@ impl CwTemplateContract {
 }
 
 /// sums the coins in a vec given denom name youre looking for
-pub fn sum_coins(denom: &String, coins: &Vec<Coin>) -> Coin {
+pub fn sum_coins(denom: &String, coins: &[Coin]) -> Coin {
     coins
         .iter()
         .filter(|x| x.denom == denom.clone())

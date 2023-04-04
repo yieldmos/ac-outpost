@@ -288,6 +288,7 @@ fn wynd_staking_msgs(
     Ok(vec![wynd_swap_msg, wynd_stake_msg])
 }
 
+#[allow(clippy::too_many_arguments)]
 fn join_wynd_pool_msgs(
     querier: &QuerierWrapper,
     target_address: Addr,
