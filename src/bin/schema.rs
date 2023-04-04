@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use ac_outpost::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use ymos_junostake_outpost::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {
