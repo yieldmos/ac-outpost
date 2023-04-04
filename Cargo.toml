@@ -52,10 +52,10 @@ semver = "1"
 cosmos-sdk-proto = {version="0.17", default-features = false, features=["cosmwasm"]}
 cw20 = "1.0.1"
 cw20-stake = {git = "https://github.com/DA0-DA0/dao-contracts.git", features=["library"]}
-cw20-vesting = {git="https://github.com/wynddao/wynddao.git"}
+cw20-vesting = {git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
 wyndex = {git = "https://github.com/wynddao/wynddex.git"}
 wyndex-multi-hop = {git = "https://github.com/wynddao/wynddex.git", features=["library"]}
-wynd-stake = {git = "https://github.com/wynddao/wynddao.git", features=["library"]}
+wynd-stake = {git = "https://github.com/wynddao/wynddao.git", tag="v1.6.0", features=["library"]}
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"
