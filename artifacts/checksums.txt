@@ -1,0 +1,2 @@
+fe9b0a265c5d31a227321b85f41a30f111b7f2d2e08adfd629b1abe3a2f049cf  ymos_junostake_outpost-aarch64.wasm
+4d3790923be991b7dbdda3fe775a041f1728d063322b6b4eacacfd189b01595b  ymos_wyndstake_outpost-aarch64.wasm

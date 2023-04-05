@@ -1,7 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Decimal;
 use outpost_utils::comp_prefs::CompoundPrefs;
-use wyndex::asset::AssetInfo;
 
 #[cw_serde]
 pub struct InstantiateMsg {}

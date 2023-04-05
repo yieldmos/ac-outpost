@@ -5,7 +5,7 @@ use cosmos_sdk_proto::cosmos::{
     staking::v1beta1::MsgDelegate,
 };
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
-use outpost_utils::{msgs::{create_exec_msg, CosmosProtoMsg, create_exec_contract_msg}, comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod}, helpers::{prefs_sum_to_one, calculate_compound_amounts}, errors::OutpostError};
+use outpost_utils::{msgs::{create_exec_msg, CosmosProtoMsg, create_exec_contract_msg}, comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod}, helpers::{prefs_sum_to_one, calculate_compound_amounts}};
 use wyndex::{
     asset::{Asset, AssetInfo, AssetInfoValidated},
     pair::{PairInfo, SimulationResponse},
@@ -99,8 +99,7 @@ pub fn prefs_to_msgs(
                 ,
                 DestinationProject::NetaStaking {} => neta_staking_msgs(
                     target_address.clone(),
-                    comp_token_amount,
-                    WYND_CW20_ADDR.to_string(),
+                    
                     query_wynd_neta_swap(&querier,comp_token_amount)?
                 ),
                 DestinationProject::WyndStaking { bonding_period } =>
@@ -194,8 +193,6 @@ fn wynd_token_swap(
 
 fn neta_staking_msgs(
     target_address: Addr,
-    comp_token_amount: Uint128,
-    staking_denom: String,
     (SimulationResponse {
         return_amount: expected_neta,
         ..
@@ -271,7 +268,7 @@ fn juno_staking_msgs(
         validator_address,
         amount: Some(Coin {
             denom: "ujuno".to_string(),
-            amount: comp_token_amount.into(),
+            amount: expected_juno.into(),
         }),
         delegator_address: target_address.to_string(),
     });
