@@ -21,9 +21,8 @@ pub fn query_version() -> VersionResponse {
 pub fn query_pending_rewards(
     querier: &QuerierWrapper,
     delegator: &Addr,
+    staking_denom: String,
 ) -> Result<AllPendingRewards, ContractError> {
-    let staking_denom = querier.query_bonded_denom()?;
-
     let rewards_query: Result<Vec<PendingReward>, ContractError> = querier
         .query_all_delegations(delegator)?
         .into_iter()

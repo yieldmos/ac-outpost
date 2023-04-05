@@ -1365,6 +1365,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "ymos-wyndstake-outpost"
+version = "0.2.0"
+dependencies = [
+ "cosmos-sdk-proto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cw2 1.0.1",
+ "cw20 1.0.1",
+ "cw20-stake 2.1.0",
+ "cw20-vesting",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+ "wynd-stake",
+ "wyndex",
+ "wyndex-multi-hop",
+]
+
+[[package]]
 name = "zeroize"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -9,6 +9,7 @@ use wyndex::{
     asset::{Asset, AssetInfo, AssetInfoValidated},
     pair::{PairInfo, SimulationResponse},
 };
+use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
     contract::{AllPendingRewards, PendingReward},
@@ -18,11 +19,11 @@ use crate::{
         CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod,
         WyndStakingBondingPeriod,
     },
-    queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
+    queries::{self, query_juno_neta_swap, query_juno_wynd_swap, query_wynd_juno_swap, query_wynd_neta_swap},
     ContractError,
 };
 
-const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
+pub const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
 const _WYJUNO_CW20_ADDR: &str = "juno1snv8z7j75jwfce4uhkjh5fedpxjnrx9v20ffflzws57atshr79yqnw032r";
 const _WYND_STAKING_ADDR: &str = "juno1sy9mlw47w44f94zea7g98y5ff4cvtc8rfv75jgwphlet83wlf4ssa050mv";
 pub const WYND_MULTI_HOP_ADDR: &str =
@@ -31,7 +32,8 @@ pub const JUNO_NETA_PAIR_ADDR: &str =
     "juno1h6x5jlvn6jhpnu63ufe4sgv4utyk8hsfl5rqnrpg2cvp6ccuq4lqwqnzra";
 pub const JUNO_WYND_PAIR_ADDR: &str =
     "juno1a7lmc8e04hcs4y2275cultvg83u636ult4pmnwktr6l9nhrh2e8qzxfdwf";
-const NETA_CW20_ADDR: &str = "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr";
+pub const WYND_NETA_PAIR_ADDR: &str = "";
+pub const NETA_CW20_ADDR: &str = "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr";
 const NETA_STAKING_ADDR: &str = "juno1a7x8aj7k38vnj9edrlymkerhrl5d4ud3makmqhx6vt3dhu0d824qh038zh";
 
 pub fn compound(
@@ -46,11 +48,13 @@ pub fn compound(
     }
     let delegator = deps.api.addr_validate(&delegator_address)?;
 
+    let pending_staking_rewards = queries::query_pending_wynd_rewards(&deps.querier, &delegator)?;
+
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let sub_msgs = prefs_to_msgs(
-        deps.querier.query_bonded_denom()?,
         &delegator,
-        queries::query_pending_rewards(&deps.querier, &delegator)?,
+        WYND_CW20_ADDR.to_string(),
+        pending_staking_rewards,
         comp_prefs,
         deps.querier,
     )?;
@@ -63,60 +67,61 @@ pub fn compound(
 
 /// Converts the user's compound preferences into a list of CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
-    staking_denom: String,
     target_address: &Addr,
-    AllPendingRewards {
-        rewards: pending_rewards,
-        total: total_rewards,
-    }: AllPendingRewards,
+    staking_denom: String,
+    total_rewards: Uint128,
     comp_prefs: CompoundPrefs,
     querier: QuerierWrapper,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    // generate the withdraw rewards messages to grab all of the user's pending rewards
-    // these should be the first msgs in the tx so the user has funds to compound
-    let mut withdraw_rewards_msgs: Vec<CosmosProtoMsg> = pending_rewards
-        .iter()
-        .map(|PendingReward { validator, .. }| {
-            CosmosProtoMsg::WithdrawDelegatorReward(MsgWithdrawDelegatorReward {
-                validator_address: validator.to_string(),
-                delegator_address: target_address.to_string(),
-            })
-        })
-        .collect();
+    // Generate msg for withdrawing the wynd rewards.
+    // This should be the first msgs in the tx so the user has funds to compound
+    let mut all_msgs: Vec<CosmosProtoMsg> =
+        vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+            WYND_CW20_ADDR.to_string(),
+            &target_address.to_string(),
+            &wynd_stake::msg::ExecuteMsg::WithdrawRewards {
+                owner: None,
+                receiver: None,
+            },
+            None,
+        )?)];
 
     // calculates the amount of ujuno that will be used for each target project accurately
     let compound_token_amounts = iter::zip(
-        calculate_compound_amounts(&comp_prefs.clone().try_into()?, &total_rewards.amount)?,
+        calculate_compound_amounts(&comp_prefs.clone().try_into()?, &total_rewards)?,
         comp_prefs.relative,
     );
 
-    let compounding_msgs: Result<Vec<CosmosProtoMsg>, ContractError> = compound_token_amounts
+    let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
         .map(
-            |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> { match destination {
-                DestinationProject::JunoStaking { validator_address } => {
-                    Ok(vec![CosmosProtoMsg::Delegate(MsgDelegate {
-                        validator_address,
-                        amount: Some(Coin {
-                            denom: total_rewards.denom.clone(),
-                            amount: comp_token_amount.into(),
-                        }),
-                        delegator_address: target_address.to_string(),
-                    })])
-                },
+            |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> { 
+                match destination {
+                DestinationProject::JunoStaking { validator_address } => 
+                    juno_staking_msgs(target_address.clone(),
+                        comp_token_amount,
+                         WYND_CW20_ADDR.to_string(), 
+                         validator_address, 
+                         query_wynd_juno_swap(&querier, comp_token_amount)?
+                    )
+                ,
                 DestinationProject::NetaStaking {} => neta_staking_msgs(
                     target_address.clone(),
                     comp_token_amount,
-                    staking_denom.clone(),
-                    query_juno_neta_swap(&querier,comp_token_amount)?
+                    WYND_CW20_ADDR.to_string(),
+                    query_wynd_neta_swap(&querier,comp_token_amount)?
                 ),
                 DestinationProject::WyndStaking { bonding_period } =>
-                 wynd_staking_msgs(
-                    target_address.clone(),
-                    comp_token_amount,
-                    staking_denom.clone(),
-                    bonding_period,
-                    query_juno_wynd_swap(&querier, comp_token_amount)?
-                ),
+                    Ok(vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                        WYND_CW20_ADDR.to_string(),
+                        &target_address,
+                        &cw20_vesting::ExecuteMsg::Delegate {
+                            amount: comp_token_amount,
+                            msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+                                unbonding_period: bonding_period.into(),
+                            })?,
+                        },
+                        None,
+                    )?)]),
                 DestinationProject::TokenSwap { target_denom } => wynd_token_swap(
                     target_address.clone(),
                     comp_token_amount,
@@ -151,11 +156,11 @@ pub fn prefs_to_msgs(
             } },
         )
         .collect::<Result<Vec<_>, ContractError>>()
-        .map(|msgs_list| msgs_list.into_iter().flatten().collect());
+        .map(|msgs_list| msgs_list.into_iter().flatten().collect())?;
 
-    withdraw_rewards_msgs.append(&mut compounding_msgs?);
+    all_msgs.append(&mut compounding_msgs);
 
-    Ok(withdraw_rewards_msgs)
+    Ok(all_msgs)
 }
 
 fn wynd_token_swap(
@@ -198,31 +203,26 @@ fn neta_staking_msgs(
     target_address: Addr,
     comp_token_amount: Uint128,
     staking_denom: String,
-    SimulationResponse {
+    (SimulationResponse {
         return_amount: expected_neta,
         ..
-    }: SimulationResponse,
+    }, operations): (SimulationResponse, Vec<SwapOperation>),
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // swap juno for neta
     let neta_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        JUNO_NETA_PAIR_ADDR.to_string(),
+        WYND_CW20_ADDR.to_string(),
         &target_address,
-        &wyndex::pair::ExecuteMsg::Swap {
-            offer_asset: Asset {
-                info: AssetInfo::Native(staking_denom.clone()),
-                amount: comp_token_amount,
-            },
-            ask_asset_info: Some(AssetInfo::Token(NETA_STAKING_ADDR.to_string())),
-            max_spread: None,
-            belief_price: None,
-            to: None,
-            referral_address: None,
-            referral_commission: None,
-        },
-        Some(vec![Coin {
-            denom: staking_denom,
-            amount: comp_token_amount.to_string(),
-        }]),
+        &cw20::Cw20ExecuteMsg::Send { contract: WYND_MULTI_HOP_ADDR.to_string(), amount: expected_neta, msg: 
+            to_binary(&wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
+                operations,
+                receiver: None,
+                max_spread: None,
+                minimum_receive: None,
+                referral_address: None,
+                referral_commission: None,
+            })? ,
+         },
+        None,
     )?);
 
     // stake neta
@@ -238,6 +238,52 @@ fn neta_staking_msgs(
     )?);
 
     Ok(vec![neta_swap_msg, neta_stake_msg])
+}
+
+fn juno_staking_msgs(
+    target_address: Addr,
+    comp_token_amount: Uint128,
+    staking_denom: String,
+    validator_address: String,
+    SimulationResponse {
+        return_amount: expected_juno,
+        ..
+    }: SimulationResponse,
+) -> Result<Vec<CosmosProtoMsg>, ContractError> {
+    // swap wynd for juno
+    let wynd_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+        WYND_CW20_ADDR.to_string(),
+        &target_address,
+        &cw20::Cw20ExecuteMsg::Send {
+            contract: JUNO_WYND_PAIR_ADDR.to_string(),
+            amount: comp_token_amount,
+            msg: to_binary(&wyndex::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::Token(staking_denom.clone()),
+                    amount: comp_token_amount,
+                },
+                ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
+                max_spread: None,
+                belief_price: None,
+                to: None,
+                referral_address: None,
+                referral_commission: None,
+            })?,
+        },
+        None,
+    )?);
+
+    // stake juno
+    let juno_stake_msg = CosmosProtoMsg::Delegate(MsgDelegate {
+        validator_address,
+        amount: Some(Coin {
+            denom: "ujuno".to_string(),
+            amount: comp_token_amount.into(),
+        }),
+        delegator_address: target_address.to_string(),
+    });
+
+    Ok(vec![wynd_swap_msg, juno_stake_msg])
 }
 
 fn wynd_staking_msgs(
