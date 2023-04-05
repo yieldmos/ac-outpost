@@ -869,6 +869,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
+name = "outpost-utils"
+version = "0.2.0"
+dependencies = [
+ "cosmos-sdk-proto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20 1.0.1",
+ "schemars",
+ "serde",
+ "thiserror",
+ "wyndex",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1355,6 +1369,7 @@ dependencies = [
  "cw20 1.0.1",
  "cw20-stake 2.1.0",
  "cw20-vesting",
+ "outpost-utils",
  "schemars",
  "semver",
  "serde",
@@ -1378,6 +1393,7 @@ dependencies = [
  "cw20 1.0.1",
  "cw20-stake 2.1.0",
  "cw20-vesting",
+ "outpost-utils",
  "schemars",
  "semver",
  "serde",

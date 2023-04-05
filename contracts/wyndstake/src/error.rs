@@ -1,4 +1,3 @@
-use cosmos_sdk_proto::prost;
 use cosmwasm_std::{CheckedMultiplyFractionError, OverflowError, StdError};
 use thiserror::Error;
 
@@ -16,9 +15,6 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
-    #[error("Invalid prefs: Relative quantities must sum to 1")]
-    InvalidPrefQtys,
-
     #[error("Target Not Implemented")]
     NotImplemented {},
 
@@ -28,14 +24,14 @@ pub enum ContractError {
     #[error("Could not query pendingRewards")]
     QueryPendingRewardsFailure,
 
-    #[error("Could not generate exec message")]
-    GenerateExecFailure,
-
-    #[error("Could not encode msg as any")]
-    EncodeError(#[from] prost::EncodeError),
-
     #[error("Could not simulate swap of {from} to {to}")]
     SwapSimulationError { from: String, to: String },
+
+    #[error("Outpost Utils: &{0}")]
+    OutpostError(#[from] outpost_utils::errors::OutpostError),
+
+    #[error("Could not encode msg as any: {0}")]
+    EncodeError(#[from] cosmos_sdk_proto::prost::EncodeError),
 }
 
 impl From<semver::Error> for ContractError {

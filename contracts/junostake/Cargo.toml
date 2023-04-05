@@ -50,6 +50,7 @@ cw20-vesting = {workspace = true}
 wyndex =  {workspace = true}
 wyndex-multi-hop =  {workspace = true}
 wynd-stake = {workspace = true}
+outpost-utils = {workspace=true}
 
 [dev-dependencies]
 cw-multi-test = {workspace = true}

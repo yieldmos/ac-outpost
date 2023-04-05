@@ -1,10 +1,11 @@
 use std::iter;
 
 use cosmos_sdk_proto::cosmos::{
-    base::v1beta1::Coin, distribution::v1beta1::MsgWithdrawDelegatorReward,
+    base::v1beta1::Coin, 
     staking::v1beta1::MsgDelegate,
 };
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
+use outpost_utils::{msgs::{create_exec_msg, CosmosProtoMsg, create_exec_contract_msg}, comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod}, helpers::{prefs_sum_to_one, calculate_compound_amounts}, errors::OutpostError};
 use wyndex::{
     asset::{Asset, AssetInfo, AssetInfoValidated},
     pair::{PairInfo, SimulationResponse},
@@ -12,14 +13,7 @@ use wyndex::{
 use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
-    contract::{AllPendingRewards, PendingReward},
-    generate_exec::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
-    helpers::{calculate_compound_amounts, prefs_sum_to_one},
-    msg::{
-        CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod,
-        WyndStakingBondingPeriod,
-    },
-    queries::{self, query_juno_neta_swap, query_juno_wynd_swap, query_wynd_juno_swap, query_wynd_neta_swap},
+    queries::{self,  query_wynd_juno_swap, query_wynd_neta_swap},
     ContractError,
 };
 
@@ -43,9 +37,8 @@ pub fn compound(
     delegator_address: String,
     comp_prefs: CompoundPrefs,
 ) -> Result<Response, ContractError> {
-    if !prefs_sum_to_one(&comp_prefs)? {
-        return Err(ContractError::InvalidPrefQtys);
-    }
+    let _ = !prefs_sum_to_one(&comp_prefs)?;
+    
     let delegator = deps.api.addr_validate(&delegator_address)?;
 
     let pending_staking_rewards = queries::query_pending_wynd_rewards(&deps.querier, &delegator)?;
@@ -286,53 +279,6 @@ fn juno_staking_msgs(
     Ok(vec![wynd_swap_msg, juno_stake_msg])
 }
 
-fn wynd_staking_msgs(
-    target_address: Addr,
-    comp_token_amount: Uint128,
-    staking_denom: String,
-    bonding_period: WyndStakingBondingPeriod,
-    SimulationResponse {
-        return_amount: expected_wynd,
-        ..
-    }: SimulationResponse,
-) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    // swap juno for wynd
-    let wynd_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        JUNO_WYND_PAIR_ADDR.to_string(),
-        &target_address,
-        &wyndex::pair::ExecuteMsg::Swap {
-            offer_asset: Asset {
-                info: AssetInfo::Native(staking_denom.clone()),
-                amount: comp_token_amount,
-            },
-            ask_asset_info: Some(AssetInfo::Token(WYND_CW20_ADDR.to_string())),
-            max_spread: None,
-            belief_price: None,
-            to: None,
-            referral_address: None,
-            referral_commission: None,
-        },
-        Some(vec![Coin {
-            denom: staking_denom,
-            amount: comp_token_amount.to_string(),
-        }]),
-    )?);
-
-    // delegate wynd to the staking contract
-    let wynd_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        WYND_CW20_ADDR.to_string(),
-        &target_address,
-        &cw20_vesting::ExecuteMsg::Delegate {
-            amount: expected_wynd,
-            msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
-                unbonding_period: bonding_period.into(),
-            })?,
-        },
-        None,
-    )?);
-
-    Ok(vec![wynd_swap_msg, wynd_stake_msg])
-}
 
 #[allow(clippy::too_many_arguments)]
 fn join_wynd_pool_msgs(

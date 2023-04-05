@@ -51,6 +51,7 @@ wyndex =  {workspace = true}
 wyndex-multi-hop =  {workspace = true}
 wynd-stake = {workspace = true}
 # wynd-utils = {workspace = true}
+outpost-utils = {workspace=true}
 
 
 [dev-dependencies]

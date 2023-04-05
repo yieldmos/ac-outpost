@@ -5,6 +5,14 @@ use cosmos_sdk_proto::cosmos::{
     staking::v1beta1::MsgDelegate,
 };
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
+use outpost_utils::{
+    comp_prefs::{
+        CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod,
+        WyndStakingBondingPeriod,
+    },
+    helpers::{calculate_compound_amounts, prefs_sum_to_one},
+    msgs::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+};
 use wyndex::{
     asset::{Asset, AssetInfo, AssetInfoValidated},
     pair::{PairInfo, SimulationResponse},
@@ -12,12 +20,6 @@ use wyndex::{
 
 use crate::{
     contract::{AllPendingRewards, PendingReward},
-    generate_exec::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
-    helpers::{calculate_compound_amounts, prefs_sum_to_one},
-    msg::{
-        CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod,
-        WyndStakingBondingPeriod,
-    },
     queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
     ContractError,
 };
@@ -41,9 +43,8 @@ pub fn compound(
     delegator_address: String,
     comp_prefs: CompoundPrefs,
 ) -> Result<Response, ContractError> {
-    if !prefs_sum_to_one(&comp_prefs)? {
-        return Err(ContractError::InvalidPrefQtys);
-    }
+    let _ = !prefs_sum_to_one(&comp_prefs)?;
+
     let delegator = deps.api.addr_validate(&delegator_address)?;
     let staking_denom = deps.querier.query_bonded_denom()?;
 

@@ -5,13 +5,13 @@ use cosmos_sdk_proto::cosmos::{
     staking::v1beta1::MsgDelegate,
 };
 use cosmwasm_std::{Addr, Decimal, Uint128};
-
-use crate::{
-    contract::{AllPendingRewards, PendingReward},
-    generate_exec::CosmosProtoMsg,
+use outpost_utils::{
+    comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject, RelativeQty},
     helpers::calculate_compound_amounts,
-    msg::{CompoundPrefs, DestinationAction, DestinationProject, RelativeQty},
+    msgs::CosmosProtoMsg,
 };
+
+use crate::contract::{AllPendingRewards, PendingReward};
 
 #[test]
 fn calculate_compound_amounts_even_test() {

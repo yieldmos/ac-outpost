@@ -1,4 +1,5 @@
-use cosmwasm_std::{Addr, FullDelegation, QuerierWrapper, Uint128, WasmQuery};
+use cosmwasm_std::{Addr, QuerierWrapper, Uint128};
+use outpost_utils::queries::query_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
@@ -6,9 +7,7 @@ use wyndex::{
 use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
-    contract::{AllPendingRewards, PendingReward},
     execute::{JUNO_NETA_PAIR_ADDR, JUNO_WYND_PAIR_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR},
-    helpers::sum_coins,
     msg::VersionResponse,
     ContractError,
 };
@@ -33,23 +32,6 @@ pub fn query_pending_wynd_rewards(
     Ok(rewards.rewards)
 }
 
-/// Queries the Wyndex pool for the amount of `to_denom` that can be received for `from_token`
-/// IMPORTANT: you must provide the pair contract address for the simulation
-pub fn query_wynd_pool_swap(
-    querier: &QuerierWrapper,
-    pool_address: String,
-    from_token: &Asset,
-    // just for error reporting purposes
-    to_denom: &String,
-) -> Result<SimulationResponse, ContractError> {
-    wyndex::querier::simulate(querier, pool_address, from_token).map_err(|_| {
-        ContractError::SwapSimulationError {
-            from: from_token.info.to_string(),
-            to: to_denom.to_string(),
-        }
-    })
-}
-
 /// Queries wyndex for the amount of juno that can be received for `from_token_amount` of wynd
 pub fn query_wynd_juno_swap(
     querier: &QuerierWrapper,
@@ -62,8 +44,9 @@ pub fn query_wynd_juno_swap(
             info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
             amount: from_token_amount,
         },
-        &"ujuno".to_string(),
+        "ujuno".to_string(),
     )
+    .map_err(|e| ContractError::from(e))
 }
 
 /// Queries wyndex for the amount of neta that can be received for `from_token_amount` of wynd
@@ -93,36 +76,4 @@ pub fn query_wynd_neta_swap(
     )?;
 
     Ok((sim_resp, operations))
-}
-
-/// Queries wyndex for the amount of neta that can be received for `from_token_amount` of juno
-pub fn query_juno_neta_swap(
-    querier: &QuerierWrapper,
-    from_token_amount: Uint128,
-) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
-        querier,
-        JUNO_NETA_PAIR_ADDR.to_string(),
-        &Asset {
-            info: AssetInfo::Native("ujuno".to_string()),
-            amount: from_token_amount,
-        },
-        &"uneta".to_string(),
-    )
-}
-
-/// Queries wyndex for the amount of wynd that can be received for `from_token_amount` of juno
-pub fn query_juno_wynd_swap(
-    querier: &QuerierWrapper,
-    from_token_amount: Uint128,
-) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
-        querier,
-        JUNO_NETA_PAIR_ADDR.to_string(),
-        &Asset {
-            info: AssetInfo::Native("ujuno".to_string()),
-            amount: from_token_amount,
-        },
-        &"uwynd".to_string(),
-    )
 }
