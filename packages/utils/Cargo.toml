@@ -14,3 +14,4 @@ thiserror = { workspace = true }
 cosmos-sdk-proto = { workspace = true }
 cw20 = { workspace = true }
 wyndex = { workspace = true }
+wyndex-multi-hop = {workspace=true}

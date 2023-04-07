@@ -880,6 +880,7 @@ dependencies = [
  "serde",
  "thiserror",
  "wyndex",
+ "wyndex-multi-hop",
 ]
 
 [[package]]

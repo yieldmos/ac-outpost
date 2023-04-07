@@ -114,9 +114,10 @@ pub fn prefs_to_msgs(
                         None,
                     )?)]),
                 DestinationProject::TokenSwap { target_denom } => wynd_token_swap(
+                   
                     target_address.clone(),
                     comp_token_amount,
-                    staking_denom.clone(),
+                    AssetInfo::Token(WYND_CW20_ADDR.to_string()),
                     target_denom,
                 ),
                 DestinationProject::WyndLP {
@@ -155,39 +156,41 @@ pub fn prefs_to_msgs(
 }
 
 fn wynd_token_swap(
+
     target_address: Addr,
     comp_token_amount: Uint128,
-    staking_denom: String,
+    staking_denom: AssetInfo,
     target_denom: AssetInfo,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    match target_denom {
-        // swapping from ujuno to ujuno so nothing to do here
-        AssetInfo::Native(target_native_denom) if staking_denom == target_native_denom => {
-            Ok(vec![])
-        }
-        // create the swap via the multihop contract
-        _ => Ok(vec![CosmosProtoMsg::ExecuteContract(
-            create_exec_contract_msg(
-                WYND_MULTI_HOP_ADDR.to_string(),
-                &target_address,
-                &wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                    operations: vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
-                        offer_asset_info: AssetInfo::Native(staking_denom.clone()),
-                        ask_asset_info: target_denom,
-                    }],
-                    receiver: None,
-                    max_spread: None,
-                    minimum_receive: None,
-                    referral_address: None,
-                    referral_commission: None,
-                },
-                Some(vec![Coin {
-                    denom: staking_denom,
-                    amount: comp_token_amount.to_string(),
-                }]),
-            )?,
-        )]),
+
+// swapping from uwynd to wynd so nothing to do here
+    if staking_denom.eq(&target_denom) {
+        return Ok(vec![]);
     }
+
+    let operations = vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
+        offer_asset_info: staking_denom,
+        ask_asset_info: target_denom,
+    }];
+
+    Ok(vec![
+        CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(WYND_CW20_ADDR.to_string(),
+         &target_address, 
+         &cw20::Cw20ExecuteMsg::Send { contract: WYND_MULTI_HOP_ADDR.to_string(), 
+            amount: comp_token_amount, msg: 
+            to_binary(&wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
+                operations,
+                receiver: None,
+                max_spread: None,
+                minimum_receive: None,
+                referral_address: None,
+                referral_commission: None,
+            })? ,
+         },
+         None)?)
+    ])
+   
+    
 }
 
 fn neta_staking_msgs(
