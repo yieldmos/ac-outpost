@@ -24,17 +24,16 @@ use crate::{
     ContractError,
 };
 
-const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
-const _WYJUNO_CW20_ADDR: &str = "juno1snv8z7j75jwfce4uhkjh5fedpxjnrx9v20ffflzws57atshr79yqnw032r";
-const _WYND_STAKING_ADDR: &str = "juno1sy9mlw47w44f94zea7g98y5ff4cvtc8rfv75jgwphlet83wlf4ssa050mv";
+pub const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
 pub const WYND_MULTI_HOP_ADDR: &str =
     "juno1pctfpv9k03v0ff538pz8kkw5ujlptntzkwjg6c0lrtqv87s9k28qdtl50w";
 pub const JUNO_NETA_PAIR_ADDR: &str =
     "juno1h6x5jlvn6jhpnu63ufe4sgv4utyk8hsfl5rqnrpg2cvp6ccuq4lqwqnzra";
 pub const JUNO_WYND_PAIR_ADDR: &str =
     "juno1a7lmc8e04hcs4y2275cultvg83u636ult4pmnwktr6l9nhrh2e8qzxfdwf";
-const NETA_CW20_ADDR: &str = "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr";
-const NETA_STAKING_ADDR: &str = "juno1a7x8aj7k38vnj9edrlymkerhrl5d4ud3makmqhx6vt3dhu0d824qh038zh";
+pub const NETA_CW20_ADDR: &str = "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr";
+pub const NETA_STAKING_ADDR: &str =
+    "juno1a7x8aj7k38vnj9edrlymkerhrl5d4ud3makmqhx6vt3dhu0d824qh038zh";
 
 pub fn compound(
     deps: DepsMut,
@@ -160,7 +159,7 @@ pub fn prefs_to_msgs(
     Ok(withdraw_rewards_msgs)
 }
 
-fn wynd_token_swap(
+pub fn wynd_token_swap(
     target_address: Addr,
     comp_token_amount: Uint128,
     staking_denom: String,
@@ -196,7 +195,7 @@ fn wynd_token_swap(
     }
 }
 
-fn neta_staking_msgs(
+pub fn neta_staking_msgs(
     target_address: Addr,
     comp_token_amount: Uint128,
     staking_denom: String,
@@ -242,7 +241,7 @@ fn neta_staking_msgs(
     Ok(vec![neta_swap_msg, neta_stake_msg])
 }
 
-fn wynd_staking_msgs(
+pub fn wynd_staking_msgs(
     target_address: Addr,
     comp_token_amount: Uint128,
     staking_denom: String,

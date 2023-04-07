@@ -32,8 +32,8 @@ pub enum DestinationProject {
 }
 
 #[cw_serde]
+// percentage using 18 decimal places
 pub struct RelativeQty {
-    // percentage using 18 decimal places
     pub quantity: u128,
 }
 

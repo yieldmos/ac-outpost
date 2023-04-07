@@ -1,4 +1,4 @@
-# Junostake Outpost
+# Wyndstake Outpost
 
 Compounding outpost that allows users to specify how they would like to manage their wynd staking rewards by percentage. It is intended to be called on a regular basis by Yieldmos so that delegators can manage their rewards in whatever way they would like.
 

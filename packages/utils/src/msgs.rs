@@ -9,7 +9,6 @@ use cosmos_sdk_proto::Any;
 use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, QuerierWrapper, StdError, Uint128};
 use serde::Serialize;
 use wyndex::asset::AssetInfo;
-use wyndex_multi_hop::msg::SwapOperation;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CosmosProtoMsg {
