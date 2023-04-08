@@ -10,7 +10,7 @@ pub struct CompoundPrefs {
 #[cw_serde]
 pub struct DestinationAction {
     pub destination: DestinationProject,
-    pub amount: RelativeQty,
+    pub amount: u128,
 }
 
 #[cw_serde]
@@ -29,12 +29,6 @@ pub enum DestinationProject {
         target_denom: AssetInfo,
     },
     NetaStaking {},
-}
-
-#[cw_serde]
-// percentage using 18 decimal places
-pub struct RelativeQty {
-    pub quantity: u128,
 }
 
 #[cw_serde]

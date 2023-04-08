@@ -7,7 +7,7 @@ use cosmos_sdk_proto::{
 };
 use cosmwasm_std::{to_binary, Addr};
 use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject, RelativeQty},
+    comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject},
     msgs::CosmosProtoMsg,
 };
 use wyndex::{asset::AssetInfo, pair::SimulationResponse};

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin, Decimal, Uint128};
 
 use crate::{
-    comp_prefs::{CompoundPrefs, DestinationAction, RelativeQty},
+    comp_prefs::{CompoundPrefs, DestinationAction},
     errors::OutpostError,
 };
 
@@ -37,13 +37,17 @@ pub fn calculate_compound_amounts(
 
 /// checks that the prefs are both summing to 1 and that they are all positive and nonzero
 pub fn prefs_sum_to_one(comp_prefs: &CompoundPrefs) -> Result<bool, OutpostError> {
-    let total_pref_amounts = comp_prefs.relative.iter().map(|x| x.amount.quantity).fold(
-        Ok(Decimal::zero()),
-        |acc, x| match (acc, Decimal::from_atomics(x, 18)) {
-            (Ok(acc), Ok(x)) if x.gt(&Decimal::zero()) => Ok(acc + x),
-            _ => Err(OutpostError::InvalidPrefQtys),
-        },
-    )?;
+    let total_pref_amounts =
+        comp_prefs
+            .relative
+            .iter()
+            .map(|x| x.amount)
+            .fold(Ok(Decimal::zero()), |acc, x| {
+                match (acc, Decimal::from_atomics(x, 18)) {
+                    (Ok(acc), Ok(x)) if x.gt(&Decimal::zero()) => Ok(acc + x),
+                    _ => Err(OutpostError::InvalidPrefQtys),
+                }
+            })?;
 
     match total_pref_amounts == Decimal::one() {
         true => Ok(true),
@@ -60,14 +64,9 @@ impl TryFrom<CompoundPrefs> for Vec<Decimal> {
         prefs
             .relative
             .iter()
-            .map(
-                |DestinationAction {
-                     amount: RelativeQty { quantity },
-                     ..
-                 }| {
-                    Decimal::from_atomics(*quantity, 18).map_err(|_| OutpostError::InvalidPrefQtys)
-                },
-            )
+            .map(|DestinationAction { amount, .. }| {
+                Decimal::from_atomics(*amount, 18).map_err(|_| OutpostError::InvalidPrefQtys)
+            })
             .collect::<Result<Vec<Decimal>, OutpostError>>()
     }
 }
