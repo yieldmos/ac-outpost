@@ -147,12 +147,17 @@ pub fn create_wyndex_swap_msg(
     offer_asset: AssetInfo,
     ask_asset_info: AssetInfo,
     multihop_address: String,
-) -> Result<CosmosProtoMsg, StdError> {
+) -> Result<Vec<CosmosProtoMsg>, StdError> {
+    // no swap to do because the offer and ask tokens are the same
+    if offer_asset.eq(&ask_asset_info) {
+        return Ok(vec![]);
+    }
+
     let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
 
     match offer_asset {
-        AssetInfo::Native(offer_denom) => {
-            Ok(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+        AssetInfo::Native(offer_denom) => Ok(vec![CosmosProtoMsg::ExecuteContract(
+            create_exec_contract_msg(
                 multihop_address,
                 sender,
                 &swap_ops,
@@ -160,10 +165,10 @@ pub fn create_wyndex_swap_msg(
                     amount: offer_amount.to_string(),
                     denom: offer_denom,
                 }]),
-            )?))
-        }
-        AssetInfo::Token(ask_token_contract_address) => {
-            Ok(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+            )?,
+        )]),
+        AssetInfo::Token(ask_token_contract_address) => Ok(vec![CosmosProtoMsg::ExecuteContract(
+            create_exec_contract_msg(
                 ask_token_contract_address,
                 sender,
                 &cw20::Cw20ExecuteMsg::Send {
@@ -172,8 +177,8 @@ pub fn create_wyndex_swap_msg(
                     msg: to_binary(&swap_ops)?,
                 },
                 None,
-            )?))
-        }
+            )?,
+        )]),
     }
 }
 
@@ -186,7 +191,12 @@ pub fn create_wyndex_swap_msg_with_simulation(
     offer_asset: AssetInfo,
     ask_asset_info: AssetInfo,
     multihop_address: String,
-) -> Result<(CosmosProtoMsg, Uint128), StdError> {
+) -> Result<(Vec<CosmosProtoMsg>, Uint128), StdError> {
+    // no swap to do because the offer and ask tokens are the same
+    if offer_asset.eq(&ask_asset_info) {
+        return Ok((vec![], offer_amount));
+    }
+
     let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
 
     let simulated_swap: wyndex::pair::SimulationResponse;
@@ -234,7 +244,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
         }
     }
     Ok((
-        CosmosProtoMsg::ExecuteContract(exec),
+        vec![CosmosProtoMsg::ExecuteContract(exec)],
         simulated_swap.return_amount,
     ))
 }
