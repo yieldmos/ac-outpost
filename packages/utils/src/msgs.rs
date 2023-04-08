@@ -1,3 +1,4 @@
+use cosmos_sdk_proto::cosmos::authz::v1beta1::{GenericAuthorization, Grant, MsgGrant};
 use cosmos_sdk_proto::cosmos::distribution::v1beta1::MsgWithdrawDelegatorReward;
 use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
 use cosmos_sdk_proto::cosmos::{authz::v1beta1::MsgExec, base::v1beta1::Coin};
@@ -51,6 +52,53 @@ where
         msg: to_binary(&msg)?.to_vec(),
         funds: funds.unwrap_or_default(),
     })
+}
+
+pub enum GenericAuthorizationType {
+    WithdrawDelegatorRewards,
+    Delegation,
+}
+
+impl From<GenericAuthorizationType> for Any {
+    fn from(proto: GenericAuthorizationType) -> Any {
+        match proto {
+            GenericAuthorizationType::WithdrawDelegatorRewards => Any {
+                type_url: "/cosmos.authz.v1beta1.GenericAuthorization".to_string(),
+                value: GenericAuthorization {
+                    msg: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward".to_string(),
+                }
+                .encode_to_vec(),
+            },
+            GenericAuthorizationType::Delegation => Any {
+                type_url: "/cosmos.authz.v1beta1.GenericAuthorization".to_string(),
+                value: GenericAuthorization {
+                    msg: "/cosmos.staking.v1beta1.MsgDelegate".to_string(),
+                }
+                .encode_to_vec(),
+            },
+        }
+    }
+}
+
+/// Creates a Generic MsgGrant message
+pub fn create_generic_grant_msg(
+    granter: String,
+    grantee: &Addr,
+    grant_type: GenericAuthorizationType,
+) -> CosmosMsg {
+    let grant = MsgGrant {
+        grantee: grantee.to_string(),
+        granter,
+        grant: Some(Grant {
+            authorization: Some(grant_type.into()),
+            expiration: None,
+        }),
+    };
+
+    CosmosMsg::Stargate {
+        type_url: "/cosmos.authz.v1beta1.MsgGrant".to_string(),
+        value: Binary::from(grant.encode_to_vec()),
+    }
 }
 
 /// Creates a MsgExec message

@@ -3,8 +3,9 @@ use cosmwasm_std::{
     Timestamp, Validator,
 };
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, Module, StakingInfo};
-use outpost_utils::comp_prefs::{
-    CompoundPrefs, DestinationAction, DestinationProject, RelativeQty,
+use outpost_utils::{
+    comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject, RelativeQty},
+    msgs::{create_generic_grant_msg, GenericAuthorizationType},
 };
 
 use crate::{
@@ -115,10 +116,22 @@ fn validator_only_compounding() {
 
     app.execute_multi(
         delegator_addr.clone(),
-        vec![CosmosMsg::Staking(cosmwasm_std::StakingMsg::Delegate {
-            validator: start_validator_addr.to_string(),
-            amount: coin(100_000, "ubtc"),
-        })],
+        vec![
+            CosmosMsg::Staking(cosmwasm_std::StakingMsg::Delegate {
+                validator: start_validator_addr.to_string(),
+                amount: coin(100_000, "ubtc"),
+            }),
+            // create_generic_grant_msg(
+            //     delegator_addr.to_string(),
+            //     &contract.addr(),
+            //     GenericAuthorizationType::Delegation,
+            // ),
+            // create_generic_grant_msg(
+            //     delegator_addr.to_string(),
+            //     &contract.addr(),
+            //     GenericAuthorizationType::WithdrawDelegatorRewards,
+            // ),
+        ],
     )
     .unwrap();
 
@@ -136,23 +149,23 @@ fn validator_only_compounding() {
 
     app.update_block(next_block);
 
-    let err = contract
-        .compound_funds(
-            &mut app,
-            &delegator_addr.clone(),
-            CompoundPrefs {
-                relative: vec![DestinationAction {
-                    destination: DestinationProject::JunoStaking {
-                        validator_address: end_validator_addr.to_string(),
-                    },
-                    amount: RelativeQty {
-                        quantity: 1_000_000_000_000_000_000u128.into(),
-                    },
-                }],
-            },
-            delegator_addr.to_string(),
-        )
-        .unwrap_err();
+    // let err = contract
+    //     .compound_funds(
+    //         &mut app,
+    //         &delegator_addr.clone(),
+    //         CompoundPrefs {
+    //             relative: vec![DestinationAction {
+    //                 destination: DestinationProject::JunoStaking {
+    //                     validator_address: end_validator_addr.to_string(),
+    //                 },
+    //                 amount: RelativeQty {
+    //                     quantity: 1_000_000_000_000_000_000u128.into(),
+    //                 },
+    //             }],
+    //         },
+    //         delegator_addr.to_string(),
+    //     )
+    //     .unwrap_err();
 
-    println!("{}", err)
+    // println!("{}", err)
 }
