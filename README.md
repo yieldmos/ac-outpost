@@ -13,11 +13,11 @@ The expected flow should go as such:
 
 ## Outposts Progress
 
-| Chain ID    | Rewards        | Status                                           |
-| ----------- | -------------- | ------------------------------------------------ |
-| `juno-1`    | `staking`      | [`working`](./contracts/junostake/README.md)     |
-| `juno-1`    | `wynd staking` | [`in progress`](./contracts/wyndstake/README.md) |
-| `juno-1`    | `wynd lps`     | `not started`                                    |
-| `osmosis-1` | `staking`      | `not started`                                    |
+| Chain ID    | Rewards        | Status                                       |
+| ----------- | -------------- | -------------------------------------------- |
+| `juno-1`    | `staking`      | [`working`](./contracts/junostake/README.md) |
+| `juno-1`    | `wynd staking` | [`working`](./contracts/wyndstake/README.md) |
+| `juno-1`    | `wynd lps`     | `in progress`                                |
+| `osmosis-1` | `staking`      | `not started`                                |
 
 Testing and the grants query are still in progress on all fronts. These must be codified before the v1 release.

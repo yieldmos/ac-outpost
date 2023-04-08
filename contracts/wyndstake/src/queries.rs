@@ -7,7 +7,7 @@ use wyndex::{
 use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
-    execute::{JUNO_NETA_PAIR_ADDR, JUNO_WYND_PAIR_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR},
+    execute::{JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR},
     msg::VersionResponse,
     ContractError,
 };
@@ -61,7 +61,7 @@ pub fn query_wynd_neta_swap(
         },
         SwapOperation::WyndexSwap {
             offer_asset_info: AssetInfo::Native("ujuno".to_string()),
-            ask_asset_info: AssetInfo::Token(JUNO_NETA_PAIR_ADDR.to_string()),
+            ask_asset_info: AssetInfo::Token(NETA_CW20_ADDR.to_string()),
         },
     ];
 

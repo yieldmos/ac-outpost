@@ -8,7 +8,7 @@ use outpost_utils::{
     msgs::{create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg, CosmosProtoMsg, create_wyndex_swap_msg_with_simulation},
 };
 use wyndex::{
-    asset::{Asset, AssetInfo, AssetInfoValidated},
+    asset::{Asset, AssetInfo},
     pair::{PairInfo, SimulationResponse},
 };
 use wyndex_multi_hop::msg::SwapOperation;
@@ -372,7 +372,7 @@ pub fn join_wynd_pool_msgs(
     // wyndex::factory::ROUTE;
 }
 
-struct WyndAssetLPMessages {
+pub struct WyndAssetLPMessages {
     /// The msgs to perform the token swaps and if applicable the increase allowances
     swap_msgs: Vec<CosmosProtoMsg>,
     /// The asset denom and amount that will be sent to the pool contract
@@ -384,7 +384,7 @@ struct WyndAssetLPMessages {
 pub fn wynd_lp_asset_swaps(
     querier: &QuerierWrapper,
     staking_denom: &String,
-    pool_contract_address: &str,
+    _pool_contract_address: &str,
     wynd_amount_per_asset: &Uint128,
     pool_info: &PairInfo,
     target_address: &Addr,
@@ -399,7 +399,7 @@ pub fn wynd_lp_asset_swaps(
                 querier,
                  target_address,
                  *wynd_amount_per_asset, 
-                AssetInfo::Token(WYND_CW20_ADDR.to_string()), 
+                AssetInfo::Token(staking_denom.clone()), 
                 asset.clone().into(), 
                 WYND_MULTI_HOP_ADDR.to_string())?;
 
