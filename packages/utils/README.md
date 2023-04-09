@@ -16,9 +16,7 @@ Please note that this is still a pre-release version and breaking changes are ex
             "destination": {
               "neta_staking": {}
             },
-            "amount": {
-              "quantity": "250000000000000000"
-            }
+            "amount": "250000000000000000"
           },
           {
             "destination": {
@@ -26,9 +24,7 @@ Please note that this is still a pre-release version and breaking changes are ex
                 "bonding_period": "seven_hundred_thirty_days"
               }
             },
-            "amount": {
-              "quantity": "250000000000000000"
-            }
+            "amount": "250000000000000000"
           },
           {
             "destination": {
@@ -36,9 +32,7 @@ Please note that this is still a pre-release version and breaking changes are ex
                 "validator_address": "junovaloper1m55p4c956dawa95uhzz027p4pwm3fedfkdtnyj"
               }
             },
-            "amount": {
-              "quantity": "250000000000000000"
-            }
+            "amount": "250000000000000000"
           },
           {
             "destination": {
@@ -48,9 +42,7 @@ Please note that this is still a pre-release version and breaking changes are ex
                 }
               }
             },
-            "amount": {
-              "quantity": "250000000000000000"
-            }
+            "amount": "250000000000000000"
           }
         ]
       },

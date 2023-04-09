@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, Module, StakingInfo};
 use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, DestinationProject},
+    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject},
     msgs::{create_generic_grant_msg, GenericAuthorizationType},
 };
 

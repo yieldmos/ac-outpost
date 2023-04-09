@@ -9,12 +9,15 @@ pub struct CompoundPrefs {
 
 #[cw_serde]
 pub struct DestinationAction {
-    pub destination: DestinationProject,
+    pub destination: JunoDestinationProject,
+    /// the percentage of the rewards that should be sent to this destination
+    /// this is a number with 18 decimal places
+    /// for example "250000000000000000" is 25%
     pub amount: u128,
 }
 
 #[cw_serde]
-pub enum DestinationProject {
+pub enum JunoDestinationProject {
     JunoStaking {
         validator_address: String,
     },

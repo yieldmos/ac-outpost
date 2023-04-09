@@ -26,6 +26,7 @@ cw20-vesting = {package="cw20-vesting", git="https://github.com/wynddao/wynddao.
 wyndex = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.2"}
 wyndex-multi-hop = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.2", features=["library"]}
 wynd-stake = {git = "https://github.com/wynddao/wynddao.git", tag="v1.6.0", features=["library"]}
+wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3"}
 # wynd-utils = {git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
 outpost-utils = {path="./packages/utils"}
 

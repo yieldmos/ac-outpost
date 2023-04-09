@@ -7,7 +7,7 @@ use cosmos_sdk_proto::cosmos::{
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
     comp_prefs::{
-        CompoundPrefs, DestinationAction, DestinationProject, WyndLPBondingPeriod,
+        CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod,
         WyndStakingBondingPeriod,
     },
     helpers::{calculate_compound_amounts, prefs_sum_to_one},
@@ -94,7 +94,7 @@ pub fn prefs_to_msgs(
     let compounding_msgs: Result<Vec<CosmosProtoMsg>, ContractError> = compound_token_amounts
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> { match destination {
-                DestinationProject::JunoStaking { validator_address } => {
+                JunoDestinationProject::JunoStaking { validator_address } => {
                     Ok(vec![CosmosProtoMsg::Delegate(MsgDelegate {
                         validator_address,
                         amount: Some(Coin {
@@ -104,13 +104,13 @@ pub fn prefs_to_msgs(
                         delegator_address: target_address.to_string(),
                     })])
                 },
-                DestinationProject::NetaStaking {} => neta_staking_msgs(
+                JunoDestinationProject::NetaStaking {} => neta_staking_msgs(
                     target_address.clone(),
                     comp_token_amount,
                     staking_denom.clone(),
                     query_juno_neta_swap(&querier,comp_token_amount)?
                 ),
-                DestinationProject::WyndStaking { bonding_period } =>
+                JunoDestinationProject::WyndStaking { bonding_period } =>
                  wynd_staking_msgs(
                     target_address.clone(),
                     comp_token_amount,
@@ -118,13 +118,13 @@ pub fn prefs_to_msgs(
                     bonding_period,
                     query_juno_wynd_swap(&querier, comp_token_amount)?
                 ),
-                DestinationProject::TokenSwap { target_denom } => wynd_token_swap(
+                JunoDestinationProject::TokenSwap { target_denom } => wynd_token_swap(
                     target_address.clone(),
                     comp_token_amount,
                     staking_denom.clone(),
                     target_denom,
                 ),
-                DestinationProject::WyndLP {
+                JunoDestinationProject::WyndLP {
                     contract_address,
                     bonding_period,
                 } => {

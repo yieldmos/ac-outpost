@@ -15,9 +15,10 @@ use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
     queries::{self, query_wynd_juno_swap, query_wynd_neta_swap},
-    ContractError,
+    ContractError, msg::PoolCompoundPrefs, helpers::valid_pool_prefs,
 };
 
+pub const WYNDDEX_FACTORY_ADDR: &str = "juno16adshp473hd9sruwztdqrtsfckgtd69glqm6sqk0hc4q40c296qsxl3u3s";
 pub const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
 pub const WYND_MULTI_HOP_ADDR: &str =
     "juno1pctfpv9k03v0ff538pz8kkw5ujlptntzkwjg6c0lrtqv87s9k28qdtl50w";
@@ -32,13 +33,19 @@ pub fn compound(
     env: Env,
     _info: MessageInfo,
     delegator_address: String,
-    comp_prefs: CompoundPrefs,
+    pools: Vec<PoolCompoundPrefs>,
+    other_pools: Option<CompoundPrefs>,
+    current_user_pools: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
-    let _ = !prefs_sum_to_one(&comp_prefs)?;
+    let _ = valid_pool_prefs(pools)?;
+    // if there is a set of catch all pool comp prefs we need to validate that the prefs are valid
+    if let Some(other_pool_prefs) = other_pools {
+         prefs_sum_to_one(&other_pool_prefs)?;
+    }
 
     let delegator = deps.api.addr_validate(&delegator_address)?;
 
-    let pending_staking_rewards = queries::query_pending_wynd_rewards(&deps.querier, &delegator)?;
+    // let pending_staking_rewards = queries::query_pending_wynd_pool_rewards(&deps.querier, &delegator)?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let sub_msgs = prefs_to_msgs(
