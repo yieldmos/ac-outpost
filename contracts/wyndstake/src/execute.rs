@@ -4,7 +4,7 @@ use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegat
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
     comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod},
-    helpers::{calculate_compound_amounts, prefs_sum_to_one},
+    helpers::{calculate_compound_amounts, prefs_sum_to_one, WyndAssetLPMessages},
     msgs::{
         create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
         create_wyndex_swap_msg_with_simulation, CosmosProtoMsg,
@@ -371,13 +371,6 @@ pub fn join_wynd_pool_msgs(
     Ok(swap_msgs)
     // will need to update things to utilize the routes from the factory
     // wyndex::factory::ROUTE;
-}
-
-pub struct WyndAssetLPMessages {
-    /// The msgs to perform the token swaps and if applicable the increase allowances
-    swap_msgs: Vec<CosmosProtoMsg>,
-    /// The asset denom and amount that will be sent to the pool contract
-    target_asset_info: Asset,
 }
 
 /// Generates the wyndex swap messages and IncreaseAllowance (for cw20) messages that are needed before the actual pool can be entered.

@@ -110,10 +110,12 @@ pub fn prefs_to_msgs(
 
     let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
         .map(
-            |(comp_token_amounts, PoolCatchAllDestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
+            |(comp_token_amounts, 
+                PoolCatchAllDestinationAction { destination, .. })| -> 
+                Result<Vec<CosmosProtoMsg>, ContractError> {
                 match destination {
 
-                    ReturnToPool => unimplemented!("return to pool"),
+                    PoolCatchAllDestinationProject::ReturnToPool => todo!("return to pool"),
                     
                     PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLP {
                             contract_address,
@@ -164,7 +166,6 @@ pub fn prefs_to_msgs(
                             comp_token_amounts,                    
                             target_denom,
                         ),
-                    _ => todo!("other destinations"),
                
             } },
         )
@@ -317,7 +318,48 @@ pub fn join_wynd_pool_msgs(
     pool_info: wyndex::pair::PairInfo,
     existing_lp_tokens: cw20::BalanceResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    
+    let swap_msgs: Result<Vec<WyndAssetLPMessages>, ContractError> = match &comp_token_amounts[..] {
+        [AssetValidated {
+            info: reward_asset,
+            amount,
+        }] => {
+            let (first_swap_msgs, first_swap_estimate) = create_wyndex_swap_msg_with_simulation(
+                querier,
+                &target_address,
+                *amount / Uint128::from(2u128),
+                reward_asset.clone().into(),
+                pool_info.asset_infos[0].clone().into(),
+                WYND_MULTI_HOP_ADDR.to_string(),
+            )?;
+
+            let (second_swap_msgs, second_swap_estimate) = create_wyndex_swap_msg_with_simulation(
+                querier,
+                &target_address,
+                *amount / Uint128::from(2u128),
+                reward_asset.clone().into(),
+                pool_info.asset_infos[1].clone().into(),
+                WYND_MULTI_HOP_ADDR.to_string(),
+            )?;
+
+            Ok(vec![
+                WyndAssetLPMessages {
+                    swap_msgs: first_swap_msgs,
+                    target_asset_info: Asset {
+                        info: pool_info.asset_infos[0].clone().into(),
+                        amount: first_swap_estimate,
+                    },
+                },
+                WyndAssetLPMessages {
+                    swap_msgs: second_swap_msgs,
+                    target_asset_info: Asset {
+                        info: pool_info.asset_infos[1].clone().into(),
+                        amount: second_swap_estimate,
+                    },
+                },
+            ])
+        }
+        _ => Err(ContractError::NotImplemented {}),
+    };
 
     unimplemented!();
 

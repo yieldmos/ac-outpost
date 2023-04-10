@@ -1,8 +1,10 @@
 use cosmwasm_std::{Coin, Decimal, Uint128};
+use wyndex::asset::Asset;
 
 use crate::{
     comp_prefs::{CompoundPrefs, DestinationAction},
     errors::OutpostError,
+    msgs::CosmosProtoMsg,
 };
 
 /// sums the coins in a vec given denom name youre looking for
@@ -69,4 +71,11 @@ impl TryFrom<CompoundPrefs> for Vec<Decimal> {
             })
             .collect::<Result<Vec<Decimal>, OutpostError>>()
     }
+}
+
+pub struct WyndAssetLPMessages {
+    /// The msgs to perform the token swaps and if applicable the increase allowances
+    pub swap_msgs: Vec<CosmosProtoMsg>,
+    /// The asset denom and amount that will be sent to the pool contract
+    pub target_asset_info: Asset,
 }
