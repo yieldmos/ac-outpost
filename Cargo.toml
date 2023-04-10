@@ -29,6 +29,7 @@ wynd-stake = {git = "https://github.com/wynddao/wynddao.git", tag="v1.6.0", feat
 wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3"}
 # wynd-utils = {git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
 outpost-utils = {path="./packages/utils"}
+wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3"}
 
 [profile.release.package.ymos-junostake-outpost]
 codegen-units = 1

@@ -3,19 +3,18 @@ use std::iter;
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod},
-    helpers::{calculate_compound_amounts, prefs_sum_to_one},
+    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod, PoolCompoundPrefs, PoolCatchAllDestinationAction},
+    helpers::{calculate_compound_amounts},
     msgs::{create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg, CosmosProtoMsg, create_wyndex_swap_msg_with_simulation},
 };
 use wyndex::{
-    asset::{Asset, AssetInfo},
+    asset::{Asset, AssetInfo, AssetValidated},
     pair::{PairInfo, SimulationResponse},
 };
 use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
-    queries::{self, query_wynd_juno_swap, query_wynd_neta_swap},
-    ContractError, msg::PoolCompoundPrefs, helpers::valid_pool_prefs,
+    ContractError, helpers::{valid_pool_prefs, valid_catch_all_pool_prefs, assign_comp_prefs_to_pools, PoolRewardsWithPrefs},
 };
 
 pub const WYNDDEX_FACTORY_ADDR: &str = "juno16adshp473hd9sruwztdqrtsfckgtd69glqm6sqk0hc4q40c296qsxl3u3s";
@@ -33,28 +32,38 @@ pub fn compound(
     env: Env,
     _info: MessageInfo,
     delegator_address: String,
-    pools: Vec<PoolCompoundPrefs>,
-    other_pools: Option<CompoundPrefs>,
+    pool_prefs: Vec<PoolCompoundPrefs>,
+    other_pools_prefs: Option<Vec<PoolCatchAllDestinationAction>>,
     current_user_pools: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
-    let _ = valid_pool_prefs(pools)?;
+    // validate the pool prefs
+    let _ = valid_pool_prefs(pool_prefs)?;
+
     // if there is a set of catch all pool comp prefs we need to validate that the prefs are valid
-    if let Some(other_pool_prefs) = other_pools {
-         prefs_sum_to_one(&other_pool_prefs)?;
+    if let Some(other_pool_prefs) = other_pools_prefs {
+        let _ = valid_catch_all_pool_prefs(&other_pool_prefs)?;
     }
 
     let delegator = deps.api.addr_validate(&delegator_address)?;
 
     // let pending_staking_rewards = queries::query_pending_wynd_pool_rewards(&deps.querier, &delegator)?;
+    let pending_rewards: Vec<(PairInfo, Vec<AssetValidated>)> = vec![];
+
+    let pool_rewards_with_prefs = assign_comp_prefs_to_pools(
+        pending_rewards,
+        pool_prefs,
+        other_pools_prefs
+    );
+
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
-    let sub_msgs = prefs_to_msgs(
+    let sub_msgs = pool_rewards_with_prefs.into_iter().map(
+        |rewards_with_prefs|
+        prefs_to_msgs(
+        &deps.querier,
         &delegator,
-        WYND_CW20_ADDR.to_string(),
-        pending_staking_rewards,
-        comp_prefs,
-        deps.querier,
-    )?;
+        rewards_with_prefs)
+    ).collect::<Result<Vec<Vec<_>>, ContractError>>()?.into_iter().flatten().collect();
 
     // the final exec message that will be broadcast and contains all the sub msgs
     let exec_msg = create_exec_msg(&env.contract.address, sub_msgs)?;
@@ -64,11 +73,14 @@ pub fn compound(
 
 /// Converts the user's compound preferences into a list of CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
+
+    querier: &QuerierWrapper,
     target_address: &Addr,
-    staking_denom: String,
-    total_rewards: Uint128,
-    comp_prefs: CompoundPrefs,
-    querier: QuerierWrapper,
+    PoolRewardsWithPrefs {
+        pool,
+        rewards,
+        prefs
+    }: PoolRewardsWithPrefs
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // Generate msg for withdrawing the wynd rewards.
     // This should be the first msgs in the tx so the user has funds to compound

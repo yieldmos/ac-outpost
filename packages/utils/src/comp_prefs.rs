@@ -79,3 +79,55 @@ impl From<WyndLPBondingPeriod> for u64 {
         }
     }
 }
+
+#[cw_serde]
+/// compound prefs for a specific pool
+pub struct PoolCompoundPrefs {
+    pub pool_address: String,
+    pub comp_prefs: CompoundPrefs,
+}
+
+#[cw_serde]
+/// compound prefs for all of the pools that have rewards and were not
+/// individually specified
+pub struct PoolCatchAllDestinationAction {
+    pub destination: PoolCatchAllDestinationProject,
+    /// the percentage of the rewards that should be sent to this destination
+    /// this is a number with 18 decimal places
+    /// for example "250000000000000000" is 25%
+    pub amount: u128,
+}
+
+#[cw_serde]
+/// Compound prefs for a catch all pools that were not individually specified.
+/// The main difference between this and the normal DestinationProject is that
+/// in the catch all you have the ability to specify sending the rewards back to the pool
+/// it came from instead of needing to specify any static destination
+pub enum PoolCatchAllDestinationProject {
+    BasicDestination(JunoDestinationProject),
+    /// send pool rewards back to the pool that generated the rewards
+    ReturnToPool,
+}
+
+impl From<DestinationAction> for PoolCatchAllDestinationAction {
+    fn from(
+        DestinationAction {
+            destination,
+            amount,
+        }: DestinationAction,
+    ) -> Self {
+        PoolCatchAllDestinationAction {
+            destination: PoolCatchAllDestinationProject::BasicDestination(destination),
+            amount,
+        }
+    }
+}
+
+impl From<CompoundPrefs> for Vec<PoolCatchAllDestinationAction> {
+    fn from(CompoundPrefs { relative }: CompoundPrefs) -> Self {
+        relative
+            .into_iter()
+            .map(PoolCatchAllDestinationAction::from)
+            .collect()
+    }
+}

@@ -51,6 +51,7 @@ wyndex =  {workspace = true}
 wyndex-multi-hop =  {workspace = true}
 wynd-stake = {workspace = true}
 wyndex-factory = {workspace = true}
+wyndex-stake = {workspace = true}
 outpost-utils = {workspace=true}
 
 

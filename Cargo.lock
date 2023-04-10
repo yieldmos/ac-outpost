@@ -1492,6 +1492,7 @@ dependencies = [
  "wyndex 2.0.2",
  "wyndex-factory",
  "wyndex-multi-hop",
+ "wyndex-stake",
 ]
 
 [[package]]
