@@ -11,7 +11,7 @@ The things you can do with your rewards during any given compounding.
 | Destination Project | Status        | Note                                         |
 | ------------------- | ------------- | -------------------------------------------- |
 | `Juno Staking`      | `working`     | Can specify any validator address            |
-| `Wynd Staking`      | `in progress` | Can select any valid unbonding period        |
-| `Neta Staking`      | `in progress` |                                              |
-| `Token Swap`        | `in progress` | Can pick any token that's on Wyndex          |
+| `Wynd Staking`      | `working`     | Can select any valid unbonding period        |
+| `Neta Staking`      | `working`     |                                              |
+| `Token Swap`        | `working`     | Can pick any token that's on Wyndex          |
 | `Wyndex LPs`        | `in progress` | Must specify the given pool contract address |

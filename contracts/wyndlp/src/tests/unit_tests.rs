@@ -20,7 +20,7 @@ use wyndex::{
 use crate::{
     contract::{AllPendingRewards, PendingReward},
     execute::{
-        juno_staking_msgs, neta_staking_msgs, wynd_token_swap, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
+        juno_staking_msgs, neta_staking_msgs, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
         NETA_STAKING_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR,
     },
     helpers::calculate_compound_amounts,
