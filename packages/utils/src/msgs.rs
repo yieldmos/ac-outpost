@@ -9,7 +9,10 @@ use cosmos_sdk_proto::Any;
 
 use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, QuerierWrapper, StdError, Uint128};
 use serde::Serialize;
-use wyndex::asset::AssetInfo;
+use wyndex::asset::{AssetInfo, AssetValidated};
+use wyndex::pair::SimulationResponse;
+
+use crate::errors::OutpostError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CosmosProtoMsg {
@@ -247,4 +250,49 @@ pub fn create_wyndex_swap_msg_with_simulation(
         vec![CosmosProtoMsg::ExecuteContract(exec)],
         simulated_swap.return_amount,
     ))
+}
+
+pub struct SwapSimResponse {
+    pub swap_msgs: Vec<CosmosProtoMsg>,
+    pub asset: AssetInfo,
+    pub simulated_return_amount: Uint128,
+}
+
+/// Creates a MsgExecuteContract for doing multiple token swaps on Wyndex via the multihop router
+/// also returning the simulated resultant token amounts
+pub fn create_wyndex_swaps_with_sims(
+    querier: &QuerierWrapper,
+    delegator_addr: &Addr,
+    offer_assets: Vec<AssetValidated>,
+    ask_asset: AssetInfo,
+    multihop_address: String,
+) -> Result<SwapSimResponse, StdError> {
+    let swaps_and_sims = offer_assets
+        .into_iter()
+        .map(|AssetValidated { info, amount }| {
+            create_wyndex_swap_msg_with_simulation(
+                querier,
+                delegator_addr,
+                amount,
+                info.into(),
+                ask_asset.clone(),
+                multihop_address.to_string(),
+            )
+        })
+        .collect::<Result<Vec<_>, StdError>>()?;
+
+    let (swap_msgs, simulated_return_amount) = swaps_and_sims.into_iter().fold(
+        (vec![], Uint128::zero()),
+        |(mut swaps, mut sim_total), (swap, sim)| {
+            swaps.extend(swap);
+            sim_total += sim;
+            (swaps, sim_total)
+        },
+    );
+
+    Ok(SwapSimResponse {
+        swap_msgs,
+        asset: ask_asset,
+        simulated_return_amount,
+    })
 }

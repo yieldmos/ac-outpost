@@ -154,7 +154,7 @@ pub fn reduce_assets_by_percentage(
 
     for (i, asset) in remaining_assets.iter_mut().enumerate() {
         let amount_to_remove = total_assets[i].amount * percentage;
-        
+
         asset.amount -= amount_to_remove;
         removed_assets.push(AssetValidated {
             amount: amount_to_remove,

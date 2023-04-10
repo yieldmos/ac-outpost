@@ -5,11 +5,11 @@ use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, R
 use outpost_utils::{
     comp_prefs::{
         CompoundPrefs, DestinationAction, JunoDestinationProject, PoolCatchAllDestinationAction,
-        PoolCompoundPrefs, WyndLPBondingPeriod,
+        PoolCatchAllDestinationProject, PoolCompoundPrefs, WyndLPBondingPeriod,
     },
     msgs::{
         create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
-        create_wyndex_swap_msg_with_simulation, CosmosProtoMsg,
+        create_wyndex_swap_msg_with_simulation, CosmosProtoMsg, create_wyndex_swaps_with_sims, SwapSimResponse,
     },
 };
 use wyndex::{
@@ -104,75 +104,75 @@ pub fn prefs_to_msgs(
     let compound_token_amounts =
         iter::zip(calculate_compound_amounts(prefs.clone(), rewards)?, prefs);
 
-    todo!();
+    let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
+        .map(
+            |(comp_token_amounts, PoolCatchAllDestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
+                match destination {
+                    ReturnToPool => todo!("return to pool"),
 
-    // let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
-    //     .map(
-    //         |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    //             match destination {
-    //             JunoDestinationProject::JunoStaking { validator_address } =>
-    //                 juno_staking_msgs(target_address.clone(),
-    //                     comp_token_amount,
-    //                      WYND_CW20_ADDR.to_string(),
-    //                      validator_address,
-    //                      query_wynd_juno_swap(&querier, comp_token_amount)?
-    //                 )
-    //             ,
-    //             JunoDestinationProject::NetaStaking {} => neta_staking_msgs(
-    //                 target_address.clone(),
+                PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::JunoStaking { validator_address }) =>
+                    juno_staking_msgs(
+                        querier, 
+                        target_address.clone(),
+                        comp_token_amounts,                         
+                         validator_address,
+                    ),
+                _ => todo!("other destinations"),
+                // PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::NetaStaking {}) => neta_staking_msgs(
+                //     target_address.clone(),
 
-    //                 query_wynd_neta_swap(&querier,comp_token_amount)?
-    //             ),
-    //             JunoDestinationProject::WyndStaking { bonding_period } =>
-    //                 Ok(vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-    //                     WYND_CW20_ADDR.to_string(),
-    //                     &target_address,
-    //                     &cw20_vesting::ExecuteMsg::Delegate {
-    //                         amount: comp_token_amount,
-    //                         msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
-    //                             unbonding_period: bonding_period.into(),
-    //                         })?,
-    //                     },
-    //                     None,
-    //                 )?)]),
-    //             JunoDestinationProject::TokenSwap { target_denom } => wynd_token_swap(
+                //     query_wynd_neta_swap(&querier,comp_token_amount)?
+                // ),
+                // PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndStaking { bonding_period }) =>
+                //     Ok(vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                //         WYND_CW20_ADDR.to_string(),
+                //         &target_address,
+                //         &cw20_vesting::ExecuteMsg::Delegate {
+                //             amount: comp_token_amount,
+                //             msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+                //                 unbonding_period: bonding_period.into(),
+                //             })?,
+                //         },
+                //         None,
+                //     )?)]),
+                // PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::TokenSwap { target_denom }) => wynd_token_swap(
 
-    //                 target_address.clone(),
-    //                 comp_token_amount,
-    //                 AssetInfo::Token(WYND_CW20_ADDR.to_string()),
-    //                 target_denom,
-    //             ),
-    //             JunoDestinationProject::WyndLP {
-    //                 contract_address,
-    //                 bonding_period,
-    //             } => {
+                //     target_address.clone(),
+                //     comp_token_amount,
+                //     AssetInfo::Token(WYND_CW20_ADDR.to_string()),
+                //     target_denom,
+                // ),
+                // PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLP {
+                //     contract_address,
+                //     bonding_period,
+                // }) => {
 
-    //                 let pool_info: wyndex::pair::PairInfo = querier.query_wasm_smart(
-    //                     contract_address.to_string(),
-    //                     &wyndex::pair::QueryMsg::Pair {},
-    //                 )?;
+                //     let pool_info: wyndex::pair::PairInfo = querier.query_wasm_smart(
+                //         contract_address.to_string(),
+                //         &wyndex::pair::QueryMsg::Pair {},
+                //     )?;
 
-    //                 join_wynd_pool_msgs(
-    //                     &querier,
-    //                     target_address.clone(),
-    //                     comp_token_amount,
-    //                     staking_denom.clone(),
-    //                     contract_address,
-    //                     bonding_period,
-    //                      pool_info.clone(),
-    //                      querier.query_wasm_smart(
-    //                         pool_info.liquidity_token,
-    //                         &cw20::Cw20QueryMsg::Balance {
-    //                             address: target_address.to_string(),
-    //                         },
-    //                     )?
-    //                 )},
-    //         } },
-    //     )
-    //     .collect::<Result<Vec<_>, ContractError>>()
-    //     .map(|msgs_list| msgs_list.into_iter().flatten().collect())?;
+                //     join_wynd_pool_msgs(
+                //         &querier,
+                //         target_address.clone(),
+                //         comp_token_amount,
+                //         staking_denom.clone(),
+                //         contract_address,
+                //         bonding_period,
+                //          pool_info.clone(),
+                //          querier.query_wasm_smart(
+                //             pool_info.liquidity_token,
+                //             &cw20::Cw20QueryMsg::Balance {
+                //                 address: target_address.to_string(),
+                //             },
+                //         )?
+                //     )},
+            } },
+        )
+        .collect::<Result<Vec<_>, ContractError>>()
+        .map(|msgs_list| msgs_list.into_iter().flatten().collect())?;
 
-    // all_msgs.append(&mut compounding_msgs);
+    all_msgs.append(&mut compounding_msgs);
 
     Ok(all_msgs)
 }
@@ -237,37 +237,22 @@ pub fn neta_staking_msgs(
 }
 
 pub fn juno_staking_msgs(
+    querier: &QuerierWrapper,
     target_address: Addr,
-    comp_token_amount: Uint128,
-    staking_denom: String,
+    comp_token_amounts: Vec<AssetValidated>,
     validator_address: String,
-    SimulationResponse {
-        return_amount: expected_juno,
-        ..
-    }: SimulationResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    // swap wynd for juno
-    let wynd_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        WYND_CW20_ADDR.to_string(),
+    let SwapSimResponse {
+        mut swap_msgs,
+        simulated_return_amount: expected_juno,
+        ..
+    } = create_wyndex_swaps_with_sims(
+        querier, 
         &target_address,
-        &cw20::Cw20ExecuteMsg::Send {
-            contract: JUNO_WYND_PAIR_ADDR.to_string(),
-            amount: comp_token_amount,
-            msg: to_binary(&wyndex::pair::ExecuteMsg::Swap {
-                offer_asset: Asset {
-                    info: AssetInfo::Token(staking_denom.clone()),
-                    amount: comp_token_amount,
-                },
-                ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
-                max_spread: None,
-                belief_price: None,
-                to: None,
-                referral_address: None,
-                referral_commission: None,
-            })?,
-        },
-        None,
-    )?);
+        comp_token_amounts.into(), 
+        AssetInfo::Native("ujuno".to_string()),
+        WYND_MULTI_HOP_ADDR.to_string()
+    )?;
 
     // stake juno
     let juno_stake_msg = CosmosProtoMsg::Delegate(MsgDelegate {
@@ -279,7 +264,9 @@ pub fn juno_staking_msgs(
         delegator_address: target_address.to_string(),
     });
 
-    Ok(vec![wynd_swap_msg, juno_stake_msg])
+    swap_msgs.push(juno_stake_msg);
+
+    Ok(swap_msgs)
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -5,7 +5,10 @@ use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, R
 use outpost_utils::{
     comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod},
     helpers::{calculate_compound_amounts, prefs_sum_to_one},
-    msgs::{create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg, CosmosProtoMsg, create_wyndex_swap_msg_with_simulation},
+    msgs::{
+        create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
+        create_wyndex_swap_msg_with_simulation, CosmosProtoMsg,
+    },
 };
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -159,8 +162,6 @@ pub fn wynd_token_swap(
     staking_denom: AssetInfo,
     target_denom: AssetInfo,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    
-
     Ok(create_wyndex_swap_msg(
         &target_address,
         comp_token_amount,
@@ -393,19 +394,22 @@ pub fn wynd_lp_asset_swaps(
         .asset_infos
         .iter()
         // map over each asset in the pool to generate the swap msgs and the target asset info
-        .map(|asset| -> Result<WyndAssetLPMessages, ContractError> {            
-            let (swap_msgs, target_token_amount) = 
-            create_wyndex_swap_msg_with_simulation(
+        .map(|asset| -> Result<WyndAssetLPMessages, ContractError> {
+            let (swap_msgs, target_token_amount) = create_wyndex_swap_msg_with_simulation(
                 querier,
-                 target_address,
-                 *wynd_amount_per_asset, 
-                AssetInfo::Token(staking_denom.clone()), 
-                asset.clone().into(), 
-                WYND_MULTI_HOP_ADDR.to_string())?;
+                target_address,
+                *wynd_amount_per_asset,
+                AssetInfo::Token(staking_denom.clone()),
+                asset.clone().into(),
+                WYND_MULTI_HOP_ADDR.to_string(),
+            )?;
 
             Ok(WyndAssetLPMessages {
                 swap_msgs,
-                target_asset_info: Asset { info: asset.clone().into(), amount: target_token_amount },
+                target_asset_info: Asset {
+                    info: asset.clone().into(),
+                    amount: target_token_amount,
+                },
             })
         })
         .collect()

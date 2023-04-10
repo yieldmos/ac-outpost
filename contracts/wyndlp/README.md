@@ -10,7 +10,7 @@ The things you can do with your rewards during any given compounding.
 
 | Destination Project | Status        | Note                                         |
 | ------------------- | ------------- | -------------------------------------------- |
-| `Juno Staking`      | `in progress` | Can specify any validator address            |
+| `Juno Staking`      | `working`     | Can specify any validator address            |
 | `Wynd Staking`      | `in progress` | Can select any valid unbonding period        |
 | `Neta Staking`      | `in progress` |                                              |
 | `Token Swap`        | `in progress` | Can pick any token that's on Wyndex          |
