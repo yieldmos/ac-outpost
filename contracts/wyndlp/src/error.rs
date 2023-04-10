@@ -1,4 +1,4 @@
-use cosmwasm_std::{CheckedMultiplyFractionError, OverflowError, StdError};
+use cosmwasm_std::{CheckedMultiplyFractionError, DecimalRangeExceeded, OverflowError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -35,6 +35,9 @@ pub enum ContractError {
 
     #[error("Pool {pool} specified multiple times in compounding prefs")]
     DuplicatePoolPrefs { pool: String },
+
+    #[error("Decimal out of range: {0}")]
+    DecimalRangeExceeded(#[from] DecimalRangeExceeded),
 }
 
 impl From<semver::Error> for ContractError {

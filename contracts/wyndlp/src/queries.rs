@@ -35,38 +35,40 @@ pub fn query_current_user_pools(
         },
     )?;
 
-    let current_user_pools = pools
-        .pairs
-        .iter()
-        .filter_map(|pair| {
-            let outstanding_rewards: Result<RewardsPowerResponse, StdError> = querier
-                .query_wasm_smart(
-                    pair.staking_addr,
-                    &wyndex_stake::msg::QueryMsg::RewardsPower {
-                        address: delegator_addr.to_string(),
-                    },
-                );
+    unimplemented!()
 
-            match outstanding_rewards {
-                Ok(RewardsPowerResponse { rewards })
-                    if rewards.iter().any(|reward| !reward.1.is_zero()) =>
-                {
-                    Some((
-                        pair.clone(),
-                        RewardsPowerResponse {
-                            rewards: rewards
-                                .into_iter()
-                                .filter(|(_, amount)| !amount.is_zero())
-                                .collect(),
-                        },
-                    ))
-                }
-                _ => None,
-            }
-        })
-        .collect();
+    // let current_user_pools = pools
+    //     .pairs
+    //     .iter()
+    //     .filter_map(|pair| {
+    //         let outstanding_rewards: Result<RewardsPowerResponse, StdError> = querier
+    //             .query_wasm_smart(
+    //                 pair.staking_addr,
+    //                 &wyndex_stake::msg::QueryMsg::RewardsPower {
+    //                     address: delegator_addr.to_string(),
+    //                 },
+    //             );
 
-    Ok(current_user_pools)
+    //         match outstanding_rewards {
+    //             Ok(RewardsPowerResponse { rewards })
+    //                 if rewards.iter().any(|reward| !reward.1.is_zero()) =>
+    //             {
+    //                 Some((
+    //                     pair.clone(),
+    //                     RewardsPowerResponse {
+    //                         rewards: rewards
+    //                             .into_iter()
+    //                             .filter(|(_, amount)| !amount.is_zero())
+    //                             .collect(),
+    //                     },
+    //                 ))
+    //             }
+    //             _ => None,
+    //         }
+    //     })
+    //     .collect();
+
+    // Ok(current_user_pools)
 }
 
 pub fn query_pending_wynd_pool_rewards(

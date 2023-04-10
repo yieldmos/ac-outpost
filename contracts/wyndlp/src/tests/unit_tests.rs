@@ -7,10 +7,15 @@ use cosmos_sdk_proto::{
 };
 use cosmwasm_std::{to_binary, Addr};
 use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject},
+    comp_prefs::{
+        CompoundPrefs, DestinationAction, JunoDestinationProject, PoolCatchAllDestinationAction,
+    },
     msgs::CosmosProtoMsg,
 };
-use wyndex::{asset::AssetInfo, pair::SimulationResponse};
+use wyndex::{
+    asset::{AssetInfo, AssetInfoValidated, AssetValidated},
+    pair::SimulationResponse,
+};
 
 use crate::{
     contract::{AllPendingRewards, PendingReward},
@@ -18,7 +23,204 @@ use crate::{
         juno_staking_msgs, neta_staking_msgs, wynd_token_swap, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
         NETA_STAKING_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR,
     },
+    helpers::calculate_compound_amounts,
 };
+
+#[test]
+fn calc_lp_compound_amounts() {
+    assert_eq!(
+        calculate_compound_amounts(
+            vec![PoolCatchAllDestinationAction {
+                destination:
+                    outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper1".to_string(),
+                        }
+                    ),
+                amount: 1_000_000_000_000_000_000u128.into()
+            }],
+            vec![AssetValidated {
+                info: AssetInfoValidated::Native("ubtc".to_string()),
+                amount: 100u128.into()
+            }]
+        )
+        .unwrap(),
+        vec![vec![AssetValidated {
+            info: AssetInfoValidated::Native("ubtc".to_string()),
+            amount: 100u128.into()
+        }],]
+    );
+
+    assert_eq!(
+        calculate_compound_amounts(
+            vec![PoolCatchAllDestinationAction {
+                destination:
+                    outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper1".to_string(),
+                        }
+                    ),
+                amount: 1_000_000_000_000_000_000u128.into()
+            }],
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 100u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 1000u128.into()
+                }
+            ]
+        )
+        .unwrap(),
+        vec![vec![
+            AssetValidated {
+                info: AssetInfoValidated::Native("ubtc".to_string()),
+                amount: 100u128.into()
+            },
+            AssetValidated {
+                info: AssetInfoValidated::Native("ueth".to_string()),
+                amount: 1000u128.into()
+            },
+        ],]
+    );
+
+    assert_eq!(
+        calculate_compound_amounts(
+            vec![
+                PoolCatchAllDestinationAction {
+                    destination:
+                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                            JunoDestinationProject::JunoStaking {
+                                validator_address: "btcvaloper1".to_string(),
+                            }
+                        ),
+                    amount: 200_000_000_000_000_000u128.into()
+                },
+                PoolCatchAllDestinationAction {
+                    destination:
+                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                            JunoDestinationProject::JunoStaking {
+                                validator_address: "btcvaloper2".to_string(),
+                            }
+                        ),
+                    amount: 800_000_000_000_000_000u128.into()
+                }
+            ],
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 100u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 1000u128.into()
+                }
+            ]
+        )
+        .unwrap(),
+        vec![
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 20u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 200u128.into()
+                },
+            ],
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 80u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 800u128.into()
+                },
+            ],
+        ]
+    );
+
+    assert_eq!(
+        calculate_compound_amounts(
+            vec![
+                PoolCatchAllDestinationAction {
+                    destination:
+                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                            JunoDestinationProject::JunoStaking {
+                                validator_address: "btcvaloper1".to_string(),
+                            }
+                        ),
+                    amount: 333_333_333_333_333_333u128.into()
+                },
+                PoolCatchAllDestinationAction {
+                    destination:
+                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                            JunoDestinationProject::JunoStaking {
+                                validator_address: "btcvaloper2".to_string(),
+                            }
+                        ),
+                    amount: 333_333_333_333_333_333u128.into()
+                },
+                PoolCatchAllDestinationAction {
+                    destination:
+                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
+                            JunoDestinationProject::JunoStaking {
+                                validator_address: "btcvaloper3".to_string(),
+                            }
+                        ),
+                    amount: 333_333_333_333_333_333u128.into()
+                }
+            ],
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 100u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 1000u128.into()
+                }
+            ]
+        )
+        .unwrap(),
+        vec![
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 33u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 333u128.into()
+                },
+            ],
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 33u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 333u128.into()
+                },
+            ],
+            vec![
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ubtc".to_string()),
+                    amount: 34u128.into()
+                },
+                AssetValidated {
+                    info: AssetInfoValidated::Native("ueth".to_string()),
+                    amount: 334u128.into()
+                },
+            ],
+        ]
+    );
+}
 
 // #[test]
 // fn generate_neta_staking_msg() {

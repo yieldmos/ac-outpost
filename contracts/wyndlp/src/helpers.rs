@@ -8,7 +8,7 @@ use outpost_utils::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, Decimal, StdResult, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, Decimal, StdResult, Uint128, WasmMsg};
 use wyndex::{asset::AssetValidated, pair::PairInfo};
 
 use crate::{msg::ExecuteMsg, ContractError};
@@ -79,10 +79,13 @@ pub struct PoolRewardsWithPrefs {
     pub prefs: Vec<PoolCatchAllDestinationAction>,
 }
 
+/// Connects pools with pending rewards to their applicable compound prefs.
+/// This will take into account if a set of catch all preferences is set or not.
+/// Returns the list list of pools to perform compounding on along with their prefs.
 pub fn assign_comp_prefs_to_pools(
     pending_rewards: Vec<(PairInfo, Vec<AssetValidated>)>,
     pool_prefs: Vec<PoolCompoundPrefs>,
-    other_pools_prefs: Option<Vec<PoolCatchAllDestinationAction>>,
+    other_pools_prefs: &Option<Vec<PoolCatchAllDestinationAction>>,
 ) -> Vec<PoolRewardsWithPrefs> {
     let prefs_by_address: HashMap<String, PoolCompoundPrefs> = pool_prefs
         .into_iter()
@@ -99,15 +102,65 @@ pub fn assign_comp_prefs_to_pools(
                 (Some(prefs), _) => Some(PoolRewardsWithPrefs {
                     pool: pair_info.clone(),
                     rewards: assets.clone(),
-                    prefs: prefs.comp_prefs.into(),
+                    prefs: prefs.comp_prefs.clone().into(),
                 }),
                 (_, Some(prefs)) => Some(PoolRewardsWithPrefs {
                     pool: pair_info.clone(),
                     rewards: assets.clone(),
-                    prefs,
+                    prefs: prefs.clone(),
                 }),
                 _ => None,
             }
         })
         .collect()
+}
+
+/// Calculates the amount of each asset to compound for each pool.
+///
+/// For example if the prefs specify that 25% of the rewards should be compounded
+/// back to staking and 75% should go to a token swap while the rewards are 1000ubtc and 2000ujuno
+/// the result should be [`[250ubtc, 500ujuno]`, `[750ubtc, 1500ujuno]`]
+pub fn calculate_compound_amounts(
+    comp_prefs: Vec<PoolCatchAllDestinationAction>,
+    rewards: Vec<AssetValidated>,
+) -> Result<Vec<Vec<AssetValidated>>, ContractError> {
+    let mut remaining = rewards.clone();
+    let mut amounts: Vec<Vec<AssetValidated>> = vec![];
+
+    for (i, PoolCatchAllDestinationAction { amount: pct, .. }) in comp_prefs.iter().enumerate() {
+        if (i + 1) == comp_prefs.len() {
+            amounts.push(remaining);
+            break;
+        }
+
+        amounts.push(reduce_assets_by_percentage(
+            &rewards,
+            &mut remaining,
+            Decimal::from_atomics(pct.clone(), 18)?,
+        )?);
+    }
+
+    Ok(amounts)
+}
+
+/// Reduces the amount of each asset by a percentage.
+/// Returns a list of the amounts that were removed.
+pub fn reduce_assets_by_percentage(
+    total_assets: &Vec<AssetValidated>,
+    remaining_assets: &mut Vec<AssetValidated>,
+    percentage: Decimal,
+) -> StdResult<Vec<AssetValidated>> {
+    let mut removed_assets: Vec<AssetValidated> = vec![];
+
+    for (i, asset) in remaining_assets.iter_mut().enumerate() {
+        let amount_to_remove = total_assets[i].amount * percentage;
+        
+        asset.amount -= amount_to_remove;
+        removed_assets.push(AssetValidated {
+            amount: amount_to_remove,
+            info: asset.info.clone(),
+        });
+    }
+
+    Ok(removed_assets)
 }
