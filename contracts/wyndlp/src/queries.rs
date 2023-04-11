@@ -75,6 +75,10 @@ pub fn query_pending_wynd_pool_rewards(
     querier: &QuerierWrapper,
     delegator: &Addr,
 ) -> Result<(), ContractError> {
+    wyndex_stake::msg::QueryMsg::WithdrawableRewards {
+        owner: delegator.to_string(),
+    };
+
     todo!("get all the pending rewards per active pool");
     // .iter()
     // .map(|addr| {
@@ -84,50 +88,4 @@ pub fn query_pending_wynd_pool_rewards(
     // .collect::<Result<Vec<_>, _>>()?;
 
     // Ok(())
-}
-
-/// Queries wyndex for the amount of juno that can be received for `from_token_amount` of wynd
-pub fn query_wynd_juno_swap(
-    querier: &QuerierWrapper,
-    from_token_amount: Uint128,
-) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
-        querier,
-        JUNO_WYND_PAIR_ADDR.to_string(),
-        &Asset {
-            info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
-            amount: from_token_amount,
-        },
-        "ujuno".to_string(),
-    )
-    .map_err(|e| ContractError::from(e))
-}
-
-/// Queries wyndex for the amount of neta that can be received for `from_token_amount` of wynd
-pub fn query_wynd_neta_swap(
-    querier: &QuerierWrapper,
-    from_token_amount: Uint128,
-) -> Result<(SimulationResponse, Vec<SwapOperation>), ContractError> {
-    let operations = vec![
-        SwapOperation::WyndexSwap {
-            offer_asset_info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
-            ask_asset_info: AssetInfo::Native("ujuno".to_string()),
-        },
-        SwapOperation::WyndexSwap {
-            offer_asset_info: AssetInfo::Native("ujuno".to_string()),
-            ask_asset_info: AssetInfo::Token(NETA_CW20_ADDR.to_string()),
-        },
-    ];
-
-    let sim_resp = querier.query_wasm_smart(
-        WYND_MULTI_HOP_ADDR.to_string(),
-        &wyndex_multi_hop::msg::QueryMsg::SimulateSwapOperations {
-            offer_amount: from_token_amount,
-            operations: operations.clone(),
-            referral: false,
-            referral_commission: None,
-        },
-    )?;
-
-    Ok((sim_resp, operations))
 }

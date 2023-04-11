@@ -1,33 +1,15 @@
 use std::collections::HashMap;
 
-use cosmos_sdk_proto::{
-    cosmos::{
-        base::v1beta1::Coin, distribution::v1beta1::MsgWithdrawDelegatorReward,
-        staking::v1beta1::MsgDelegate,
-    },
-    cosmwasm::wasm::v1::MsgExecuteContract,
-};
-use cosmwasm_std::{to_binary, Addr, Uint128};
+use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
+use cosmwasm_std::{Addr, Uint128};
 use outpost_utils::{
-    comp_prefs::{
-        CompoundPrefs, DestinationAction, JunoDestinationProject, PoolCatchAllDestinationAction,
-    },
+    comp_prefs::{JunoDestinationProject, PoolCatchAllDestinationAction},
     helpers::WyndAssetLPMessages,
-    msgs::CosmosProtoMsg,
+    msgs::{create_exec_contract_msg, CosmosProtoMsg},
 };
-use wyndex::{
-    asset::{Asset, AssetInfo, AssetInfoValidated, AssetValidated},
-    pair::SimulationResponse,
-};
+use wyndex::asset::{Asset, AssetInfo, AssetInfoValidated, AssetValidated};
 
-use crate::{
-    contract::{AllPendingRewards, PendingReward},
-    execute::{
-        juno_staking_msgs, neta_staking_msgs, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
-        NETA_STAKING_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR,
-    },
-    helpers::{calculate_compound_amounts, fold_wynd_swap_msgs},
-};
+use crate::helpers::{calculate_compound_amounts, fold_wynd_swap_msgs, wynd_join_pool_msgs};
 
 #[test]
 fn calc_lp_compound_amounts() {
@@ -312,17 +294,20 @@ fn fold_wynd_swaps() {
     assert_eq!(
         fold_wynd_swap_msgs(vec![
             WyndAssetLPMessages {
-                swap_msgs: vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-                    sender: "senderaddr".to_string(),
-                    contract: "contractaddr".to_string(),
-                    msg: vec![],
-                    funds: vec![],
-                }),CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-                    sender: "senderaddr".to_string(),
-                    contract: "contractaddr2".to_string(),
-                    msg: vec![],
-                    funds: vec![],
-                })],
+                swap_msgs: vec![
+                    CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                        sender: "senderaddr".to_string(),
+                        contract: "contractaddr".to_string(),
+                        msg: vec![],
+                        funds: vec![],
+                    }),
+                    CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                        sender: "senderaddr".to_string(),
+                        contract: "contractaddr2".to_string(),
+                        msg: vec![],
+                        funds: vec![],
+                    })
+                ],
                 target_asset_info: Asset {
                     info: AssetInfo::Native("ubtc".to_string()),
                     amount: 100u128.into(),
@@ -349,22 +334,26 @@ fn fold_wynd_swaps() {
             }
         ]),
         (
-            vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-                sender: "senderaddr".to_string(),
-                contract: "contractaddr".to_string(),
-                msg: vec![],
-                funds: vec![],
-            }),CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-                sender: "senderaddr".to_string(),
-                contract: "contractaddr2".to_string(),
-                msg: vec![],
-                funds: vec![],
-            }),CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-                sender: "senderaddr".to_string(),
-                contract: "contractaddr3".to_string(),
-                msg: vec![],
-                funds: vec![],
-            })],
+            vec![
+                CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                    sender: "senderaddr".to_string(),
+                    contract: "contractaddr".to_string(),
+                    msg: vec![],
+                    funds: vec![],
+                }),
+                CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                    sender: "senderaddr".to_string(),
+                    contract: "contractaddr2".to_string(),
+                    msg: vec![],
+                    funds: vec![],
+                }),
+                CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                    sender: "senderaddr".to_string(),
+                    contract: "contractaddr3".to_string(),
+                    msg: vec![],
+                    funds: vec![],
+                })
+            ],
             HashMap::from([
                 (
                     AssetInfo::Native("ubtc".to_string()),
@@ -378,6 +367,119 @@ fn fold_wynd_swaps() {
         )
     );
 }
+
+#[test]
+fn generate_join_pool_messages() {
+    let delegator_addr = Addr::unchecked("test1");
+    let target_pool = "pool1addr".to_string();
+
+    let mut swap_msgs: Vec<CosmosProtoMsg> = vec![];
+    let assets: HashMap<AssetInfo, Uint128> = HashMap::from([]);
+
+    let join_pool_msgs = wynd_join_pool_msgs(
+        delegator_addr.to_string(),
+        target_pool.clone(),
+        &mut swap_msgs,
+        assets,
+    )
+    .unwrap();
+
+    assert_eq!(
+        join_pool_msgs,
+        vec![CosmosProtoMsg::ExecuteContract(
+            create_exec_contract_msg(
+                target_pool.clone(),
+                &delegator_addr.to_string(),
+                &wyndex::pair::ExecuteMsg::ProvideLiquidity {
+                    assets: vec![],
+                    slippage_tolerance: None,
+                    receiver: None,
+                },
+                None,
+            )
+            .unwrap()
+        )]
+    );
+
+    let mut swap_msgs: Vec<CosmosProtoMsg> = vec![];
+    let assets: HashMap<AssetInfo, Uint128> = HashMap::from([
+        (
+            AssetInfo::Native("ubtc".to_string()),
+            Uint128::from(1100u128),
+        ),
+        (
+            AssetInfo::Native("ueth".to_string()),
+            Uint128::from(1000u128),
+        ),
+        (
+            AssetInfo::Token("contractcw20addrs".to_string()),
+            Uint128::from(500u128),
+        ),
+    ]);
+
+    let join_pool_msgs = wynd_join_pool_msgs(
+        delegator_addr.to_string(),
+        target_pool.clone(),
+        &mut swap_msgs,
+        assets,
+    )
+    .unwrap();
+
+    assert_eq!(
+        join_pool_msgs,
+        vec![
+            CosmosProtoMsg::ExecuteContract(
+                create_exec_contract_msg(
+                    "contractcw20addrs".to_string(),
+                    &delegator_addr.to_string(),
+                    &cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                        spender: target_pool.to_string(),
+                        amount: 500u128.into(),
+                        expires: None,
+                    },
+                    None,
+                )
+                .unwrap()
+            ),
+            CosmosProtoMsg::ExecuteContract(
+                create_exec_contract_msg(
+                    target_pool.clone(),
+                    &delegator_addr.to_string(),
+                    &wyndex::pair::ExecuteMsg::ProvideLiquidity {
+                        assets: vec![
+                            Asset {
+                                info: AssetInfo::Token("contractcw20addrs".to_string()),
+                                amount: 500u128.into()
+                            },
+                            Asset {
+                                info: AssetInfo::Native("ubtc".to_string()),
+                                amount: 1100u128.into()
+                            },
+                            Asset {
+                                info: AssetInfo::Native("ueth".to_string()),
+                                amount: 1000u128.into()
+                            },
+                        ],
+                        slippage_tolerance: None,
+                        receiver: None,
+                    },
+                    Some(vec![
+                        Coin {
+                            denom: "ubtc".to_string(),
+                            amount: 1100u128.to_string()
+                        },
+                        Coin {
+                            denom: "ueth".to_string(),
+                            amount: 1000u128.to_string()
+                        },
+                    ]),
+                )
+                .unwrap()
+            )
+        ]
+    );
+}
+
 // #[test]
 // fn generate_neta_staking_msg() {
 //     let delegator_addr = Addr::unchecked("test1");

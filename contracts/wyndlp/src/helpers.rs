@@ -196,13 +196,15 @@ pub fn fold_wynd_swap_msgs(
     )
 }
 
+/// Constructs the messages required to join a pool from the prerequisite swaps.
+/// This includes the provide increase allowances and provide liquidity messages
 pub fn wynd_join_pool_msgs(
     delegator_address: String,
     pool_to_join_address: String,
     swap_msgs: &mut Vec<CosmosProtoMsg>,
     assets: HashMap<AssetInfo, Uint128>,
 ) -> Result<Vec<CosmosProtoMsg>, StdError> {
-    let (mut native_funds, token_transfer_msgs, assets): (
+    let (mut native_funds, token_transfer_msgs, mut asset_funds): (
         Vec<Coin>,
         Vec<Result<CosmosProtoMsg, StdError>>,
         Vec<Asset>,
@@ -241,6 +243,11 @@ pub fn wynd_join_pool_msgs(
         },
     );
 
+    asset_funds.sort_by_key(|Asset { info, .. }| match info {
+        AssetInfo::Native(denom) => denom.clone(),
+        AssetInfo::Token(contract_addr) => contract_addr.clone(),
+    });
+
     native_funds.sort_by_key(|Coin { denom, .. }| denom.clone());
 
     swap_msgs.extend(
@@ -253,7 +260,7 @@ pub fn wynd_join_pool_msgs(
         pool_to_join_address.clone(),
         &delegator_address,
         &wyndex::pair::ExecuteMsg::ProvideLiquidity {
-            assets,
+            assets: asset_funds,
             slippage_tolerance: None,
             receiver: None,
         },
