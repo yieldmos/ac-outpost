@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cosmos_sdk_proto::{
     cosmos::{
         base::v1beta1::Coin, distribution::v1beta1::MsgWithdrawDelegatorReward,
@@ -5,15 +7,16 @@ use cosmos_sdk_proto::{
     },
     cosmwasm::wasm::v1::MsgExecuteContract,
 };
-use cosmwasm_std::{to_binary, Addr};
+use cosmwasm_std::{to_binary, Addr, Uint128};
 use outpost_utils::{
     comp_prefs::{
         CompoundPrefs, DestinationAction, JunoDestinationProject, PoolCatchAllDestinationAction,
     },
+    helpers::WyndAssetLPMessages,
     msgs::CosmosProtoMsg,
 };
 use wyndex::{
-    asset::{AssetInfo, AssetInfoValidated, AssetValidated},
+    asset::{Asset, AssetInfo, AssetInfoValidated, AssetValidated},
     pair::SimulationResponse,
 };
 
@@ -23,7 +26,7 @@ use crate::{
         juno_staking_msgs, neta_staking_msgs, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
         NETA_STAKING_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR,
     },
-    helpers::calculate_compound_amounts,
+    helpers::{calculate_compound_amounts, fold_wynd_swap_msgs},
 };
 
 #[test]
@@ -222,6 +225,159 @@ fn calc_lp_compound_amounts() {
     );
 }
 
+#[test]
+fn fold_wynd_swaps() {
+    assert_eq!(
+        fold_wynd_swap_msgs(vec![WyndAssetLPMessages {
+            swap_msgs: vec![],
+            target_asset_info: Asset {
+                info: AssetInfo::Native("ubtc".to_string()),
+                amount: 100u128.into(),
+            },
+        }]),
+        (
+            vec![],
+            HashMap::from([(
+                AssetInfo::Native("ubtc".to_string()),
+                Uint128::from(100u128)
+            )])
+        )
+    );
+
+    assert_eq!(
+        fold_wynd_swap_msgs(vec![
+            WyndAssetLPMessages {
+                swap_msgs: vec![],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ubtc".to_string()),
+                    amount: 100u128.into(),
+                },
+            },
+            WyndAssetLPMessages {
+                swap_msgs: vec![],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ubtc".to_string()),
+                    amount: 1000u128.into(),
+                },
+            }
+        ]),
+        (
+            vec![],
+            HashMap::from([(
+                AssetInfo::Native("ubtc".to_string()),
+                Uint128::from(1100u128)
+            )])
+        )
+    );
+
+    assert_eq!(
+        fold_wynd_swap_msgs(vec![
+            WyndAssetLPMessages {
+                swap_msgs: vec![],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ubtc".to_string()),
+                    amount: 100u128.into(),
+                },
+            },
+            WyndAssetLPMessages {
+                swap_msgs: vec![],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ubtc".to_string()),
+                    amount: 1000u128.into(),
+                },
+            },
+            WyndAssetLPMessages {
+                swap_msgs: vec![],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ueth".to_string()),
+                    amount: 1000u128.into(),
+                },
+            }
+        ]),
+        (
+            vec![],
+            HashMap::from([
+                (
+                    AssetInfo::Native("ubtc".to_string()),
+                    Uint128::from(1100u128)
+                ),
+                (
+                    AssetInfo::Native("ueth".to_string()),
+                    Uint128::from(1000u128)
+                )
+            ])
+        )
+    );
+
+    assert_eq!(
+        fold_wynd_swap_msgs(vec![
+            WyndAssetLPMessages {
+                swap_msgs: vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                    sender: "senderaddr".to_string(),
+                    contract: "contractaddr".to_string(),
+                    msg: vec![],
+                    funds: vec![],
+                }),CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                    sender: "senderaddr".to_string(),
+                    contract: "contractaddr2".to_string(),
+                    msg: vec![],
+                    funds: vec![],
+                })],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ubtc".to_string()),
+                    amount: 100u128.into(),
+                },
+            },
+            WyndAssetLPMessages {
+                swap_msgs: vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                    sender: "senderaddr".to_string(),
+                    contract: "contractaddr3".to_string(),
+                    msg: vec![],
+                    funds: vec![],
+                })],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ubtc".to_string()),
+                    amount: 1000u128.into(),
+                },
+            },
+            WyndAssetLPMessages {
+                swap_msgs: vec![],
+                target_asset_info: Asset {
+                    info: AssetInfo::Native("ueth".to_string()),
+                    amount: 1000u128.into(),
+                },
+            }
+        ]),
+        (
+            vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                sender: "senderaddr".to_string(),
+                contract: "contractaddr".to_string(),
+                msg: vec![],
+                funds: vec![],
+            }),CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                sender: "senderaddr".to_string(),
+                contract: "contractaddr2".to_string(),
+                msg: vec![],
+                funds: vec![],
+            }),CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
+                sender: "senderaddr".to_string(),
+                contract: "contractaddr3".to_string(),
+                msg: vec![],
+                funds: vec![],
+            })],
+            HashMap::from([
+                (
+                    AssetInfo::Native("ubtc".to_string()),
+                    Uint128::from(1100u128)
+                ),
+                (
+                    AssetInfo::Native("ueth".to_string()),
+                    Uint128::from(1000u128)
+                )
+            ])
+        )
+    );
+}
 // #[test]
 // fn generate_neta_staking_msg() {
 //     let delegator_addr = Addr::unchecked("test1");

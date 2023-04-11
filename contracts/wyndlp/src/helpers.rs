@@ -3,13 +3,17 @@ use std::collections::HashMap;
 use outpost_utils::{
     comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs},
     errors::OutpostError,
-    helpers::prefs_sum_to_one,
+    helpers::{prefs_sum_to_one, WyndAssetLPMessages},
+    msgs::CosmosProtoMsg,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, Decimal, StdResult, Uint128, WasmMsg};
-use wyndex::{asset::AssetValidated, pair::PairInfo};
+use wyndex::{
+    asset::{AssetInfo, AssetValidated},
+    pair::PairInfo,
+};
 
 use crate::{msg::ExecuteMsg, ContractError};
 
@@ -163,4 +167,30 @@ pub fn reduce_assets_by_percentage(
     }
 
     Ok(removed_assets)
+}
+
+/// Combines a vector of lp messages into a vector of the underlying swap messages
+/// and a hashmap of the target assets and their amounts. This is particularly suitable for preparing
+/// for joining a pool.
+pub fn fold_wynd_swap_msgs(
+    swap_msgs: Vec<WyndAssetLPMessages>,
+) -> (Vec<CosmosProtoMsg>, HashMap<AssetInfo, Uint128>) {
+    swap_msgs.into_iter().fold(
+        (vec![], HashMap::new()),
+        |(mut msgs, mut assets),
+         WyndAssetLPMessages {
+             swap_msgs,
+             target_asset_info,
+         }| {
+            msgs.extend(swap_msgs);
+            assets.insert(
+                target_asset_info.info.clone(),
+                *assets
+                    .get(&target_asset_info.info)
+                    .unwrap_or(&Uint128::from(0u128))
+                    + target_asset_info.amount.clone(),
+            );
+            (msgs, assets)
+        },
+    )
 }

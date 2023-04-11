@@ -1,4 +1,4 @@
-use std::iter;
+use std::{collections::HashMap, iter};
 
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
@@ -14,7 +14,7 @@ use outpost_utils::{
         create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
         create_wyndex_swap_msg_with_simulation, create_wyndex_swaps_with_sims, CosmosProtoMsg,
         SwapSimResponse,
-    },
+    }, helpers::WyndAssetLPMessages,
 };
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},
@@ -25,7 +25,7 @@ use wyndex_multi_hop::msg::SwapOperation;
 use crate::{
     helpers::{
         assign_comp_prefs_to_pools, calculate_compound_amounts, valid_catch_all_pool_prefs,
-        valid_pool_prefs, PoolRewardsWithPrefs,
+        valid_pool_prefs, PoolRewardsWithPrefs, fold_wynd_swap_msgs,
     },
     ContractError,
 };
@@ -318,7 +318,7 @@ pub fn join_wynd_pool_msgs(
     pool_info: wyndex::pair::PairInfo,
     existing_lp_tokens: cw20::BalanceResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    let swap_msgs: Result<Vec<WyndAssetLPMessages>, ContractError> = match &comp_token_amounts[..] {
+    let swap_msgs: Vec<WyndAssetLPMessages> = match &comp_token_amounts[..] {
         [AssetValidated {
             info: reward_asset,
             amount,
@@ -359,7 +359,9 @@ pub fn join_wynd_pool_msgs(
             ])
         }
         _ => Err(ContractError::NotImplemented {}),
-    };
+    }?;
+
+    let (swap_msgs, assets)= fold_wynd_swap_msgs(swap_msgs);
 
     unimplemented!();
 
@@ -459,12 +461,7 @@ pub fn join_wynd_pool_msgs(
     // // wyndex::factory::ROUTE;
 }
 
-pub struct WyndAssetLPMessages {
-    /// The msgs to perform the token swaps and if applicable the increase allowances
-    swap_msgs: Vec<CosmosProtoMsg>,
-    /// The asset denom and amount that will be sent to the pool contract
-    target_asset_info: Asset,
-}
+
 
 /// Generates the wyndex swap messages and IncreaseAllowance (for cw20) messages that are needed before the actual pool can be entered.
 /// These messages should ensure that we have the correct amount of assets in the pool contract
