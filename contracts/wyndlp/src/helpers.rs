@@ -1,17 +1,18 @@
 use std::collections::HashMap;
 
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
 use outpost_utils::{
     comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs},
     errors::OutpostError,
     helpers::{prefs_sum_to_one, WyndAssetLPMessages},
-    msgs::CosmosProtoMsg,
+    msgs::{create_exec_contract_msg, CosmosProtoMsg},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, Decimal, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, Decimal, StdError, StdResult, Uint128, WasmMsg};
 use wyndex::{
-    asset::{AssetInfo, AssetValidated},
+    asset::{Asset, AssetInfo, AssetValidated},
     pair::PairInfo,
 };
 
@@ -193,4 +194,71 @@ pub fn fold_wynd_swap_msgs(
             (msgs, assets)
         },
     )
+}
+
+pub fn wynd_join_pool_msgs(
+    delegator_address: String,
+    pool_to_join_address: String,
+    swap_msgs: &mut Vec<CosmosProtoMsg>,
+    assets: HashMap<AssetInfo, Uint128>,
+) -> Result<Vec<CosmosProtoMsg>, StdError> {
+    let (mut native_funds, token_transfer_msgs, assets): (
+        Vec<Coin>,
+        Vec<Result<CosmosProtoMsg, StdError>>,
+        Vec<Asset>,
+    ) = assets.into_iter().fold(
+        (vec![], vec![], vec![]),
+        |(mut all_native_tokens, mut all_token_transfer_msgs, mut assets), (asset, amount)| {
+            match asset {
+                AssetInfo::Native(ref denom) => all_native_tokens.push(Coin {
+                    denom: denom.clone(),
+                    amount: amount.to_string(),
+                }),
+                AssetInfo::Token(ref token_contract_address) => all_token_transfer_msgs.push(
+                    if let Ok(exec) = create_exec_contract_msg(
+                        token_contract_address.clone(),
+                        &delegator_address,
+                        &cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                            spender: pool_to_join_address.to_string(),
+                            amount,
+                            expires: None,
+                        },
+                        None,
+                    ) {
+                        Ok(CosmosProtoMsg::ExecuteContract(exec))
+                    } else {
+                        Err(StdError::GenericErr {
+                            msg: "failed to create wynd cw20 join pool message".to_string(),
+                        })
+                    },
+                ),
+            }
+            assets.push(Asset {
+                info: asset,
+                amount,
+            });
+            (all_native_tokens, all_token_transfer_msgs, assets)
+        },
+    );
+
+    native_funds.sort_by_key(|Coin { denom, .. }| denom.clone());
+
+    swap_msgs.extend(
+        token_transfer_msgs
+            .into_iter()
+            .collect::<Result<Vec<CosmosProtoMsg>, StdError>>()?,
+    );
+
+    swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+        pool_to_join_address.clone(),
+        &delegator_address,
+        &wyndex::pair::ExecuteMsg::ProvideLiquidity {
+            assets,
+            slippage_tolerance: None,
+            receiver: None,
+        },
+        Some(native_funds),
+    )?));
+
+    Ok(swap_msgs.to_vec())
 }
