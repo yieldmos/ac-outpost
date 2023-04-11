@@ -25,7 +25,7 @@ use wyndex_multi_hop::msg::SwapOperation;
 use crate::{
     helpers::{
         assign_comp_prefs_to_pools, calculate_compound_amounts, valid_catch_all_pool_prefs,
-        valid_pool_prefs, PoolRewardsWithPrefs, fold_wynd_swap_msgs,
+        valid_pool_prefs, PoolRewardsWithPrefs, fold_wynd_swap_msgs, wynd_join_pool_msgs,
     },
     ContractError,
 };
@@ -133,7 +133,6 @@ pub fn prefs_to_msgs(
                                 &querier,
                                 target_address.clone(),
                                 comp_token_amounts,
-                                contract_address,
                                 bonding_period,
                                 pool_info.clone(),
                                 querier.query_wasm_smart(
@@ -313,7 +312,6 @@ pub fn join_wynd_pool_msgs(
     querier: &QuerierWrapper,
     target_address: Addr,
     comp_token_amounts: Vec<AssetValidated>,
-    pool_contract_address: String,
     bonding_period: WyndLPBondingPeriod,
     pool_info: wyndex::pair::PairInfo,
     existing_lp_tokens: cw20::BalanceResponse,
@@ -363,24 +361,31 @@ pub fn join_wynd_pool_msgs(
 
     let (mut swap_msgs, assets)= fold_wynd_swap_msgs(swap_msgs);
 
-    unimplemented!();
+
+    let mut join_pool_msgs = 
+        wynd_join_pool_msgs(target_address.to_string(), 
+            pool_info.staking_addr.to_string(), &mut swap_msgs, assets)?;
+
+   
 
     
 
-    // if !existing_lp_tokens.balance.is_zero() {
-    //     swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-    //         pool_info.liquidity_token.to_string(),
-    //         &target_address,
-    //         &cw20::Cw20ExecuteMsg::Send {
-    //             contract: pool_info.staking_addr.to_string(),
-    //             amount: existing_lp_tokens.balance,
-    //             msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
-    //                 unbonding_period: bonding_period.into(),
-    //             })?,
-    //         },
-    //         None,
-    //     )?));
-    // }
+    if !existing_lp_tokens.balance.is_zero() {
+        join_pool_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+            pool_info.liquidity_token.to_string(),
+            &target_address,
+            &cw20::Cw20ExecuteMsg::Send {
+                contract: pool_info.staking_addr.to_string(),
+                amount: existing_lp_tokens.balance,
+                msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+                    unbonding_period: bonding_period.into(),
+                })?,
+            },
+            None,
+        )?));
+    }
+
+    Ok(join_pool_msgs)
 
     // let asset_count: u128 = pool_info.asset_infos.len().try_into().unwrap();
     // let wynd_amount_per_asset: Uint128 =
