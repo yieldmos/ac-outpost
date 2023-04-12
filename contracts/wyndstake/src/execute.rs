@@ -87,19 +87,19 @@ pub fn prefs_to_msgs(
 
     let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
         .map(
-            |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> { 
+            |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
                 match destination {
-                JunoDestinationProject::JunoStaking { validator_address } => 
+                JunoDestinationProject::JunoStaking { validator_address } =>
                     juno_staking_msgs(target_address.clone(),
                         comp_token_amount,
-                         WYND_CW20_ADDR.to_string(), 
-                         validator_address, 
+                         WYND_CW20_ADDR.to_string(),
+                         validator_address,
                          query_wynd_juno_swap(&querier, comp_token_amount)?
                     )
                 ,
                 JunoDestinationProject::NetaStaking {} => neta_staking_msgs(
                     target_address.clone(),
-                    
+
                     query_wynd_neta_swap(&querier,comp_token_amount)?
                 ),
                 JunoDestinationProject::WyndStaking { bonding_period } =>
@@ -115,7 +115,6 @@ pub fn prefs_to_msgs(
                         None,
                     )?)]),
                 JunoDestinationProject::TokenSwap { target_denom } => wynd_token_swap(
-                   
                     target_address.clone(),
                     comp_token_amount,
                     AssetInfo::Token(WYND_CW20_ADDR.to_string()),

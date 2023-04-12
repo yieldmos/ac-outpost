@@ -1,21 +1,8 @@
-use cosmwasm_std::{Addr, QuerierWrapper, StdError, StdResult, Uint128};
-use outpost_utils::queries::query_wynd_pool_swap;
-use wynd_stake;
-use wyndex::{
-    asset::{Asset, AssetInfo},
-    pair::{PairInfo, SimulationResponse},
-};
-use wyndex_multi_hop::msg::SwapOperation;
-use wyndex_stake::msg::RewardsPowerResponse;
+use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Uint128};
+use wyndex::{asset::AssetValidated, pair::PairInfo};
+use wyndex_stake::msg::WithdrawableRewardsResponse;
 
-use crate::{
-    execute::{
-        JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYNDDEX_FACTORY_ADDR, WYND_CW20_ADDR,
-        WYND_MULTI_HOP_ADDR,
-    },
-    msg::VersionResponse,
-    ContractError,
-};
+use crate::{execute::WYNDDEX_FACTORY_ADDR, msg::VersionResponse};
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
@@ -23,10 +10,11 @@ pub fn query_version() -> VersionResponse {
     }
 }
 
+/// Queries the current user's pools that have rewards from the list of every pool in wyndex
 pub fn query_current_user_pools(
     querier: &QuerierWrapper,
     delegator_addr: &Addr,
-) -> StdResult<Vec<(PairInfo, RewardsPowerResponse)>> {
+) -> StdResult<Vec<(PairInfo, Vec<AssetValidated>)>> {
     let pools: wyndex::factory::PairsResponse = querier.query_wasm_smart(
         WYNDDEX_FACTORY_ADDR.to_string(),
         &wyndex::factory::QueryMsg::Pairs {
@@ -35,57 +23,48 @@ pub fn query_current_user_pools(
         },
     )?;
 
-    unimplemented!()
-
-    // let current_user_pools = pools
-    //     .pairs
-    //     .iter()
-    //     .filter_map(|pair| {
-    //         let outstanding_rewards: Result<RewardsPowerResponse, StdError> = querier
-    //             .query_wasm_smart(
-    //                 pair.staking_addr,
-    //                 &wyndex_stake::msg::QueryMsg::RewardsPower {
-    //                     address: delegator_addr.to_string(),
-    //                 },
-    //             );
-
-    //         match outstanding_rewards {
-    //             Ok(RewardsPowerResponse { rewards })
-    //                 if rewards.iter().any(|reward| !reward.1.is_zero()) =>
-    //             {
-    //                 Some((
-    //                     pair.clone(),
-    //                     RewardsPowerResponse {
-    //                         rewards: rewards
-    //                             .into_iter()
-    //                             .filter(|(_, amount)| !amount.is_zero())
-    //                             .collect(),
-    //                     },
-    //                 ))
-    //             }
-    //             _ => None,
-    //         }
-    //     })
-    //     .collect();
-
-    // Ok(current_user_pools)
+    check_user_pools_for_rewards(querier, delegator_addr, pools.pairs)
 }
 
-pub fn query_pending_wynd_pool_rewards(
+/// Given a list of user pools, check each to see if the given user has rewards
+pub fn check_user_pools_for_rewards(
     querier: &QuerierWrapper,
+    delegator_addr: &Addr,
+    user_pools: Vec<PairInfo>,
+) -> StdResult<Vec<(PairInfo, Vec<AssetValidated>)>> {
+    Ok(user_pools
+        .iter()
+        .filter_map(|pair| {
+            query_pending_rewards(querier, &pair.staking_addr, delegator_addr)
+                .map(|rewards| (pair.clone(), rewards))
+        })
+        .collect::<Vec<(PairInfo, Vec<AssetValidated>)>>())
+}
+
+/// Queries the current user's rewards from from a specific pool's staking address.
+/// If no rewards are found, returns None
+pub fn query_pending_rewards(
+    querier: &QuerierWrapper,
+    pool_addr: &Addr,
     delegator: &Addr,
-) -> Result<(), ContractError> {
-    wyndex_stake::msg::QueryMsg::WithdrawableRewards {
-        owner: delegator.to_string(),
-    };
+) -> Option<Vec<AssetValidated>> {
+    let rewards_resp: StdResult<WithdrawableRewardsResponse> = querier.query_wasm_smart(
+        pool_addr.to_string(),
+        &wyndex_stake::msg::QueryMsg::WithdrawableRewards {
+            owner: delegator.to_string(),
+        },
+    );
 
-    todo!("get all the pending rewards per active pool");
-    // .iter()
-    // .map(|addr| {
-    //     let rewards = querier.query_rewards(addr, delegator)?;
-    //     Ok(rewards)
-    // })
-    // .collect::<Result<Vec<_>, _>>()?;
+    if let Ok(WithdrawableRewardsResponse { rewards }) = rewards_resp {
+        let pending_rewards: Vec<AssetValidated> = rewards
+            .into_iter()
+            .filter(|asset| asset.amount > Uint128::zero())
+            .collect();
 
-    // Ok(())
+        if pending_rewards.len() > 0 {
+            return Some(pending_rewards);
+        }
+    }
+
+    None
 }
