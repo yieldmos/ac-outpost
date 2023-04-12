@@ -132,7 +132,7 @@ pub fn prefs_to_msgs(
                             &target_address)?,
                         pool.clone(),
                         querier.query_wasm_smart(
-                            pool.liquidity_token,
+                            pool.clone().liquidity_token,
                             &cw20::Cw20QueryMsg::Balance {
                                 address: target_address.to_string(),
                             },
