@@ -8,10 +8,10 @@ Care has been taken to made the Destination projects modular and easily extendab
 
 The things you can do with your rewards during any given compounding.
 
-| Destination Project | Status        | Note                                         |
-| ------------------- | ------------- | -------------------------------------------- |
-| `Juno Staking`      | `working`     | Can specify any validator address            |
-| `Wynd Staking`      | `working`     | Can select any valid unbonding period        |
-| `Neta Staking`      | `working`     |                                              |
-| `Token Swap`        | `working`     | Can pick any token that's on Wyndex          |
-| `Wyndex LPs`        | `in progress` | Must specify the given pool contract address |
+| Destination Project | Status    | Note                                         |
+| ------------------- | --------- | -------------------------------------------- |
+| `Juno Staking`      | `working` | Can specify any validator address            |
+| `Wynd Staking`      | `working` | Can select any valid unbonding period        |
+| `Neta Staking`      | `working` |                                              |
+| `Token Swap`        | `working` | Can pick any token that's on Wyndex          |
+| `Wyndex LPs`        | `working` | Must specify the given pool contract address |

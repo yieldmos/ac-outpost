@@ -1,8 +1,9 @@
 use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Uint128};
+use outpost_utils::comp_prefs::WyndLPBondingPeriod;
 use wyndex::{asset::AssetValidated, pair::PairInfo};
-use wyndex_stake::msg::WithdrawableRewardsResponse;
+use wyndex_stake::msg::{AllStakedResponse, WithdrawableRewardsResponse};
 
-use crate::{execute::WYNDDEX_FACTORY_ADDR, msg::VersionResponse};
+use crate::{execute::WYNDDEX_FACTORY_ADDR, msg::VersionResponse, ContractError};
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
@@ -67,4 +68,31 @@ pub fn query_pending_rewards(
     }
 
     None
+}
+
+/// Queries the current user's staked amount from a specific pool's staking address.
+/// Returns the highest bonding period found
+pub fn get_max_user_pool_bonding_period(
+    querier: &QuerierWrapper,
+    pool_addr: &Addr,
+    delegator_addr: &Addr,
+) -> Result<WyndLPBondingPeriod, ContractError> {
+    let AllStakedResponse { stakes }: AllStakedResponse = querier.query_wasm_smart(
+        pool_addr.to_string(),
+        &wyndex_stake::msg::QueryMsg::AllStaked {
+            address: delegator_addr.to_string(),
+        },
+    )?;
+
+    let max_bonding_period: WyndLPBondingPeriod = stakes
+        .iter()
+        .map(|stake| stake.unbonding_period)
+        .max()
+        .ok_or_else(|| ContractError::NoPoolUnbondingPeriod {
+            user: delegator_addr.to_string(),
+            pool: pool_addr.to_string(),
+        })?
+        .try_into()?;
+
+    Ok(max_bonding_period)
 }

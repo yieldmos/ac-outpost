@@ -38,6 +38,9 @@ pub enum ContractError {
 
     #[error("Decimal out of range: {0}")]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error("No pool unbonding period found: {user} {pool}")]
+    NoPoolUnbondingPeriod { user: String, pool: String },
 }
 
 impl From<semver::Error> for ContractError {

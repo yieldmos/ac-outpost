@@ -2,6 +2,8 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Decimal;
 use wyndex::asset::AssetInfo;
 
+use crate::errors::OutpostError;
+
 #[cw_serde]
 pub struct CompoundPrefs {
     pub relative: Vec<DestinationAction>,
@@ -76,6 +78,20 @@ impl From<WyndLPBondingPeriod> for u64 {
             WyndLPBondingPeriod::FourteenDays => 1209600,
             WyndLPBondingPeriod::TwentyEightDays => 2419200,
             WyndLPBondingPeriod::FourtyTwoDays => 3628800,
+        }
+    }
+}
+// implement try_from for u64 to WyndLPBondingPeriod
+impl TryFrom<u64> for WyndLPBondingPeriod {
+    type Error = OutpostError;
+
+    fn try_from(v: u64) -> Result<Self, Self::Error> {
+        match v {
+            604800 => Ok(WyndLPBondingPeriod::SevenDays),
+            1209600 => Ok(WyndLPBondingPeriod::FourteenDays),
+            2419200 => Ok(WyndLPBondingPeriod::TwentyEightDays),
+            3628800 => Ok(WyndLPBondingPeriod::FourtyTwoDays),
+            _ => Err(OutpostError::InvalidBondingPeriod(v.to_string())),
         }
     }
 }

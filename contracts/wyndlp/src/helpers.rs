@@ -212,10 +212,12 @@ pub fn wynd_join_pool_msgs(
         (vec![], vec![], vec![]),
         |(mut all_native_tokens, mut all_token_transfer_msgs, mut assets), (asset, amount)| {
             match asset {
+                // for native tokens we just add them to the list of native funds
                 AssetInfo::Native(ref denom) => all_native_tokens.push(Coin {
                     denom: denom.clone(),
                     amount: amount.to_string(),
                 }),
+                // for tokens we create a cw20 increase allowance message
                 AssetInfo::Token(ref token_contract_address) => all_token_transfer_msgs.push(
                     if let Ok(exec) = create_exec_contract_msg(
                         token_contract_address.clone(),
@@ -235,6 +237,8 @@ pub fn wynd_join_pool_msgs(
                     },
                 ),
             }
+            // regardless if it's native or token we add it to the list of assets that
+            // is needed for the provide liquidity message
             assets.push(Asset {
                 info: asset,
                 amount,
@@ -243,6 +247,7 @@ pub fn wynd_join_pool_msgs(
         },
     );
 
+    // Sort the assets and native tokens by their names/addresses
     asset_funds.sort_by_key(|Asset { info, .. }| match info {
         AssetInfo::Native(denom) => denom.clone(),
         AssetInfo::Token(contract_addr) => contract_addr.clone(),
@@ -250,12 +255,14 @@ pub fn wynd_join_pool_msgs(
 
     native_funds.sort_by_key(|Coin { denom, .. }| denom.clone());
 
+    // Add the cw20 transfer messages to the swap messages to prepare for joining the pool
     swap_msgs.extend(
         token_transfer_msgs
             .into_iter()
             .collect::<Result<Vec<CosmosProtoMsg>, StdError>>()?,
     );
 
+    // Add the provide liquidity message
     swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
         pool_to_join_address.clone(),
         &delegator_address,

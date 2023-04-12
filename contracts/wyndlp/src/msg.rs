@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use outpost_utils::comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs};
+use wyndex::pair::PairInfo;
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -30,7 +31,7 @@ pub enum ExecuteMsg {
         /// If this is not provided, the contract will query wyndex directly
         /// resulting in much higher gas usage.
         /// https://api.wynddao.com/pools/user/{delegator_address} can furnish this information off chain
-        current_user_pools: Option<Vec<String>>,
+        current_user_pools: Option<Vec<PairInfo>>,
         delegator_address: String,
     },
 }

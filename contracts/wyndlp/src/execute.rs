@@ -5,7 +5,9 @@ use crate::{
         assign_comp_prefs_to_pools, calculate_compound_amounts, fold_wynd_swap_msgs,
         valid_catch_all_pool_prefs, valid_pool_prefs, wynd_join_pool_msgs, PoolRewardsWithPrefs,
     },
-    queries::{check_user_pools_for_rewards, query_current_user_pools},
+    queries::{
+        check_user_pools_for_rewards, get_max_user_pool_bonding_period, query_current_user_pools,
+    },
     ContractError,
 };
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
@@ -118,8 +120,24 @@ pub fn prefs_to_msgs(
                 PoolCatchAllDestinationAction { destination, .. })| ->
                 Result<Vec<CosmosProtoMsg>, ContractError> {
                 match destination {
-
-                    PoolCatchAllDestinationProject::ReturnToPool => todo!("return to pool"),
+                    PoolCatchAllDestinationProject::ReturnToPool =>  join_wynd_pool_msgs(
+                        &querier,
+                        target_address.clone(),
+                        comp_token_amounts,
+                        // since there's no specified pool to target we have to check to see what
+                        // the user's current bonding period is
+                        get_max_user_pool_bonding_period(
+                            &querier,
+                            &pool.staking_addr,
+                            &target_address)?,
+                        pool.clone(),
+                        querier.query_wasm_smart(
+                            pool.liquidity_token,
+                            &cw20::Cw20QueryMsg::Balance {
+                                address: target_address.to_string(),
+                            },
+                        )?
+                    ),
 
                     PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLP {
                             contract_address,

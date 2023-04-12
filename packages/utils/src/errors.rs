@@ -17,4 +17,7 @@ pub enum OutpostError {
 
     #[error("Could not simulate swap of {from} to {to}")]
     SwapSimulationError { from: String, to: String },
+
+    #[error("Parsing invalid wynd pool bonding period: {0}")]
+    InvalidBondingPeriod(String),
 }
