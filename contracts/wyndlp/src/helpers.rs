@@ -199,6 +199,7 @@ pub fn fold_wynd_swap_msgs(
 /// Constructs the messages required to join a pool from the prerequisite swaps.
 /// This includes the provide increase allowances and provide liquidity messages
 pub fn wynd_join_pool_msgs(
+    current_block_height: &u64,
     delegator_address: String,
     pool_to_join_address: String,
     swap_msgs: &mut Vec<CosmosProtoMsg>,
@@ -225,7 +226,7 @@ pub fn wynd_join_pool_msgs(
                         &cw20::Cw20ExecuteMsg::IncreaseAllowance {
                             spender: pool_to_join_address.to_string(),
                             amount,
-                            expires: None,
+                            expires: Some(cw20::Expiration::AtHeight(current_block_height + 1)),
                         },
                         None,
                     ) {

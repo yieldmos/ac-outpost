@@ -377,6 +377,7 @@ fn generate_join_pool_messages() {
     let assets: HashMap<AssetInfo, Uint128> = HashMap::from([]);
 
     let join_pool_msgs = wynd_join_pool_msgs(
+        &1u64,
         delegator_addr.to_string(),
         target_pool.clone(),
         &mut swap_msgs,
@@ -418,6 +419,7 @@ fn generate_join_pool_messages() {
     ]);
 
     let join_pool_msgs = wynd_join_pool_msgs(
+        &1u64,
         delegator_addr.to_string(),
         target_pool.clone(),
         &mut swap_msgs,
@@ -435,7 +437,7 @@ fn generate_join_pool_messages() {
                     &cw20::Cw20ExecuteMsg::IncreaseAllowance {
                         spender: target_pool.to_string(),
                         amount: 500u128.into(),
-                        expires: None,
+                        expires: Some(cw20::Expiration::AtHeight(2))
                     },
                     None,
                 )

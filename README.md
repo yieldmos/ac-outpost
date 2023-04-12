@@ -20,6 +20,6 @@ The expected flow should go as such:
 | `juno-1`    | `wynd lps`     | [`in progress`](./contracts/wyndlp/README.md) |
 | `osmosis-1` | `staking`      | `not started`                                 |
 | `osmosis-1` | `lps`          | `not started`                                 |
-| `osmosis-1` | `lending`      | `not started`                                 |
+| `osmosis-1` | `mars lending` | `not started`                                 |
 
 Testing and the grants query are still in progress on all fronts. These must be codified before the v1 release.

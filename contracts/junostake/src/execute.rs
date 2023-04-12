@@ -49,6 +49,7 @@ pub fn compound(
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let sub_msgs = prefs_to_msgs(
+        &env.block.height,
         staking_denom.to_string(),
         &delegator,
         queries::query_pending_rewards(&deps.querier, &delegator, staking_denom)?,
@@ -64,6 +65,7 @@ pub fn compound(
 
 /// Converts the user's compound preferences into a list of CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
+    current_height: &u64,
     staking_denom: String,
     target_address: &Addr,
     AllPendingRewards {
@@ -135,6 +137,7 @@ pub fn prefs_to_msgs(
                     )?;
 
                     join_wynd_pool_msgs(
+                        current_height,
                         &querier,
                         target_address.clone(),
                         comp_token_amount,
@@ -291,6 +294,7 @@ pub fn wynd_staking_msgs(
 
 #[allow(clippy::too_many_arguments)]
 fn join_wynd_pool_msgs(
+    current_height: &u64,
     querier: &QuerierWrapper,
     target_address: Addr,
     comp_token_amount: Uint128,
@@ -310,6 +314,7 @@ fn join_wynd_pool_msgs(
         comp_token_amount.checked_div_floor((asset_count, 1u128))?;
 
     let pool_assets = wynd_lp_asset_swaps(
+        current_height,
         querier,
         &staking_denom,
         &pool_contract_address,
@@ -411,6 +416,7 @@ struct WyndAssetLPMessages {
 /// Generates the wyndex swap messages and IncreaseAllowance (for cw20) messages that are needed before the actual pool can be entered.
 /// These messages should ensure that we have the correct amount of assets in the pool contract
 fn wynd_lp_asset_swaps(
+    current_height: &u64,
     querier: &QuerierWrapper,
     staking_denom: &String,
     pool_contract_address: &str,
@@ -517,7 +523,9 @@ fn wynd_lp_asset_swaps(
                                         &cw20::Cw20ExecuteMsg::IncreaseAllowance {
                                             spender: pool_contract_address.to_string(),
                                             amount: swap_simulate.amount,
-                                            expires: None,
+                                            expires: Some(cw20::Expiration::AtHeight(
+                                                *current_height,
+                                            )),
                                         },
                                         None,
                                     )?),

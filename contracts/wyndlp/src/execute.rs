@@ -12,7 +12,8 @@ use crate::{
 };
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError, Uint128,
+    to_binary, Addr, BlockInfo, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdError,
+    Uint128,
 };
 use outpost_utils::{
     comp_prefs::{
@@ -75,7 +76,9 @@ pub fn compound(
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let sub_msgs = pool_rewards_with_prefs
         .into_iter()
-        .map(|rewards_with_prefs| prefs_to_msgs(&deps.querier, &delegator, rewards_with_prefs))
+        .map(|rewards_with_prefs| {
+            prefs_to_msgs(&env.block, &deps.querier, &delegator, rewards_with_prefs)
+        })
         .collect::<Result<Vec<Vec<_>>, ContractError>>()?
         .into_iter()
         .flatten()
@@ -89,6 +92,7 @@ pub fn compound(
 
 /// Converts the user's compound preferences into a list of CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
+    current_block: &BlockInfo,
     querier: &QuerierWrapper,
     target_address: &Addr,
     PoolRewardsWithPrefs {
@@ -121,6 +125,7 @@ pub fn prefs_to_msgs(
                 Result<Vec<CosmosProtoMsg>, ContractError> {
                 match destination {
                     PoolCatchAllDestinationProject::ReturnToPool =>  join_wynd_pool_msgs(
+                        &current_block.height,
                         &querier,
                         target_address.clone(),
                         comp_token_amounts,
@@ -152,6 +157,7 @@ pub fn prefs_to_msgs(
                             )?};
 
                             join_wynd_pool_msgs(
+                                &current_block.height,
                                 &querier,
                                 target_address.clone(),
                                 comp_token_amounts,
@@ -330,6 +336,7 @@ pub fn juno_staking_msgs(
 }
 
 pub fn join_wynd_pool_msgs(
+    current_block_height: &u64,
     querier: &QuerierWrapper,
     target_address: Addr,
     comp_token_amounts: Vec<AssetValidated>,
@@ -383,6 +390,7 @@ pub fn join_wynd_pool_msgs(
     let (mut swap_msgs, assets) = fold_wynd_swap_msgs(swap_msgs);
 
     let mut join_pool_msgs = wynd_join_pool_msgs(
+        current_block_height,
         target_address.to_string(),
         pool_info.staking_addr.to_string(),
         &mut swap_msgs,
