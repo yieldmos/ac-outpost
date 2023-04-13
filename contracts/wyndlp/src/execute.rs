@@ -26,10 +26,11 @@ use outpost_utils::{
         create_wyndex_swap_msg_with_simulation, create_wyndex_swaps_with_sims, CosmosProtoMsg,
         SwapSimResponse,
     },
+    queries::simulate_multiple_swaps,
 };
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},
-    pair::PairInfo,
+    pair::{PairInfo, SimulationResponse},
 };
 
 pub const WYNDDEX_FACTORY_ADDR: &str =
@@ -335,60 +336,78 @@ pub fn juno_staking_msgs(
     Ok(swap_msgs)
 }
 
+/// Generate the messages to join a Wynd LP pool
 pub fn join_wynd_pool_msgs(
     current_block_height: &u64,
     querier: &QuerierWrapper,
     target_address: Addr,
-    comp_token_amounts: Vec<AssetValidated>,
+    all_reward_tokens: Vec<AssetValidated>,
     bonding_period: WyndLPBondingPeriod,
     pool_info: wyndex::pair::PairInfo,
     existing_lp_tokens: cw20::BalanceResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    let swap_msgs: Vec<WyndAssetLPMessages> = match &comp_token_amounts[..] {
-        [AssetValidated {
-            info: reward_asset,
-            amount,
-        }] => {
-            let (first_swap_msgs, first_swap_estimate) = create_wyndex_swap_msg_with_simulation(
-                querier,
-                &target_address,
-                *amount / Uint128::from(2u128),
-                reward_asset.clone().into(),
-                pool_info.asset_infos[0].clone().into(),
-                WYND_MULTI_HOP_ADDR.to_string(),
-            )?;
+    let swap_msgs: Vec<WyndAssetLPMessages> = if let [AssetValidated {
+        info: reward_asset,
+        amount,
+    }] = &all_reward_tokens[..]
+    {
+        // if there's only one reward asset, we can use simplified logic to knock it out with less gas and complexity
 
-            let (second_swap_msgs, second_swap_estimate) = create_wyndex_swap_msg_with_simulation(
-                querier,
-                &target_address,
-                *amount / Uint128::from(2u128),
-                reward_asset.clone().into(),
-                pool_info.asset_infos[1].clone().into(),
-                WYND_MULTI_HOP_ADDR.to_string(),
-            )?;
+        let (first_swap_msgs, first_swap_estimate) = create_wyndex_swap_msg_with_simulation(
+            querier,
+            &target_address,
+            *amount / Uint128::from(2u128),
+            reward_asset.clone().into(),
+            pool_info.asset_infos[0].clone().into(),
+            WYND_MULTI_HOP_ADDR.to_string(),
+        )?;
 
-            Ok(vec![
-                WyndAssetLPMessages {
-                    swap_msgs: first_swap_msgs,
-                    target_asset_info: Asset {
-                        info: pool_info.asset_infos[0].clone().into(),
-                        amount: first_swap_estimate,
-                    },
+        let (second_swap_msgs, second_swap_estimate) = create_wyndex_swap_msg_with_simulation(
+            querier,
+            &target_address,
+            *amount / Uint128::from(2u128),
+            reward_asset.clone().into(),
+            pool_info.asset_infos[1].clone().into(),
+            WYND_MULTI_HOP_ADDR.to_string(),
+        )?;
+
+        vec![
+            WyndAssetLPMessages {
+                swap_msgs: first_swap_msgs,
+                target_asset_info: Asset {
+                    info: pool_info.asset_infos[0].clone().into(),
+                    amount: first_swap_estimate,
                 },
-                WyndAssetLPMessages {
-                    swap_msgs: second_swap_msgs,
-                    target_asset_info: Asset {
-                        info: pool_info.asset_infos[1].clone().into(),
-                        amount: second_swap_estimate,
-                    },
+            },
+            WyndAssetLPMessages {
+                swap_msgs: second_swap_msgs,
+                target_asset_info: Asset {
+                    info: pool_info.asset_infos[1].clone().into(),
+                    amount: second_swap_estimate,
                 },
-            ])
-        }
-        _ => Err(ContractError::NotImplemented {}),
-    }?;
+            },
+        ]
+    } else {
+        // if there's more than one reward asset, we need to do a more complex simulation to figure out the best way to swap them
 
+        swap_rewards_to_pool_assets(
+            querier,
+            &target_address,
+            &mut simulate_multiple_swaps(
+                querier,
+                all_reward_tokens,
+                pool_info.asset_infos.first().unwrap(),
+                &WYND_MULTI_HOP_ADDR.to_string(),
+            )?
+            .clone(),
+            &pool_info,
+        )?
+    };
+
+    // combine all the swap msgs into a simplified format that we can put into use
     let (mut swap_msgs, assets) = fold_wynd_swap_msgs(swap_msgs);
 
+    // get the list of msgs needed to join the pool after doing the swaps
     let mut join_pool_msgs = wynd_join_pool_msgs(
         current_block_height,
         target_address.to_string(),
@@ -397,6 +416,10 @@ pub fn join_wynd_pool_msgs(
         assets,
     )?;
 
+    // this is a stopgap for testing purposes
+    // since we can't know yet how many gamm tokens to stake/bond
+    // we'll just stake the existing LP tokens besides the ones we're adding in today's compounding
+    // in the next compounding we'll get the new LP tokens and stake those
     if !existing_lp_tokens.balance.is_zero() {
         join_pool_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
             pool_info.liquidity_token.to_string(),
@@ -413,101 +436,6 @@ pub fn join_wynd_pool_msgs(
     }
 
     Ok(join_pool_msgs)
-
-    // let asset_count: u128 = pool_info.asset_infos.len().try_into().unwrap();
-    // let wynd_amount_per_asset: Uint128 =
-    //     comp_token_amount.checked_div_floor((asset_count, 1u128))?;
-
-    // let pool_assets = wynd_lp_asset_swaps(
-    //     querier,
-    //     &staking_denom,
-    //     &pool_contract_address,
-    //     &wynd_amount_per_asset,
-    //     &pool_info,
-    //     &target_address,
-    // )?;
-
-    // let pool_join_funds: Vec<Asset> = pool_assets
-    //     .iter()
-    //     .map(
-    //         |WyndAssetLPMessages {
-    //              target_asset_info, ..
-    //          }| target_asset_info.clone(),
-    //     )
-    //     .collect::<Vec<_>>();
-    // let native_funds: Vec<Coin> = pool_assets
-    //     .iter()
-    //     .filter_map(
-    //         |WyndAssetLPMessages {
-    //              target_asset_info, ..
-    //          }| {
-    //             if let Asset {
-    //                 info: AssetInfo::Native(native_denom),
-    //                 amount,
-    //             } = target_asset_info
-    //             {
-    //                 Some(Coin {
-    //                     denom: native_denom.clone(),
-    //                     amount: amount.to_string(),
-    //                 })
-    //             } else {
-    //                 None
-    //             }
-    //         },
-    //     )
-    //     .collect::<Vec<_>>();
-
-    // let mut swap_msgs: Vec<CosmosProtoMsg> = pool_assets
-    //     .iter()
-    //     .flat_map(|WyndAssetLPMessages { swap_msgs, .. }| swap_msgs.clone())
-    //     .collect::<Vec<_>>();
-
-    // swap_msgs.append(&mut vec![
-    //     CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-    //         pool_contract_address,
-    //         &target_address,
-    //         &wyndex::pair::ExecuteMsg::ProvideLiquidity {
-    //             assets: pool_join_funds,
-    //             slippage_tolerance: None,
-    //             receiver: None,
-    //         },
-    //         Some(native_funds),
-    //     )?),
-    //     // CosmosProtoMsg::ExecuteContract(
-    //     //     create_exec_contract_msg(
-    //     //         &pool_info.staking_addr.to_string(),
-    //     //         &target_address,
-    //     //         &cw20::Cw20ExecuteMsg::Send {
-    //     //             contract: pool_info.staking_addr.to_string(),
-    //     //             amount: todo!("set estimated lp tokens"),
-    //     //             msg: to_binary(
-    //     //                 &wyndex_stake::msg::ReceiveDelegationMsg::Delegate {
-    //     //                     unbonding_period: bonding_period.into(),
-
-    //     //             } )? ,
-    //     //         },
-    //     //         None
-    //     //     )?)
-    // ]);
-
-    // if !existing_lp_tokens.balance.is_zero() {
-    //     swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-    //         pool_info.liquidity_token.to_string(),
-    //         &target_address,
-    //         &cw20::Cw20ExecuteMsg::Send {
-    //             contract: pool_info.staking_addr.to_string(),
-    //             amount: existing_lp_tokens.balance,
-    //             msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
-    //                 unbonding_period: bonding_period.into(),
-    //             })?,
-    //         },
-    //         None,
-    //     )?));
-    // }
-
-    // Ok(swap_msgs)
-    // // will need to update things to utilize the routes from the factory
-    // // wyndex::factory::ROUTE;
 }
 
 /// Generates the wyndex swap messages and IncreaseAllowance (for cw20) messages that are needed before the actual pool can be entered.
@@ -543,4 +471,165 @@ pub fn wynd_lp_asset_swaps(
             })
         })
         .collect()
+}
+
+pub fn swap_rewards_to_pool_assets(
+    querier: &QuerierWrapper,
+    delegator_addr: &Addr,
+    rewards: &mut Vec<(AssetValidated, SimulationResponse)>,
+    pool_info: &PairInfo,
+) -> Result<Vec<WyndAssetLPMessages>, ContractError> {
+    let mut lp_assets: Vec<WyndAssetLPMessages> = vec![];
+
+    // this is the total amount of rewards in terms of the first pool asset
+    // we will need to have half of this amount swapped into the second pool asset
+    let total_rewards_value: Uint128 = rewards
+        .iter()
+        .map(|(_, SimulationResponse { return_amount, .. })| return_amount)
+        .sum();
+
+    // the amount of the first pool asset that we need to ascertain for both sides of the lp entry
+    let (mut asset_one_amount, mut asset_two_amount) = (
+        total_rewards_value / Uint128::from(2u128),
+        total_rewards_value / Uint128::from(2u128),
+    );
+    let first_asset = &pool_info.asset_infos[0];
+    let second_asset = &pool_info.asset_infos[1];
+
+    // if we have a reward that is the same asset as the first pool asset, we can short cut some logic and save some gas.
+    // ignoring this edgecase would mean that we might accidentally swap an asset that can be deposeted as is.
+    if let Some((
+        found_reward,
+        SimulationResponse {
+            return_amount: simulated_asset_amount,
+            ..
+        },
+    )) = rewards
+        .iter_mut()
+        .find(|(reward, _)| reward.info.equal(&first_asset))
+    {
+        let overlap_amount = asset_one_amount.min(simulated_asset_amount.clone());
+        let original_asset_overlap_amount =
+            found_reward.amount * simulated_asset_amount.clone() / overlap_amount.clone();
+
+        asset_one_amount -= overlap_amount.clone();
+        found_reward.amount -= original_asset_overlap_amount;
+        *simulated_asset_amount -= overlap_amount.clone();
+        lp_assets.push(WyndAssetLPMessages {
+            swap_msgs: vec![],
+            target_asset_info: Asset {
+                info: found_reward.info.clone().into(),
+                amount: original_asset_overlap_amount,
+            },
+        });
+    };
+
+    // do the same shortcut on the other asset if it's available
+    if let Some((
+        found_reward,
+        SimulationResponse {
+            return_amount: simulated_asset_amount,
+            ..
+        },
+    )) = rewards
+        .iter_mut()
+        .find(|(reward, _)| reward.info.equal(&second_asset))
+    {
+        let overlap_amount = asset_two_amount.min(simulated_asset_amount.clone());
+        let original_asset_overlap_amount =
+            found_reward.amount * simulated_asset_amount.clone() / overlap_amount.clone();
+
+        asset_two_amount -= overlap_amount.clone();
+        found_reward.amount -= original_asset_overlap_amount;
+        *simulated_asset_amount -= overlap_amount.clone();
+        lp_assets.push(WyndAssetLPMessages {
+            swap_msgs: vec![],
+            target_asset_info: Asset {
+                info: found_reward.info.clone().into(),
+                amount: original_asset_overlap_amount,
+            },
+        });
+    };
+
+    // if we exhausted any of the rewards in the previous shortcuts we can remove it from the rewards list
+    rewards.retain(|(_, SimulationResponse { return_amount, .. })| !return_amount.is_zero());
+
+    // now we can just cycle through the remaining rewards (which require swaps) and swap them to the pool assets until we've exhaused the amounts needed (specified in the `asset_one_amount`)
+    for (
+        reward,
+        SimulationResponse {
+            return_amount: simulated_asset_amount,
+            ..
+        },
+    ) in rewards.iter_mut()
+    {
+        if asset_one_amount.is_zero() {
+            break;
+        }
+
+        let overlap_amount = asset_one_amount.min(simulated_asset_amount.clone());
+        let original_asset_overlap_amount =
+            reward.amount * simulated_asset_amount.clone() / overlap_amount.clone();
+
+        let (swap_msgs, target_token_amount) = create_wyndex_swap_msg_with_simulation(
+            querier,
+            delegator_addr,
+            original_asset_overlap_amount,
+            reward.info.clone().into(),
+            first_asset.clone().into(),
+            WYND_MULTI_HOP_ADDR.to_string(),
+        )?;
+
+        asset_one_amount -= overlap_amount.clone();
+        reward.amount -= original_asset_overlap_amount;
+        *simulated_asset_amount -= overlap_amount.clone();
+        lp_assets.push(WyndAssetLPMessages {
+            swap_msgs,
+            target_asset_info: Asset {
+                info: first_asset.clone().into(),
+                amount: target_token_amount,
+            },
+        });
+    }
+
+    // if we exhausted any of the rewards in the previous logic
+    rewards.retain(|(_, SimulationResponse { return_amount, .. })| !return_amount.is_zero());
+
+    // finally, whatever is remaining should be swapped to the second pool asset
+    for (
+        reward,
+        SimulationResponse {
+            return_amount: simulated_asset_amount,
+            ..
+        },
+    ) in rewards.iter_mut()
+    {
+        let overlap_amount = simulated_asset_amount.clone();
+        let original_asset_overlap_amount =
+            reward.amount * simulated_asset_amount.clone() / overlap_amount.clone();
+
+        let (swap_msgs, target_token_amount) = create_wyndex_swap_msg_with_simulation(
+            querier,
+            delegator_addr,
+            original_asset_overlap_amount,
+            reward.info.clone().into(),
+            second_asset.clone().into(),
+            WYND_MULTI_HOP_ADDR.to_string(),
+        )?;
+
+        lp_assets.push(WyndAssetLPMessages {
+            swap_msgs,
+            target_asset_info: Asset {
+                info: second_asset.clone().into(),
+                amount: target_token_amount,
+            },
+        });
+    }
+
+    Ok(lp_assets)
+
+    // TODO: I think there may be another potential optimization here where we look through the reward amounts
+    // and see if any grouping of them match exactly with the pool asset needed so that we dont accidentally
+    // chop up a reward into multiple swaps when it's not necessary.
+    // Until multiple rewards becomes more common this is probably not worth the effort
 }
