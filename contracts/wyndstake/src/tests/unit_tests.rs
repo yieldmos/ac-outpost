@@ -1,25 +1,3 @@
-use cosmos_sdk_proto::{
-    cosmos::{
-        base::v1beta1::Coin, distribution::v1beta1::MsgWithdrawDelegatorReward,
-        staking::v1beta1::MsgDelegate,
-    },
-    cosmwasm::wasm::v1::MsgExecuteContract,
-};
-use cosmwasm_std::{to_binary, Addr};
-use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject},
-    msgs::CosmosProtoMsg,
-};
-use wyndex::{asset::AssetInfo, pair::SimulationResponse};
-
-use crate::{
-    contract::{AllPendingRewards, PendingReward},
-    execute::{
-        juno_staking_msgs, neta_staking_msgs, wynd_token_swap, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
-        NETA_STAKING_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR,
-    },
-};
-
 // #[test]
 // fn generate_neta_staking_msg() {
 //     let delegator_addr = Addr::unchecked("test1");
