@@ -22,6 +22,8 @@ use crate::{
 };
 
 pub const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
+pub const WYND_CW20_STAKING_ADDR: &str =
+    "juno1sy9mlw47w44f94zea7g98y5ff4cvtc8rfv75jgwphlet83wlf4ssa050mv";
 pub const WYND_MULTI_HOP_ADDR: &str =
     "juno1pctfpv9k03v0ff538pz8kkw5ujlptntzkwjg6c0lrtqv87s9k28qdtl50w";
 pub const JUNO_WYND_PAIR_ADDR: &str =

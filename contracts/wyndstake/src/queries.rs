@@ -7,7 +7,10 @@ use wyndex::{
 use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
-    execute::{JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR},
+    execute::{
+        JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYND_CW20_ADDR, WYND_CW20_STAKING_ADDR,
+        WYND_MULTI_HOP_ADDR,
+    },
     msg::VersionResponse,
     ContractError,
 };
@@ -23,7 +26,7 @@ pub fn query_pending_wynd_rewards(
     delegator: &Addr,
 ) -> Result<Uint128, ContractError> {
     let rewards: wynd_stake::msg::RewardsResponse = querier.query_wasm_smart(
-        WYND_CW20_ADDR,
+        WYND_CW20_STAKING_ADDR,
         &wynd_stake::msg::QueryMsg::Rewards {
             address: delegator.to_string(),
         },

@@ -20,7 +20,7 @@ pub struct PendingReward {
 }
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ac-outpost-wyndstake";
+const CONTRACT_NAME: &str = "crates.io:ac-outpost-wyndlp";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
