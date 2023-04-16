@@ -7,7 +7,9 @@ use cosmos_sdk_proto::prost::EncodeError;
 use cosmos_sdk_proto::traits::{Message, MessageExt};
 use cosmos_sdk_proto::Any;
 
-use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, QuerierWrapper, StdError, Uint128};
+use cosmwasm_std::{
+    to_binary, Addr, Binary, CosmosMsg, Decimal, QuerierWrapper, StdError, Uint128,
+};
 use serde::Serialize;
 use wyndex::asset::{AssetInfo, AssetValidated};
 
@@ -134,7 +136,7 @@ pub fn create_wyndex_swap_operations(
         operations,
         minimum_receive: None,
         receiver: None,
-        max_spread: None,
+        max_spread: Some(Decimal::percent(1)),
         referral_address: None,
         referral_commission: None,
     }

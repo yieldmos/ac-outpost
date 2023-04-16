@@ -294,7 +294,6 @@ pub fn join_wynd_pool_msgs(
     let pool_assets = wynd_lp_asset_swaps(
         querier,
         &staking_denom,
-        &pool_contract_address,
         &wynd_amount_per_asset,
         &pool_info,
         &target_address,
@@ -388,7 +387,6 @@ pub fn join_wynd_pool_msgs(
 pub fn wynd_lp_asset_swaps(
     querier: &QuerierWrapper,
     staking_denom: &String,
-    _pool_contract_address: &str,
     wynd_amount_per_asset: &Uint128,
     pool_info: &PairInfo,
     target_address: &Addr,
