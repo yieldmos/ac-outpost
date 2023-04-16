@@ -27,8 +27,8 @@ pub fn query_pending_wynd_rewards(
 ) -> Result<Uint128, ContractError> {
     let rewards: wynd_stake::msg::RewardsResponse = querier.query_wasm_smart(
         WYND_CW20_STAKING_ADDR,
-        &wynd_stake::msg::QueryMsg::Rewards {
-            address: delegator.to_string(),
+        &wynd_stake::msg::QueryMsg::WithdrawableRewards {
+            owner: delegator.to_string(),
         },
     )?;
 

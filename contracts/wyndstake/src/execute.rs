@@ -72,7 +72,7 @@ pub fn prefs_to_msgs(
     // This should be the first msgs in the tx so the user has funds to compound
     let mut all_msgs: Vec<CosmosProtoMsg> =
         vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            WYND_CW20_ADDR.to_string(),
+            WYND_CW20_STAKING_ADDR.to_string(),
             &target_address.to_string(),
             &wynd_stake::msg::ExecuteMsg::WithdrawRewards {
                 owner: None,
@@ -94,7 +94,7 @@ pub fn prefs_to_msgs(
                 JunoDestinationProject::JunoStaking { validator_address } =>
                     juno_staking_msgs(target_address.clone(),
                         comp_token_amount,
-                         WYND_CW20_ADDR.to_string(),
+                        //  WYND_CW20_ADDR.to_string(),
                          validator_address,
                          query_wynd_juno_swap(&querier, comp_token_amount)?
                     )
@@ -219,7 +219,7 @@ pub fn neta_staking_msgs(
 pub fn juno_staking_msgs(
     target_address: Addr,
     comp_token_amount: Uint128,
-    staking_denom: String,
+    // staking_denom: String,
     validator_address: String,
     SimulationResponse {
         return_amount: expected_juno,
@@ -233,18 +233,27 @@ pub fn juno_staking_msgs(
         &cw20::Cw20ExecuteMsg::Send {
             contract: JUNO_WYND_PAIR_ADDR.to_string(),
             amount: comp_token_amount,
-            msg: to_binary(&wyndex::pair::ExecuteMsg::Swap {
-                offer_asset: Asset {
-                    info: AssetInfo::Token(staking_denom.clone()),
-                    amount: comp_token_amount,
-                },
-                ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
-                max_spread: None,
-                belief_price: None,
-                to: None,
-                referral_address: None,
-                referral_commission: None,
-            })?,
+            msg: to_binary(
+                &wyndex::pair::Cw20HookMsg::Swap {
+                    ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
+                    belief_price: None,
+                    max_spread: None,
+                    to: None,
+                    referral_address: None,
+                    referral_commission: None,
+                }, // ::Swap {
+                   //     offer_asset: Asset {
+                   //         info: AssetInfo::Token(staking_denom.clone()),
+                   //         amount: comp_token_amount,
+                   //     },
+                   //     ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
+                   //     max_spread: None,
+                   //     belief_price: None,
+                   //     to: None,
+                   //     referral_address: None,
+                   //     referral_commission: None,
+                   // }
+            )?,
         },
         None,
     )?);
