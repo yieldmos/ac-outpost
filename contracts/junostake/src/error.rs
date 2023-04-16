@@ -21,6 +21,12 @@ pub enum ContractError {
     #[error("Could not query pendingRewards")]
     QueryPendingRewardsFailure,
 
+    #[error("{0} is not a valid address. Cannot set as authorized address")]
+    InvalidAuthorizedAddress(String),
+
+    #[error("{0} is already an authorized compounder")]
+    DuplicateAuthorizedAddress(String),
+
     #[error("Could not simulate swap of {from} to {to}")]
     SwapSimulationError { from: String, to: String },
 

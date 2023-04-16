@@ -23,6 +23,7 @@ use wyndex::{
 
 use crate::{
     contract::{AllPendingRewards, PendingReward},
+    helpers::is_authorized_compounder,
     queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
     ContractError,
 };
@@ -48,6 +49,9 @@ pub fn compound(
     let _ = !prefs_sum_to_one(&comp_prefs)?;
 
     let delegator = deps.api.addr_validate(&delegator_address)?;
+
+    let _ = is_authorized_compounder(deps.as_ref(), &delegator)?;
+
     let staking_denom = deps.querier.query_bonded_denom()?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs

@@ -1,9 +1,13 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, Deps, StdResult, WasmMsg};
 
-use crate::msg::ExecuteMsg;
+use crate::{
+    msg::ExecuteMsg,
+    state::{ADMIN, AUTHORIZED_ADDRS},
+    ContractError,
+};
 
 /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
 /// for working with this.
@@ -24,4 +28,13 @@ impl CwTemplateContract {
         }
         .into())
     }
+}
+
+pub fn is_authorized_compounder(deps: Deps, address: &Addr) -> Result<(), ContractError> {
+    if address.ne(&ADMIN.load(deps.storage)?) {
+        if AUTHORIZED_ADDRS.load(deps.storage)?.contains(address) {
+            return Ok(());
+        }
+    }
+    Err(ContractError::Unauthorized {})
 }

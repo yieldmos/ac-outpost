@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, FullDelegation, QuerierWrapper, Uint128};
+use cosmwasm_std::{Addr, Deps, FullDelegation, QuerierWrapper, Uint128};
 use outpost_utils::{helpers::sum_coins, queries::query_wynd_pool_swap};
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -8,13 +8,22 @@ use wyndex::{
 use crate::{
     contract::{AllPendingRewards, PendingReward},
     execute::JUNO_NETA_PAIR_ADDR,
-    msg::VersionResponse,
+    msg::{AuthorizedCompoundersResponse, VersionResponse},
+    state::AUTHORIZED_ADDRS,
     ContractError,
 };
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
         version: env!("CARGO_PKG_VERSION").to_string(),
+    }
+}
+
+pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
+    let authorized_compound_addresses: Vec<Addr> =
+        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+    AuthorizedCompoundersResponse {
+        authorized_compound_addresses,
     }
 }
 
