@@ -32,9 +32,9 @@ impl CwTemplateContract {
 
 pub fn is_authorized_compounder(deps: Deps, address: &Addr) -> Result<(), ContractError> {
     if address.ne(&ADMIN.load(deps.storage)?) {
-        if AUTHORIZED_ADDRS.load(deps.storage)?.contains(address) {
-            return Ok(());
+        if !AUTHORIZED_ADDRS.load(deps.storage)?.contains(address) {
+            return Err(ContractError::Unauthorized {});
         }
     }
-    Err(ContractError::Unauthorized {})
+    Ok(())
 }
