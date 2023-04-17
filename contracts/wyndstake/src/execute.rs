@@ -234,27 +234,14 @@ pub fn juno_staking_msgs(
         &cw20::Cw20ExecuteMsg::Send {
             contract: JUNO_WYND_PAIR_ADDR.to_string(),
             amount: comp_token_amount,
-            msg: to_binary(
-                &wyndex::pair::Cw20HookMsg::Swap {
-                    ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
-                    belief_price: None,
-                    max_spread: None,
-                    to: None,
-                    referral_address: None,
-                    referral_commission: None,
-                }, // ::Swap {
-                   //     offer_asset: Asset {
-                   //         info: AssetInfo::Token(staking_denom.clone()),
-                   //         amount: comp_token_amount,
-                   //     },
-                   //     ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
-                   //     max_spread: None,
-                   //     belief_price: None,
-                   //     to: None,
-                   //     referral_address: None,
-                   //     referral_commission: None,
-                   // }
-            )?,
+            msg: to_binary(&wyndex::pair::Cw20HookMsg::Swap {
+                ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
+                belief_price: None,
+                max_spread: None,
+                to: None,
+                referral_address: None,
+                referral_commission: None,
+            })?,
         },
         None,
     )?);

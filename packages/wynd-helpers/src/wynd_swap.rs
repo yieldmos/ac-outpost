@@ -10,7 +10,7 @@ use crate::errors::WyndHelperError;
 
 /// Queries the Wyndex pool for the amount of `to_denom` that can be received for `from_token`
 /// IMPORTANT: you must provide the pair contract address for the simulation
-pub fn query_wynd_pool_swap(
+pub fn simulate_wynd_pool_swap(
     querier: &QuerierWrapper,
     pool_address: String,
     from_token: &Asset,
@@ -23,6 +23,80 @@ pub fn query_wynd_pool_swap(
             to: to_denom,
         }
     })
+}
+
+/// Generates the messages for swapping a token on Wyndex via a given pair contract
+pub fn wynd_pair_swap_msg(
+    sender: &Addr,
+    offer_asset: Asset,
+    ask_asset: AssetInfo,
+    pair_contract_address: String,
+) -> Result<CosmosProtoMsg, WyndHelperError> {
+    let swap_msg = match offer_asset.info.clone() {
+        AssetInfo::Native(denom) => {
+            // swap message when going from a native token
+            CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                pair_contract_address,
+                sender,
+                &wyndex::pair::ExecuteMsg::Swap {
+                    offer_asset: offer_asset.clone(),
+                    ask_asset_info: Some(ask_asset),
+                    max_spread: None,
+                    belief_price: None,
+                    to: None,
+                    referral_address: None,
+                    referral_commission: None,
+                },
+                Some(vec![Coin {
+                    denom,
+                    amount: offer_asset.amount.to_string(),
+                }]),
+            )?)
+        }
+        AssetInfo::Token(offer_token_address) => {
+            // swap message when going from a cw20 token
+            CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                offer_token_address,
+                sender,
+                &cw20::Cw20ExecuteMsg::Send {
+                    contract: pair_contract_address,
+                    amount: offer_asset.amount,
+                    msg: to_binary(&wyndex::pair::Cw20HookMsg::Swap {
+                        ask_asset_info: Some(ask_asset),
+                        belief_price: None,
+                        max_spread: None,
+                        to: None,
+                        referral_address: None,
+                        referral_commission: None,
+                    })?,
+                },
+                None,
+            )?)
+        }
+    };
+
+    Ok(swap_msg)
+}
+
+/// Generates the messages for swapping a token on Wyndex via a given pair contract
+/// also returns the swap simulationso that it can be used for subsequent calculations
+pub fn simulate_and_swap_wynd_pair(
+    querier: &QuerierWrapper,
+    sender: &Addr,
+    pair_contract_address: String,
+    offer_asset: Asset,
+    ask_asset: AssetInfo,
+) -> Result<(CosmosProtoMsg, SimulationResponse), WyndHelperError> {
+    let simulation = simulate_wynd_pool_swap(
+        querier,
+        pair_contract_address.clone(),
+        &offer_asset,
+        ask_asset.to_string(),
+    )?;
+
+    let swap_msg = wynd_pair_swap_msg(sender, offer_asset, ask_asset, pair_contract_address)?;
+
+    Ok((swap_msg, simulation))
 }
 
 /// Queries the Wyndex multihop factory for the amount of `to_denom`
@@ -60,6 +134,8 @@ pub fn simulate_multiple_swaps(
         .collect::<Result<Vec<_>, _>>()
 }
 
+/// Creates the swap operations for the multihop router
+/// This can be used for simulations and the actual swap
 pub fn create_wyndex_swap_operations(
     offer_asset: AssetInfo,
     ask_asset_info: AssetInfo,

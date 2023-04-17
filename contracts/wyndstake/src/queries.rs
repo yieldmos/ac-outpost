@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, QuerierWrapper, Uint128};
-use wynd_helpers::wynd_swap::query_wynd_pool_swap;
+use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
@@ -40,7 +40,7 @@ pub fn query_wynd_juno_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
+    simulate_wynd_pool_swap(
         querier,
         JUNO_WYND_PAIR_ADDR.to_string(),
         &Asset {
