@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Deps, FullDelegation, QuerierWrapper, Uint128};
 use outpost_utils::helpers::sum_coins;
-use wynd_helpers::wynd_swap::query_wynd_pool_swap;
+use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
@@ -69,7 +69,7 @@ pub fn query_juno_neta_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
+    simulate_wynd_pool_swap(
         querier,
         JUNO_NETA_PAIR_ADDR.to_string(),
         &Asset {
@@ -86,7 +86,7 @@ pub fn query_juno_wynd_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
+    simulate_wynd_pool_swap(
         querier,
         JUNO_NETA_PAIR_ADDR.to_string(),
         &Asset {

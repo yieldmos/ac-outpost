@@ -15,7 +15,8 @@ use outpost_utils::{
 };
 
 use wynd_helpers::{
-    wynd_lp::WyndAssetLPMessages, wynd_swap::create_wyndex_swap_msg_with_simulation,
+    wynd_lp::WyndAssetLPMessages,
+    wynd_swap::{create_wyndex_swap_msg_with_simulation, wynd_pair_swap_msg},
 };
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -194,26 +195,15 @@ pub fn neta_staking_msgs(
     }: SimulationResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // swap juno for neta
-    let neta_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        JUNO_NETA_PAIR_ADDR.to_string(),
+    let neta_swap_msg = wynd_pair_swap_msg(
         &target_address,
-        &wyndex::pair::ExecuteMsg::Swap {
-            offer_asset: Asset {
-                info: AssetInfo::Native(staking_denom.clone()),
-                amount: comp_token_amount,
-            },
-            ask_asset_info: Some(AssetInfo::Token(NETA_STAKING_ADDR.to_string())),
-            max_spread: None,
-            belief_price: None,
-            to: None,
-            referral_address: None,
-            referral_commission: None,
+        Asset {
+            info: AssetInfo::Native(staking_denom.clone()),
+            amount: comp_token_amount,
         },
-        Some(vec![Coin {
-            denom: staking_denom,
-            amount: comp_token_amount.to_string(),
-        }]),
-    )?);
+        AssetInfo::Token(NETA_CW20_ADDR.to_string()),
+        JUNO_NETA_PAIR_ADDR.to_string(),
+    )?;
 
     // stake neta
     let neta_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
@@ -241,26 +231,15 @@ pub fn wynd_staking_msgs(
     }: SimulationResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // swap juno for wynd
-    let wynd_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        JUNO_WYND_PAIR_ADDR.to_string(),
+    let wynd_swap_msg = wynd_pair_swap_msg(
         &target_address,
-        &wyndex::pair::ExecuteMsg::Swap {
-            offer_asset: Asset {
-                info: AssetInfo::Native(staking_denom.clone()),
-                amount: comp_token_amount,
-            },
-            ask_asset_info: Some(AssetInfo::Token(WYND_CW20_ADDR.to_string())),
-            max_spread: None,
-            belief_price: None,
-            to: None,
-            referral_address: None,
-            referral_commission: None,
+        Asset {
+            info: AssetInfo::Native(staking_denom.clone()),
+            amount: comp_token_amount,
         },
-        Some(vec![Coin {
-            denom: staking_denom,
-            amount: comp_token_amount.to_string(),
-        }]),
-    )?);
+        AssetInfo::Token(WYND_CW20_ADDR.to_string()),
+        JUNO_WYND_PAIR_ADDR.to_string(),
+    )?;
 
     // delegate wynd to the staking contract
     let wynd_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(

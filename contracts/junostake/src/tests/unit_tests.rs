@@ -27,7 +27,7 @@ fn generate_neta_staking_msg() {
                     info: wyndex::asset::AssetInfo::Native("ujuno".to_string()),
                     amount: 1000u128.into(),
                 },
-                ask_asset_info: Some(AssetInfo::Token(NETA_STAKING_ADDR.to_string())),
+                ask_asset_info: Some(AssetInfo::Token(NETA_CW20_ADDR.to_string())),
                 max_spread: None,
                 belief_price: None,
                 to: None,
