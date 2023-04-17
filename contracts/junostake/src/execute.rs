@@ -10,11 +10,12 @@ use outpost_utils::{
         CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod,
         WyndStakingBondingPeriod,
     },
-    helpers::{calculate_compound_amounts, prefs_sum_to_one, WyndAssetLPMessages},
-    msgs::{
-        create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg_with_simulation,
-        CosmosProtoMsg,
-    },
+    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
+    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+};
+
+use wynd_helpers::{
+    wynd_lp::WyndAssetLPMessages, wynd_swap::create_wyndex_swap_msg_with_simulation,
 };
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -23,8 +24,8 @@ use wyndex::{
 
 use crate::{
     contract::{AllPendingRewards, PendingReward},
-    helpers::is_authorized_compounder,
     queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 
@@ -42,16 +43,25 @@ pub const NETA_STAKING_ADDR: &str =
 pub fn compound(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     delegator_address: String,
     comp_prefs: CompoundPrefs,
 ) -> Result<Response, ContractError> {
+    // validate that the preference quantites sum to 1
     let _ = !prefs_sum_to_one(&comp_prefs)?;
 
-    let delegator = deps.api.addr_validate(&delegator_address)?;
+    let delegator: Addr = deps.api.addr_validate(&delegator_address)?;
 
-    let _ = is_authorized_compounder(deps.as_ref(), &delegator)?;
+    // validate that the user is authorized to compound
+    let _ = is_authorized_compounder(
+        deps.as_ref(),
+        &info.sender,
+        &delegator,
+        ADMIN,
+        AUTHORIZED_ADDRS,
+    )?;
 
+    // get the denom of the staking token. this should be "ujuno"
     let staking_denom = deps.querier.query_bonded_denom()?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs

@@ -1,6 +1,6 @@
 use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
 use cosmwasm_std::{to_binary, Addr};
-use outpost_utils::msgs::CosmosProtoMsg;
+use outpost_utils::msg_gen::CosmosProtoMsg;
 use wyndex::{asset::AssetInfo, pair::SimulationResponse};
 
 use crate::execute::{

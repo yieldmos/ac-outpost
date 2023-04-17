@@ -4,11 +4,12 @@ use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegat
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
     comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod},
-    helpers::{calculate_compound_amounts, prefs_sum_to_one, WyndAssetLPMessages},
-    msgs::{
-        create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
-        create_wyndex_swap_msg_with_simulation, CosmosProtoMsg,
-    },
+    helpers::{calculate_compound_amounts, prefs_sum_to_one},
+    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+};
+use wynd_helpers::{
+    wynd_lp::WyndAssetLPMessages,
+    wynd_swap::{create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation},
 };
 use wyndex::{
     asset::{Asset, AssetInfo},

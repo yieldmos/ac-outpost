@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, QuerierWrapper, Uint128};
-use outpost_utils::queries::query_wynd_pool_swap;
+use wynd_helpers::wynd_swap::query_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,

@@ -902,6 +902,7 @@ dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw20 1.0.1",
  "schemars",
  "serde",
@@ -1322,6 +1323,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
+name = "wynd-helpers"
+version = "0.2.0"
+dependencies = [
+ "cosmos-sdk-proto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20 1.0.1",
+ "outpost-utils",
+ "schemars",
+ "serde",
+ "thiserror",
+ "wyndex",
+ "wyndex-multi-hop",
+]
+
+[[package]]
 name = "wynd-stake"
 version = "1.6.0"
 source = "git+https://github.com/wynddao/wynddao.git?tag=v1.6.0#fe7c22942f578088c923932276ee8df640651ca7"
@@ -1448,6 +1465,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
+ "wynd-helpers",
  "wynd-stake",
  "wyndex",
  "wyndex-multi-hop",
@@ -1472,6 +1490,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
+ "wynd-helpers",
  "wynd-stake",
  "wyndex",
  "wyndex-factory",
@@ -1498,6 +1517,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
+ "wynd-helpers",
  "wynd-stake",
  "wyndex",
  "wyndex-multi-hop",

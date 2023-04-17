@@ -6,6 +6,12 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("Outpost Utils Error: &{0}")]
+    OutpostError(#[from] outpost_utils::errors::OutpostError),
+
+    #[error("Wynd Helper Error: &{0}")]
+    WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
@@ -29,9 +35,6 @@ pub enum ContractError {
 
     #[error("Could not simulate swap of {from} to {to}")]
     SwapSimulationError { from: String, to: String },
-
-    #[error("&{0}")]
-    OutpostError(#[from] outpost_utils::errors::OutpostError),
 
     #[error("Could not encode msg as any: {0}")]
     EncodeError(#[from] cosmos_sdk_proto::prost::EncodeError),

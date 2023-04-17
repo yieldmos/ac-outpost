@@ -2,8 +2,8 @@ use std::iter;
 
 use crate::{
     helpers::{
-        assign_comp_prefs_to_pools, calculate_compound_amounts, fold_wynd_swap_msgs,
-        valid_catch_all_pool_prefs, valid_pool_prefs, wynd_join_pool_msgs, PoolRewardsWithPrefs,
+        assign_comp_prefs_to_pools, calculate_compound_amounts, valid_catch_all_pool_prefs,
+        valid_pool_prefs, PoolRewardsWithPrefs,
     },
     queries::{
         check_user_pools_for_rewards, get_max_user_pool_bonding_period, query_current_user_pools,
@@ -20,13 +20,14 @@ use outpost_utils::{
         JunoDestinationProject, PoolCatchAllDestinationAction, PoolCatchAllDestinationProject,
         PoolCompoundPrefs, WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },
-    helpers::WyndAssetLPMessages,
-    msgs::{
-        create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
-        create_wyndex_swap_msg_with_simulation, create_wyndex_swaps_with_sims, CosmosProtoMsg,
-        SwapSimResponse,
+    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+};
+use wynd_helpers::{
+    wynd_lp::{fold_wynd_swap_msgs, wynd_join_pool_msgs, WyndAssetLPMessages},
+    wynd_swap::{
+        create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation,
+        create_wyndex_swaps_with_sims, simulate_multiple_swaps, SwapSimResponse,
     },
-    queries::simulate_multiple_swaps,
 };
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},

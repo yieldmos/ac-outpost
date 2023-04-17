@@ -1,10 +1,9 @@
-use cosmwasm_std::{Coin, Decimal, Uint128};
-use wyndex::asset::Asset;
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, Uint128};
+use cw_storage_plus::Item;
 
 use crate::{
     comp_prefs::{CompoundPrefs, DestinationAction},
     errors::OutpostError,
-    msgs::CosmosProtoMsg,
 };
 
 /// sums the coins in a vec given denom name youre looking for
@@ -73,9 +72,21 @@ impl TryFrom<CompoundPrefs> for Vec<Decimal> {
     }
 }
 
-pub struct WyndAssetLPMessages {
-    /// The msgs to perform the token swaps and if applicable the increase allowances
-    pub swap_msgs: Vec<CosmosProtoMsg>,
-    /// The asset denom and amount that will be sent to the pool contract
-    pub target_asset_info: Asset,
+/// The sender is only authorized if they are the admin or if they are in the
+/// list of authorized compounders or if they are the delegator themselves.
+pub fn is_authorized_compounder(
+    deps: Deps,
+    sender: &Addr,
+    delegator: &Addr,
+    admin: Item<Addr>,
+    authorized_addrs: Item<Vec<Addr>>,
+) -> Result<(), OutpostError> {
+    if sender.ne(delegator) {
+        if sender.ne(&admin.load(deps.storage)?) {
+            if !authorized_addrs.load(deps.storage)?.contains(sender) {
+                return Err(OutpostError::UnauthorizedCompounder(sender.to_string()));
+            }
+        }
+    }
+    Ok(())
 }

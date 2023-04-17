@@ -1,127 +1,63 @@
-use cosmos_sdk_proto::cosmos::authz::v1beta1::{GenericAuthorization, Grant, MsgGrant};
-use cosmos_sdk_proto::cosmos::distribution::v1beta1::MsgWithdrawDelegatorReward;
-use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
-use cosmos_sdk_proto::cosmos::{authz::v1beta1::MsgExec, base::v1beta1::Coin};
-use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
-use cosmos_sdk_proto::prost::EncodeError;
-use cosmos_sdk_proto::traits::{Message, MessageExt};
-use cosmos_sdk_proto::Any;
-
-use cosmwasm_std::{
-    to_binary, Addr, Binary, CosmosMsg, Decimal, QuerierWrapper, StdError, Uint128,
+use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
+use cosmwasm_std::{to_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
+use wyndex::{
+    asset::{Asset, AssetInfo, AssetValidated},
+    pair::SimulationResponse,
 };
-use serde::Serialize;
-use wyndex::asset::{AssetInfo, AssetValidated};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum CosmosProtoMsg {
-    WithdrawDelegatorReward(MsgWithdrawDelegatorReward),
-    Delegate(MsgDelegate),
-    ExecuteContract(MsgExecuteContract),
-    Exec(MsgExec),
-}
+use crate::errors::WyndHelperError;
 
-impl TryFrom<&CosmosProtoMsg> for Any {
-    fn try_from(proto: &CosmosProtoMsg) -> Result<Self, Self::Error> {
-        match proto {
-            CosmosProtoMsg::WithdrawDelegatorReward(msg) => msg.to_any(),
-            CosmosProtoMsg::Delegate(msg) => msg.to_any(),
-            CosmosProtoMsg::ExecuteContract(msg) => msg.to_any(),
-            CosmosProtoMsg::Exec(msg) => Ok(Any {
-                type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
-                value: Binary::from(msg.encode_to_vec()).to_vec(),
-            }),
+/// Queries the Wyndex pool for the amount of `to_denom` that can be received for `from_token`
+/// IMPORTANT: you must provide the pair contract address for the simulation
+pub fn query_wynd_pool_swap(
+    querier: &QuerierWrapper,
+    pool_address: String,
+    from_token: &Asset,
+    // just for error reporting purposes
+    to_denom: String,
+) -> Result<SimulationResponse, WyndHelperError> {
+    wyndex::querier::simulate(querier, pool_address, from_token).map_err(|_| {
+        WyndHelperError::SwapSimulationError {
+            from: from_token.info.to_string(),
+            to: to_denom,
         }
-    }
-
-    type Error = EncodeError;
-}
-
-/// Creates a MsgExecuteContract message
-pub fn create_exec_contract_msg<T, N>(
-    contract_addr: String,
-    sender: &N,
-    msg: &T,
-    funds: Option<Vec<Coin>>,
-) -> Result<MsgExecuteContract, StdError>
-where
-    T: Serialize + ?Sized,
-    N: Into<String> + std::fmt::Display,
-{
-    Ok(MsgExecuteContract {
-        contract: contract_addr,
-        sender: sender.to_string(),
-        msg: to_binary(&msg)?.to_vec(),
-        funds: funds.unwrap_or_default(),
     })
 }
 
-pub enum GenericAuthorizationType {
-    WithdrawDelegatorRewards,
-    Delegation,
-}
+/// Queries the Wyndex multihop factory for the amount of `to_denom`
+/// that can be received for a bunch of different tokens. This can be used
+/// to compare the value of all the input offer tokens.
+pub fn simulate_multiple_swaps(
+    querier: &QuerierWrapper,
+    offer_tokens: Vec<AssetValidated>,
+    target_token: &wyndex::asset::AssetInfoValidated,
+    multihop_factory_addr: &String,
+) -> Result<Vec<(AssetValidated, SimulationResponse)>, WyndHelperError> {
+    offer_tokens
+        .into_iter()
+        .map(|offer_token| {
+            let simulation: SimulationResponse = querier
+                .query_wasm_smart(
+                    multihop_factory_addr,
+                    &wyndex_multi_hop::msg::QueryMsg::SimulateSwapOperations {
+                        offer_amount: offer_token.amount,
+                        operations: vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
+                            offer_asset_info: offer_token.info.clone().into(),
+                            ask_asset_info: target_token.clone().into(),
+                        }],
+                        referral: false,
+                        referral_commission: None,
+                    },
+                )
+                .map_err(|_| WyndHelperError::SwapSimulationError {
+                    from: offer_token.info.to_string(),
+                    to: target_token.to_string(),
+                })?;
 
-impl From<GenericAuthorizationType> for Any {
-    fn from(proto: GenericAuthorizationType) -> Any {
-        match proto {
-            GenericAuthorizationType::WithdrawDelegatorRewards => Any {
-                type_url: "/cosmos.authz.v1beta1.GenericAuthorization".to_string(),
-                value: GenericAuthorization {
-                    msg: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward".to_string(),
-                }
-                .encode_to_vec(),
-            },
-            GenericAuthorizationType::Delegation => Any {
-                type_url: "/cosmos.authz.v1beta1.GenericAuthorization".to_string(),
-                value: GenericAuthorization {
-                    msg: "/cosmos.staking.v1beta1.MsgDelegate".to_string(),
-                }
-                .encode_to_vec(),
-            },
-        }
-    }
-}
-
-/// Creates a Generic MsgGrant message
-pub fn create_generic_grant_msg(
-    granter: String,
-    grantee: &Addr,
-    grant_type: GenericAuthorizationType,
-) -> CosmosMsg {
-    let grant = MsgGrant {
-        grantee: grantee.to_string(),
-        granter,
-        grant: Some(Grant {
-            authorization: Some(grant_type.into()),
-            expiration: None,
-        }),
-    };
-
-    CosmosMsg::Stargate {
-        type_url: "/cosmos.authz.v1beta1.MsgGrant".to_string(),
-        value: Binary::from(grant.encode_to_vec()),
-    }
-}
-
-/// Creates a MsgExec message
-pub fn create_exec_msg(
-    grantee: &Addr,
-    msgs: Vec<CosmosProtoMsg>,
-) -> Result<CosmosMsg, EncodeError> {
-    let any_msgs: Vec<Any> = msgs
-        .iter()
-        .map(|msg| -> Result<Any, EncodeError> { msg.try_into() })
-        .collect::<Result<Vec<Any>, EncodeError>>()?;
-
-    let exec = MsgExec {
-        grantee: grantee.to_string(),
-        msgs: any_msgs,
-    };
-
-    Ok(CosmosMsg::Stargate {
-        type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
-        value: Binary::from(exec.encode_to_vec()),
-    })
+            Ok((offer_token.clone(), simulation))
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
 pub fn create_wyndex_swap_operations(
@@ -142,7 +78,8 @@ pub fn create_wyndex_swap_operations(
     }
 }
 
-/// Creates a MsgExecuteContract for doing a token swap on Wyndex via the multihop router
+/// Creates a MsgExecuteContract for doing a token swap on Wyndex via the multihop router.
+/// If you need to get a simulation of the swap as well, use `create_wyndex_swap_msg_and_simulation` instead
 pub fn create_wyndex_swap_msg(
     sender: &Addr,
     offer_amount: Uint128,
@@ -155,10 +92,12 @@ pub fn create_wyndex_swap_msg(
         return Ok(vec![]);
     }
 
+    // the swap operations to be used by the multihop router
     let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
 
     match offer_asset {
         AssetInfo::Native(offer_denom) => Ok(vec![CosmosProtoMsg::ExecuteContract(
+            // multihop swap message when going from a native token
             create_exec_contract_msg(
                 multihop_address,
                 sender,
@@ -170,6 +109,7 @@ pub fn create_wyndex_swap_msg(
             )?,
         )]),
         AssetInfo::Token(ask_token_contract_address) => Ok(vec![CosmosProtoMsg::ExecuteContract(
+            // multihop swap message when going from a cw20 token
             create_exec_contract_msg(
                 ask_token_contract_address,
                 sender,
@@ -199,6 +139,8 @@ pub fn create_wyndex_swap_msg_with_simulation(
         return Ok((vec![], offer_amount));
     }
 
+    // generate the operations for the multihop here that way we can use the same ops for
+    // the simulation and the actual swap msg
     let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
 
     let simulated_swap: wyndex::pair::SimulationResponse;
@@ -222,6 +164,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
     let exec: MsgExecuteContract;
     match offer_asset {
         AssetInfo::Native(offer_denom) => {
+            // multihop swap message when going from a native token
             exec = create_exec_contract_msg(
                 multihop_address,
                 sender,
@@ -233,6 +176,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
             )?;
         }
         AssetInfo::Token(ask_token_contract_address) => {
+            // multihop swap message when going from a cw20 token
             exec = create_exec_contract_msg(
                 ask_token_contract_address,
                 sender,
@@ -257,7 +201,8 @@ pub struct SwapSimResponse {
     pub simulated_return_amount: Uint128,
 }
 
-/// Creates a MsgExecuteContract for doing multiple token swaps on Wyndex via the multihop router
+/// Creates a MsgExecuteContract for doing multiple token swaps all with the same ask token
+/// on Wyndex via the multihop router
 /// also returning the simulated resultant token amounts
 pub fn create_wyndex_swaps_with_sims(
     querier: &QuerierWrapper,

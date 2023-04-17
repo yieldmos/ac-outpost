@@ -1,4 +1,9 @@
 {
   "cmake.configureOnOpen": false,
-  "cosmywasmy.chainConfigName": "Juno uni-6"
+  "cosmywasmy.chainConfigName": "Juno uni-6",
+  "rust-analyzer.linkedProjects": [
+    "./packages/wynd-helpers/Cargo.toml",
+    "./packages/wynd-helpers/Cargo.toml",
+    "./packages/wynd-helpers/Cargo.toml"
+  ]
 }
