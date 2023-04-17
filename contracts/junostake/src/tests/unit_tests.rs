@@ -4,8 +4,8 @@ use outpost_utils::msg_gen::CosmosProtoMsg;
 use wyndex::{asset::AssetInfo, pair::SimulationResponse};
 
 use crate::execute::{
-    neta_staking_msgs, wynd_staking_msgs, wynd_token_swap, JUNO_NETA_PAIR_ADDR,
-    JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, NETA_STAKING_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR,
+    neta_staking_msgs, wynd_staking_msgs, JUNO_NETA_PAIR_ADDR, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
+    NETA_STAKING_ADDR, WYND_CW20_ADDR,
 };
 
 #[test]
@@ -124,92 +124,6 @@ fn generate_wynd_staking_msg() {
             "ujuno".to_string(),
             outpost_utils::comp_prefs::WyndStakingBondingPeriod::OneHundredEightyDays,
             sim_response
-        )
-        .unwrap(),
-        expected_msgs
-    );
-}
-
-#[test]
-fn generate_wynd_swap_msgs() {
-    let delegator_addr = Addr::unchecked("test1");
-
-    let expected_msgs: Vec<CosmosProtoMsg> = vec![];
-
-    assert_eq!(
-        wynd_token_swap(
-            delegator_addr.clone(),
-            100u128.into(),
-            "ujuno".to_string(),
-            AssetInfo::Native("ujuno".to_string())
-        )
-        .unwrap(),
-        expected_msgs
-    );
-
-    let expected_msgs: Vec<CosmosProtoMsg> =
-        vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-            contract: WYND_MULTI_HOP_ADDR.to_string(),
-            sender: "test1".to_string(),
-            msg: to_binary(&wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                operations: vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
-                    offer_asset_info: AssetInfo::Native("ujuno".to_string()),
-                    ask_asset_info: AssetInfo::Native("uusdc".to_string()),
-                }],
-                receiver: None,
-                max_spread: None,
-                minimum_receive: None,
-                referral_address: None,
-                referral_commission: None,
-            })
-            .expect("failed to encode swap msg")
-            .to_vec(),
-            funds: vec![Coin {
-                amount: 100u128.to_string(),
-                denom: "ujuno".to_string(),
-            }],
-        })];
-
-    assert_eq!(
-        wynd_token_swap(
-            delegator_addr.clone(),
-            100u128.into(),
-            "ujuno".to_string(),
-            AssetInfo::Native("uusdc".to_string())
-        )
-        .unwrap(),
-        expected_msgs
-    );
-
-    let expected_msgs: Vec<CosmosProtoMsg> =
-        vec![CosmosProtoMsg::ExecuteContract(MsgExecuteContract {
-            contract: WYND_MULTI_HOP_ADDR.to_string(),
-            sender: "test1".to_string(),
-            msg: to_binary(&wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                operations: vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
-                    offer_asset_info: AssetInfo::Native("ujuno".to_string()),
-                    ask_asset_info: AssetInfo::Token("junowynd1234".to_string()),
-                }],
-                receiver: None,
-                max_spread: None,
-                minimum_receive: None,
-                referral_address: None,
-                referral_commission: None,
-            })
-            .expect("failed to encode swap msg")
-            .to_vec(),
-            funds: vec![Coin {
-                amount: 100u128.to_string(),
-                denom: "ujuno".to_string(),
-            }],
-        })];
-
-    assert_eq!(
-        wynd_token_swap(
-            delegator_addr.clone(),
-            100u128.into(),
-            "ujuno".to_string(),
-            AssetInfo::Token("junowynd1234".to_string())
         )
         .unwrap(),
         expected_msgs

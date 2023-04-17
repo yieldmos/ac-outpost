@@ -104,12 +104,15 @@ pub fn prefs_to_msgs(
         })
         .collect();
 
-    // calculates the amount of ujuno that will be used for each target project accurately
+    // calculates the amount of ujuno that will be used for each target project accurately.
+    // these amounts are paired with the associated destination action
+    // for example (1000, JunoDestinationProject::JunoStaking { validator_address: "juno1..." })
     let compound_token_amounts = iter::zip(
         calculate_compound_amounts(&comp_prefs.clone().try_into()?, &total_rewards.amount)?,
         comp_prefs.relative,
     );
 
+    // generate the list of individual msgs to compound the user's rewards
     let compounding_msgs: Result<Vec<CosmosProtoMsg>, ContractError> = compound_token_amounts
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> { match destination {
@@ -137,12 +140,14 @@ pub fn prefs_to_msgs(
                     bonding_period,
                     query_juno_wynd_swap(&querier, comp_token_amount)?
                 ),
-                JunoDestinationProject::TokenSwap { target_denom } => wynd_token_swap(
-                    target_address.clone(),
+                JunoDestinationProject::TokenSwap { target_denom } => wynd_helpers::wynd_swap::create_wyndex_swap_msg(
+                    &target_address,
                     comp_token_amount,
-                    staking_denom.clone(),
+                    AssetInfo::Native(staking_denom.clone()),
                     target_denom,
-                ),
+                    WYND_MULTI_HOP_ADDR.to_string(),
+                )
+                .map_err(|err| ContractError::Std(err)),
                 JunoDestinationProject::WyndLP {
                     contract_address,
                     bonding_period,
@@ -177,42 +182,6 @@ pub fn prefs_to_msgs(
     withdraw_rewards_msgs.append(&mut compounding_msgs?);
 
     Ok(withdraw_rewards_msgs)
-}
-
-pub fn wynd_token_swap(
-    target_address: Addr,
-    comp_token_amount: Uint128,
-    staking_denom: String,
-    target_denom: AssetInfo,
-) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    match target_denom {
-        // swapping from ujuno to ujuno so nothing to do here
-        AssetInfo::Native(target_native_denom) if staking_denom == target_native_denom => {
-            Ok(vec![])
-        }
-        // create the swap via the multihop contract
-        _ => Ok(vec![CosmosProtoMsg::ExecuteContract(
-            create_exec_contract_msg(
-                WYND_MULTI_HOP_ADDR.to_string(),
-                &target_address,
-                &wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                    operations: vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
-                        offer_asset_info: AssetInfo::Native(staking_denom.clone()),
-                        ask_asset_info: target_denom,
-                    }],
-                    receiver: None,
-                    max_spread: None,
-                    minimum_receive: None,
-                    referral_address: None,
-                    referral_commission: None,
-                },
-                Some(vec![Coin {
-                    denom: staking_denom,
-                    amount: comp_token_amount.to_string(),
-                }]),
-            )?,
-        )]),
-    }
 }
 
 pub fn neta_staking_msgs(
