@@ -9,7 +9,9 @@ use outpost_utils::{
 };
 use wynd_helpers::{
     wynd_lp::WyndAssetLPMessages,
-    wynd_swap::{create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation},
+    wynd_swap::{
+        create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation, wynd_pair_swap_msg,
+    },
 };
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -220,7 +222,6 @@ pub fn neta_staking_msgs(
 pub fn juno_staking_msgs(
     target_address: Addr,
     comp_token_amount: Uint128,
-    // staking_denom: String,
     validator_address: String,
     SimulationResponse {
         return_amount: expected_juno,
@@ -228,23 +229,15 @@ pub fn juno_staking_msgs(
     }: SimulationResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // swap wynd for juno
-    let wynd_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        WYND_CW20_ADDR.to_string(),
+    let wynd_swap_msg = wynd_pair_swap_msg(
         &target_address,
-        &cw20::Cw20ExecuteMsg::Send {
-            contract: JUNO_WYND_PAIR_ADDR.to_string(),
+        Asset {
+            info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
             amount: comp_token_amount,
-            msg: to_binary(&wyndex::pair::Cw20HookMsg::Swap {
-                ask_asset_info: Some(AssetInfo::Native("ujuno".to_string())),
-                belief_price: None,
-                max_spread: None,
-                to: None,
-                referral_address: None,
-                referral_commission: None,
-            })?,
         },
-        None,
-    )?);
+        AssetInfo::Native("ujuno".to_string()),
+        JUNO_WYND_PAIR_ADDR.to_string(),
+    )?;
 
     // stake juno
     let juno_stake_msg = CosmosProtoMsg::Delegate(MsgDelegate {
