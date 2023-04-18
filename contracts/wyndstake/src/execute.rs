@@ -8,7 +8,7 @@ use outpost_utils::{
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
-    wynd_lp::WyndAssetLPMessages,
+    wynd_lp::{wynd_join_pool_msgs, WyndAssetLPMessages},
     wynd_swap::{
         create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation, wynd_pair_swap_msg,
     },
@@ -280,68 +280,11 @@ pub fn join_wynd_pool_msgs(
         &target_address,
     )?;
 
-    let pool_join_funds: Vec<Asset> = pool_assets
-        .iter()
-        .map(
-            |WyndAssetLPMessages {
-                 target_asset_info, ..
-             }| target_asset_info.clone(),
-        )
-        .collect::<Vec<_>>();
-    let native_funds: Vec<Coin> = pool_assets
-        .iter()
-        .filter_map(
-            |WyndAssetLPMessages {
-                 target_asset_info, ..
-             }| {
-                if let Asset {
-                    info: AssetInfo::Native(native_denom),
-                    amount,
-                } = target_asset_info
-                {
-                    Some(Coin {
-                        denom: native_denom.clone(),
-                        amount: amount.to_string(),
-                    })
-                } else {
-                    None
-                }
-            },
-        )
-        .collect::<Vec<_>>();
-
-    let mut swap_msgs: Vec<CosmosProtoMsg> = pool_assets
-        .iter()
-        .flat_map(|WyndAssetLPMessages { swap_msgs, .. }| swap_msgs.clone())
-        .collect::<Vec<_>>();
-
-    swap_msgs.append(&mut vec![
-        CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            pool_contract_address,
-            &target_address,
-            &wyndex::pair::ExecuteMsg::ProvideLiquidity {
-                assets: pool_join_funds,
-                slippage_tolerance: None,
-                receiver: None,
-            },
-            Some(native_funds),
-        )?),
-        // CosmosProtoMsg::ExecuteContract(
-        //     create_exec_contract_msg(
-        //         &pool_info.staking_addr.to_string(),
-        //         &target_address,
-        //         &cw20::Cw20ExecuteMsg::Send {
-        //             contract: pool_info.staking_addr.to_string(),
-        //             amount: todo!("set estimated lp tokens"),
-        //             msg: to_binary(
-        //                 &wyndex_stake::msg::ReceiveDelegationMsg::Delegate {
-        //                     unbonding_period: bonding_period.into(),
-
-        //             } )? ,
-        //         },
-        //         None
-        //     )?)
-    ]);
+    let mut swap_msgs: Vec<CosmosProtoMsg> = wynd_join_pool_msgs(
+        target_address.to_string(),
+        pool_contract_address,
+        pool_assets,
+    )?;
 
     if !existing_lp_tokens.balance.is_zero() {
         swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(

@@ -897,7 +897,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "outpost-utils"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -1324,7 +1324,7 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "wynd-helpers"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -1448,7 +1448,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-junostake-outpost"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -1473,7 +1473,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-wyndlp-outpost"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -1500,7 +1500,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-wyndstake-outpost"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",

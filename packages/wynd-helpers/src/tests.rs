@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, Uint128};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use wyndex::asset::{Asset, AssetInfo};
 
-use crate::wynd_lp::{fold_wynd_swap_msgs, wynd_join_pool_msgs, WyndAssetLPMessages};
+use crate::wynd_lp::{fold_wynd_swap_msgs, wynd_join_pool_from_map_msgs, WyndAssetLPMessages};
 
 #[test]
 fn fold_wynd_swaps() {
@@ -176,7 +176,7 @@ fn generate_join_pool_messages() {
     let mut swap_msgs: Vec<CosmosProtoMsg> = vec![];
     let assets: HashMap<AssetInfo, Uint128> = HashMap::from([]);
 
-    let join_pool_msgs = wynd_join_pool_msgs(
+    let join_pool_msgs = wynd_join_pool_from_map_msgs(
         &1u64,
         delegator_addr.to_string(),
         target_pool.clone(),
@@ -218,7 +218,7 @@ fn generate_join_pool_messages() {
         ),
     ]);
 
-    let join_pool_msgs = wynd_join_pool_msgs(
+    let join_pool_msgs = wynd_join_pool_from_map_msgs(
         &1u64,
         delegator_addr.to_string(),
         target_pool.clone(),

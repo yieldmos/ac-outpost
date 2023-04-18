@@ -27,6 +27,12 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("{0} is not a valid address. Cannot set as authorized address")]
+    InvalidAuthorizedAddress(String),
+
+    #[error("{0} is already an authorized compounder")]
+    DuplicateAuthorizedAddress(String),
+
     #[error("Could not query pendingRewards")]
     QueryPendingRewardsFailure,
 

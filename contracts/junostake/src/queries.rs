@@ -10,7 +10,7 @@ use crate::{
     contract::{AllPendingRewards, PendingReward},
     execute::JUNO_NETA_PAIR_ADDR,
     msg::{AuthorizedCompoundersResponse, VersionResponse},
-    state::AUTHORIZED_ADDRS,
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 
@@ -23,20 +23,25 @@ pub fn query_version() -> VersionResponse {
 pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
     let authorized_compound_addresses: Vec<Addr> =
         AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+    let admin: Addr = ADMIN.load(deps.storage).unwrap();
     AuthorizedCompoundersResponse {
+        admin,
         authorized_compound_addresses,
     }
 }
 
+/// Queries the pending staking rewards for a given delegator
 pub fn query_pending_rewards(
     querier: &QuerierWrapper,
     delegator: &Addr,
     staking_denom: String,
 ) -> Result<AllPendingRewards, ContractError> {
+    // gets all of the individual delegations for the delegator
     let rewards_query: Result<Vec<PendingReward>, ContractError> = querier
         .query_all_delegations(delegator)?
         .into_iter()
         .map(
+            // each delegation is queried for its pending rewards
             |delegation| match querier.query_delegation(delegator, delegation.validator) {
                 Ok(Some(FullDelegation {
                     validator,
@@ -53,6 +58,7 @@ pub fn query_pending_rewards(
 
     let rewards = rewards_query?;
 
+    // sums the rewards
     let total = sum_coins(
         &staking_denom,
         &rewards

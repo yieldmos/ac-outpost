@@ -24,6 +24,7 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct AuthorizedCompoundersResponse {
+    pub admin: Addr,
     pub authorized_compound_addresses: Vec<Addr>,
 }
 

@@ -23,7 +23,7 @@ use outpost_utils::{
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
-    wynd_lp::{fold_wynd_swap_msgs, wynd_join_pool_msgs, WyndAssetLPMessages},
+    wynd_lp::{fold_wynd_swap_msgs, wynd_join_pool_from_map_msgs, WyndAssetLPMessages},
     wynd_swap::{
         create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation,
         create_wyndex_swaps_with_sims, simulate_multiple_swaps, SwapSimResponse,
@@ -409,7 +409,7 @@ pub fn join_wynd_pool_msgs(
     let (mut swap_msgs, assets) = fold_wynd_swap_msgs(swap_msgs);
 
     // get the list of msgs needed to join the pool after doing the swaps
-    let mut join_pool_msgs = wynd_join_pool_msgs(
+    let mut join_pool_msgs = wynd_join_pool_from_map_msgs(
         current_block_height,
         target_address.to_string(),
         pool_info.staking_addr.to_string(),

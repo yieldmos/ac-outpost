@@ -1,9 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
 use outpost_utils::comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs};
 use wyndex::pair::PairInfo;
 
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    /// Set the admin of the contract
+    /// If none given it will be the contract creator
+    pub admin: Option<String>,
+}
 
 #[cw_serde]
 pub struct MigrateMsg {}
@@ -13,6 +18,15 @@ pub struct MigrateMsg {}
 pub enum QueryMsg {
     #[returns(VersionResponse)]
     Version {},
+
+    #[returns(AuthorizedCompoundersResponse)]
+    AuthorizedCompounders {},
+}
+
+#[cw_serde]
+pub struct AuthorizedCompoundersResponse {
+    pub admin: Addr,
+    pub authorized_compound_addresses: Vec<Addr>,
 }
 
 #[cw_serde]
@@ -33,5 +47,11 @@ pub enum ExecuteMsg {
         /// https://api.wynddao.com/pools/user/{delegator_address} can furnish this information off chain
         current_user_pools: Option<Vec<PairInfo>>,
         delegator_address: String,
+    },
+    AddAuthorizedCompounder {
+        address: String,
+    },
+    RemoveAuthorizedCompounder {
+        address: String,
     },
 }

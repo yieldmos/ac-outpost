@@ -44,7 +44,7 @@ pub fn fold_wynd_swap_msgs(
 
 /// Constructs the messages required to join a pool from the prerequisite swaps.
 /// This includes the provide increase allowances and provide liquidity messages
-pub fn wynd_join_pool_msgs(
+pub fn wynd_join_pool_from_map_msgs(
     current_block_height: &u64,
     delegator_address: String,
     pool_to_join_address: String,
@@ -122,4 +122,66 @@ pub fn wynd_join_pool_msgs(
     )?));
 
     Ok(swap_msgs.to_vec())
+}
+
+/// Constructs the Provide Liquidity message required to join a pool from the prerequisite swaps.
+/// This includes the provide increase allowances and provide liquidity messages
+pub fn wynd_join_pool_msgs(
+    delegator_address: String,
+    pool_to_join_address: String,
+    lp_asset_msgs: Vec<WyndAssetLPMessages>,
+) -> Result<Vec<CosmosProtoMsg>, StdError> {
+    // creates the vec of assets that go into the provide liquidity message
+    let assets: Vec<Asset> = lp_asset_msgs
+        .iter()
+        .map(
+            |WyndAssetLPMessages {
+                 target_asset_info, ..
+             }| target_asset_info.clone(),
+        )
+        .collect::<Vec<_>>();
+
+    // the native funds that are passed into the tx
+    let native_funds: Vec<Coin> = lp_asset_msgs
+        .iter()
+        .filter_map(
+            |WyndAssetLPMessages {
+                 target_asset_info, ..
+             }| {
+                if let Asset {
+                    info: AssetInfo::Native(native_denom),
+                    amount,
+                } = target_asset_info
+                {
+                    Some(Coin {
+                        denom: native_denom.clone(),
+                        amount: amount.to_string(),
+                    })
+                } else {
+                    None
+                }
+            },
+        )
+        .collect::<Vec<_>>();
+
+    // the accumulated list of all the swap messages from the  WyndAssetLPMessages
+    let mut swap_msgs: Vec<CosmosProtoMsg> = lp_asset_msgs
+        .iter()
+        .flat_map(|WyndAssetLPMessages { swap_msgs, .. }| swap_msgs.clone())
+        .collect::<Vec<_>>();
+
+    swap_msgs.append(&mut vec![CosmosProtoMsg::ExecuteContract(
+        create_exec_contract_msg(
+            pool_to_join_address,
+            &delegator_address,
+            &wyndex::pair::ExecuteMsg::ProvideLiquidity {
+                assets,
+                slippage_tolerance: None,
+                receiver: None,
+            },
+            Some(native_funds),
+        )?,
+    )]);
+
+    Ok(swap_msgs)
 }

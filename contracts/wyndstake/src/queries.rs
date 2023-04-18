@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, QuerierWrapper, Uint128};
+use cosmwasm_std::{Addr, Deps, QuerierWrapper, Uint128};
 use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -11,13 +11,24 @@ use crate::{
         JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYND_CW20_ADDR, WYND_CW20_STAKING_ADDR,
         WYND_MULTI_HOP_ADDR,
     },
-    msg::VersionResponse,
+    msg::{AuthorizedCompoundersResponse, VersionResponse},
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
         version: env!("CARGO_PKG_VERSION").to_string(),
+    }
+}
+
+pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
+    let authorized_compound_addresses: Vec<Addr> =
+        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+    let admin: Addr = ADMIN.load(deps.storage).unwrap();
+    AuthorizedCompoundersResponse {
+        admin,
+        authorized_compound_addresses,
     }
 }
 
