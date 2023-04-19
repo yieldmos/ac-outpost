@@ -32,6 +32,7 @@ pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse
     }
 }
 
+/// Queries the amount of wynd that can be withdrawn by `delegator`
 pub fn query_pending_wynd_rewards(
     querier: &QuerierWrapper,
     delegator: &Addr,
@@ -68,6 +69,7 @@ pub fn query_wynd_neta_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<(SimulationResponse, Vec<SwapOperation>), ContractError> {
+    // create the options for going from juno to neta which takes two hops
     let operations = vec![
         SwapOperation::WyndexSwap {
             offer_asset_info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
@@ -79,6 +81,7 @@ pub fn query_wynd_neta_swap(
         },
     ];
 
+    // simulate the swap
     let sim_resp = querier.query_wasm_smart(
         WYND_MULTI_HOP_ADDR.to_string(),
         &wyndex_multi_hop::msg::QueryMsg::SimulateSwapOperations {

@@ -8,6 +8,7 @@ use crate::{
     queries::{
         check_user_pools_for_rewards, get_max_user_pool_bonding_period, query_current_user_pools,
     },
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
@@ -20,6 +21,7 @@ use outpost_utils::{
         JunoDestinationProject, PoolCatchAllDestinationAction, PoolCatchAllDestinationProject,
         PoolCompoundPrefs, WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },
+    helpers::is_authorized_compounder,
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
@@ -48,7 +50,7 @@ pub const NETA_STAKING_ADDR: &str =
 pub fn compound(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     delegator_address: String,
     pool_prefs: Vec<PoolCompoundPrefs>,
     other_pools_prefs: Option<Vec<PoolCatchAllDestinationAction>>,
@@ -64,6 +66,15 @@ pub fn compound(
 
     // validate that the delegator address is good
     let delegator = deps.api.addr_validate(&delegator_address)?;
+
+    // check that the delegator address is valid
+    let _ = is_authorized_compounder(
+        deps.as_ref(),
+        &info.sender,
+        &delegator,
+        ADMIN,
+        AUTHORIZED_ADDRS,
+    )?;
 
     // get the list of pools that the user has staked in and the rewards they have pending
     let pending_rewards: Vec<(PairInfo, Vec<AssetValidated>)> = current_user_pools.map_or_else(

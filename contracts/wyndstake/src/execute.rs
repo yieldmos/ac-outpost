@@ -1,10 +1,15 @@
 use std::iter;
 
+use crate::{
+    queries::{self, query_wynd_juno_swap, query_wynd_neta_swap},
+    state::{ADMIN, AUTHORIZED_ADDRS},
+    ContractError,
+};
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
     comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod},
-    helpers::{calculate_compound_amounts, prefs_sum_to_one},
+    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
@@ -18,11 +23,6 @@ use wyndex::{
     pair::{PairInfo, SimulationResponse},
 };
 use wyndex_multi_hop::msg::SwapOperation;
-
-use crate::{
-    queries::{self, query_wynd_juno_swap, query_wynd_neta_swap},
-    ContractError,
-};
 
 pub const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
 pub const WYND_CW20_STAKING_ADDR: &str =
@@ -38,14 +38,26 @@ pub const NETA_STAKING_ADDR: &str =
 pub fn compound(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     delegator_address: String,
     comp_prefs: CompoundPrefs,
 ) -> Result<Response, ContractError> {
+    // check that the compounding preference quantities are valid
     let _ = !prefs_sum_to_one(&comp_prefs)?;
 
+    // check that the delegator address is valid
     let delegator = deps.api.addr_validate(&delegator_address)?;
 
+    // validate that the user is authorized to compound
+    let _ = is_authorized_compounder(
+        deps.as_ref(),
+        &info.sender,
+        &delegator,
+        ADMIN,
+        AUTHORIZED_ADDRS,
+    )?;
+
+    // get the pending wynd rewards for the user
     let pending_staking_rewards = queries::query_pending_wynd_rewards(&deps.querier, &delegator)?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
@@ -90,6 +102,7 @@ pub fn prefs_to_msgs(
         comp_prefs.relative,
     );
 
+    // the list of all the messages that will be broadcast on behalf of the user based on their comp prefs
     let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
@@ -97,17 +110,19 @@ pub fn prefs_to_msgs(
                 JunoDestinationProject::JunoStaking { validator_address } =>
                     juno_staking_msgs(target_address.clone(),
                         comp_token_amount,
-                        //  WYND_CW20_ADDR.to_string(),
                          validator_address,
-                         query_wynd_juno_swap(&querier, comp_token_amount)?
+                         query_wynd_juno_swap(&querier, 
+                            comp_token_amount)?
                     )
                 ,
                 JunoDestinationProject::NetaStaking {} => neta_staking_msgs(
                     target_address.clone(),
-
-                    query_wynd_neta_swap(&querier,comp_token_amount)?
+                    query_wynd_neta_swap(&querier,
+                        comp_token_amount)?
                 ),
                 JunoDestinationProject::WyndStaking { bonding_period } =>
+                    // going back to staking wynd is simple here since it requires no swaps
+                    // so we can just shoot back a delegate msg and be done
                     Ok(vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
                         WYND_CW20_ADDR.to_string(),
                         &target_address,
@@ -129,7 +144,7 @@ pub fn prefs_to_msgs(
                     contract_address,
                     bonding_period,
                 } => {
-
+                    // get the pool info for the lp we're about to enter
                     let pool_info: wyndex::pair::PairInfo = querier.query_wasm_smart(
                         contract_address.to_string(),
                         &wyndex::pair::QueryMsg::Pair {},
@@ -268,10 +283,14 @@ pub fn join_wynd_pool_msgs(
     //     &wyndex::pair::QueryMsg::Pool {},
     // )?;
 
+    // checks the number of assets in the pool. expected to be 2
     let asset_count: u128 = pool_info.asset_infos.len().try_into().unwrap();
+
+    // calculates the amount of wynd to be swapped for each asset in the pool
     let wynd_amount_per_asset: Uint128 =
         comp_token_amount.checked_div_floor((asset_count, 1u128))?;
 
+    // calculates the amount of each asset in the pool to be swapped for wynd
     let pool_assets = wynd_lp_asset_swaps(
         querier,
         &staking_denom,
@@ -280,12 +299,14 @@ pub fn join_wynd_pool_msgs(
         &target_address,
     )?;
 
+    // gathers the swap messages  from the WyndAssetLPMessages
     let mut swap_msgs: Vec<CosmosProtoMsg> = wynd_join_pool_msgs(
         target_address.to_string(),
         pool_contract_address,
         pool_assets,
     )?;
 
+    // if the user already has lp tokens, we need to delegate them to the staking contract
     if !existing_lp_tokens.balance.is_zero() {
         swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
             pool_info.liquidity_token.to_string(),
