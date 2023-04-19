@@ -2,12 +2,13 @@ use std::iter;
 
 use crate::{
     helpers::{
-        assign_comp_prefs_to_pools, calculate_compound_amounts, fold_wynd_swap_msgs,
-        valid_catch_all_pool_prefs, valid_pool_prefs, wynd_join_pool_msgs, PoolRewardsWithPrefs,
+        assign_comp_prefs_to_pools, calculate_compound_amounts, valid_catch_all_pool_prefs,
+        valid_pool_prefs, PoolRewardsWithPrefs,
     },
     queries::{
         check_user_pools_for_rewards, get_max_user_pool_bonding_period, query_current_user_pools,
     },
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
@@ -20,13 +21,15 @@ use outpost_utils::{
         JunoDestinationProject, PoolCatchAllDestinationAction, PoolCatchAllDestinationProject,
         PoolCompoundPrefs, WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },
-    helpers::WyndAssetLPMessages,
-    msgs::{
-        create_exec_contract_msg, create_exec_msg, create_wyndex_swap_msg,
-        create_wyndex_swap_msg_with_simulation, create_wyndex_swaps_with_sims, CosmosProtoMsg,
-        SwapSimResponse,
+    helpers::is_authorized_compounder,
+    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+};
+use wynd_helpers::{
+    wynd_lp::{fold_wynd_swap_msgs, wynd_join_pool_from_map_msgs, WyndAssetLPMessages},
+    wynd_swap::{
+        create_wyndex_swap_msg, create_wyndex_swap_msg_with_simulation,
+        create_wyndex_swaps_with_sims, simulate_multiple_swaps, SwapSimResponse,
     },
-    queries::simulate_multiple_swaps,
 };
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},
@@ -47,7 +50,7 @@ pub const NETA_STAKING_ADDR: &str =
 pub fn compound(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     delegator_address: String,
     pool_prefs: Vec<PoolCompoundPrefs>,
     other_pools_prefs: Option<Vec<PoolCatchAllDestinationAction>>,
@@ -63,6 +66,15 @@ pub fn compound(
 
     // validate that the delegator address is good
     let delegator = deps.api.addr_validate(&delegator_address)?;
+
+    // check that the delegator address is valid
+    let _ = is_authorized_compounder(
+        deps.as_ref(),
+        &info.sender,
+        &delegator,
+        ADMIN,
+        AUTHORIZED_ADDRS,
+    )?;
 
     // get the list of pools that the user has staked in and the rewards they have pending
     let pending_rewards: Vec<(PairInfo, Vec<AssetValidated>)> = current_user_pools.map_or_else(
@@ -119,12 +131,17 @@ pub fn prefs_to_msgs(
     let compound_token_amounts =
         iter::zip(calculate_compound_amounts(prefs.clone(), rewards)?, prefs);
 
+    // translates from all of the comp prefs and on chain data to the list of all the resultant msgs that should be broadcast
     let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
         .map(
             |(comp_token_amounts,
-                PoolCatchAllDestinationAction { destination, .. })| ->
-                Result<Vec<CosmosProtoMsg>, ContractError> {
+                PoolCatchAllDestinationAction { 
+                    destination,
+                    .. 
+                })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
                 match destination {
+                    // ReturnToPool denotes that rewards should be returned to the pool that they 
+                    // originally came from. This is largely for making it possible to do a catch all
                     PoolCatchAllDestinationProject::ReturnToPool =>  join_wynd_pool_msgs(
                         &current_block.height,
                         &querier,
@@ -145,10 +162,13 @@ pub fn prefs_to_msgs(
                         )?
                     ),
 
+                    // Join a specific pool normally
                     PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLP {
                             contract_address,
                             bonding_period,
                         }) => {
+                            // if the pool we're going to compound into is the same as the pool we're
+                            // already in then we dont need to query new pool/pair info and can save that gas
                             let pool_info: wyndex::pair::PairInfo = if pool.contract_addr.to_string().eq(&contract_address) {
                                 pool.clone()
                             }else {
@@ -188,7 +208,8 @@ pub fn prefs_to_msgs(
                             querier, target_address.clone(),
                             comp_token_amounts, bonding_period
                         ),
-                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::TokenSwap { target_denom }) =>
+                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::TokenSwap { 
+                        target_denom }) =>
                         token_swap_msgs(
                             target_address.clone(),
                             comp_token_amounts,
@@ -204,11 +225,14 @@ pub fn prefs_to_msgs(
     Ok(all_msgs)
 }
 
+/// generates swap messages for going from some arbitrary pool rewards
+/// all converted into an arbitrary target denom
 pub fn token_swap_msgs(
     target_address: Addr,
     comp_token_amounts: Vec<AssetValidated>,
     target_denom: AssetInfo,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
+    // shuffle through all the rewards and generate swap msgs for each one
     let swap_msgs = comp_token_amounts
         .iter()
         .map(
@@ -408,7 +432,7 @@ pub fn join_wynd_pool_msgs(
     let (mut swap_msgs, assets) = fold_wynd_swap_msgs(swap_msgs);
 
     // get the list of msgs needed to join the pool after doing the swaps
-    let mut join_pool_msgs = wynd_join_pool_msgs(
+    let mut join_pool_msgs = wynd_join_pool_from_map_msgs(
         current_block_height,
         target_address.to_string(),
         pool_info.staking_addr.to_string(),

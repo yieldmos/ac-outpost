@@ -53,6 +53,7 @@ wynd-stake = {workspace = true}
 wyndex-factory = {workspace = true}
 wyndex-stake = {workspace = true}
 outpost-utils = {workspace=true}
+wynd-helpers = {workspace=true}
 
 
 [dev-dependencies]

@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, QuerierWrapper, Uint128};
-use outpost_utils::queries::query_wynd_pool_swap;
+use cosmwasm_std::{Addr, Deps, QuerierWrapper, Uint128};
+use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
@@ -7,8 +7,12 @@ use wyndex::{
 use wyndex_multi_hop::msg::SwapOperation;
 
 use crate::{
-    execute::{JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYND_CW20_ADDR, WYND_MULTI_HOP_ADDR},
-    msg::VersionResponse,
+    execute::{
+        JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR, WYND_CW20_ADDR, WYND_CW20_STAKING_ADDR,
+        WYND_MULTI_HOP_ADDR,
+    },
+    msg::{AuthorizedCompoundersResponse, VersionResponse},
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 
@@ -18,14 +22,25 @@ pub fn query_version() -> VersionResponse {
     }
 }
 
+pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
+    let authorized_compound_addresses: Vec<Addr> =
+        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+    let admin: Addr = ADMIN.load(deps.storage).unwrap();
+    AuthorizedCompoundersResponse {
+        admin,
+        authorized_compound_addresses,
+    }
+}
+
+/// Queries the amount of wynd that can be withdrawn by `delegator`
 pub fn query_pending_wynd_rewards(
     querier: &QuerierWrapper,
     delegator: &Addr,
 ) -> Result<Uint128, ContractError> {
     let rewards: wynd_stake::msg::RewardsResponse = querier.query_wasm_smart(
-        WYND_CW20_ADDR,
-        &wynd_stake::msg::QueryMsg::Rewards {
-            address: delegator.to_string(),
+        WYND_CW20_STAKING_ADDR,
+        &wynd_stake::msg::QueryMsg::WithdrawableRewards {
+            owner: delegator.to_string(),
         },
     )?;
 
@@ -37,7 +52,7 @@ pub fn query_wynd_juno_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
+    simulate_wynd_pool_swap(
         querier,
         JUNO_WYND_PAIR_ADDR.to_string(),
         &Asset {
@@ -54,6 +69,7 @@ pub fn query_wynd_neta_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<(SimulationResponse, Vec<SwapOperation>), ContractError> {
+    // create the options for going from juno to neta which takes two hops
     let operations = vec![
         SwapOperation::WyndexSwap {
             offer_asset_info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
@@ -65,6 +81,7 @@ pub fn query_wynd_neta_swap(
         },
     ];
 
+    // simulate the swap
     let sim_resp = querier.query_wasm_smart(
         WYND_MULTI_HOP_ADDR.to_string(),
         &wyndex_multi_hop::msg::QueryMsg::SimulateSwapOperations {

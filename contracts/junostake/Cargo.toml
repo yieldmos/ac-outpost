@@ -51,6 +51,7 @@ wyndex =  {workspace = true}
 wyndex-multi-hop =  {workspace = true}
 wynd-stake = {workspace = true}
 outpost-utils = {workspace=true}
+wynd-helpers = {workspace=true}
 
 [dev-dependencies]
 cw-multi-test = {workspace = true}

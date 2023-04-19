@@ -1,12 +1,7 @@
 use cosmwasm_std::{
-    coin, coins, testing::mock_env, Addr, BlockInfo, CosmosMsg, Decimal, Delegation, Empty,
-    Timestamp, Validator,
+    coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator,
 };
-use cw_multi_test::{next_block, App, Contract, ContractWrapper, Module, StakingInfo};
-use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject},
-    msgs::{create_generic_grant_msg, GenericAuthorizationType},
-};
+use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
 
 use crate::{
     contract::{execute, instantiate, query},
@@ -39,7 +34,7 @@ fn instantiate_with_defaults() {
         None,
         "Test Outpost",
         // &coins(100_000, "ubtc"),
-        &InstantiateMsg {},
+        &InstantiateMsg { admin: None },
     )
     .unwrap();
 
@@ -110,7 +105,7 @@ fn validator_only_compounding() {
         &contract_admin_addr,
         None,
         "Test Outpost",
-        &InstantiateMsg {},
+        &InstantiateMsg { admin: None },
     )
     .unwrap();
 

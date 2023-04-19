@@ -1,8 +1,12 @@
 use cosmos_sdk_proto::prost;
+use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum OutpostError {
+    #[error("Outpost StdError: {0}")]
+    Std(#[from] StdError),
+
     #[error("Invalid prefs: Relative quantities must be non-zero and sum to 1")]
     InvalidPrefQtys,
 
@@ -15,9 +19,9 @@ pub enum OutpostError {
     #[error("Compound arithemtic overflow: {0}")]
     OverflowError(#[from] cosmwasm_std::OverflowError),
 
-    #[error("Could not simulate swap of {from} to {to}")]
-    SwapSimulationError { from: String, to: String },
-
     #[error("Parsing invalid wynd pool bonding period: {0}")]
     InvalidBondingPeriod(String),
+
+    #[error("Compounder not authorized: {0}")]
+    UnauthorizedCompounder(String),
 }

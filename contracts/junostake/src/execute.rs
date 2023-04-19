@@ -10,17 +10,23 @@ use outpost_utils::{
         CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod,
         WyndStakingBondingPeriod,
     },
-    helpers::{calculate_compound_amounts, prefs_sum_to_one},
-    msgs::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
+    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+};
+
+use wynd_helpers::{
+    wynd_lp::{wynd_join_pool_msgs, WyndAssetLPMessages},
+    wynd_swap::{create_wyndex_swap_msg_with_simulation, wynd_pair_swap_msg},
 };
 use wyndex::{
-    asset::{Asset, AssetInfo, AssetInfoValidated},
+    asset::{Asset, AssetInfo},
     pair::{PairInfo, SimulationResponse},
 };
 
 use crate::{
     contract::{AllPendingRewards, PendingReward},
     queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 
@@ -38,13 +44,26 @@ pub const NETA_STAKING_ADDR: &str =
 pub fn compound(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     delegator_address: String,
     comp_prefs: CompoundPrefs,
 ) -> Result<Response, ContractError> {
+    // validate that the preference quantites sum to 1
     let _ = !prefs_sum_to_one(&comp_prefs)?;
 
-    let delegator = deps.api.addr_validate(&delegator_address)?;
+    // check that the delegator address is valid
+    let delegator: Addr = deps.api.addr_validate(&delegator_address)?;
+
+    // validate that the user is authorized to compound
+    let _ = is_authorized_compounder(
+        deps.as_ref(),
+        &info.sender,
+        &delegator,
+        ADMIN,
+        AUTHORIZED_ADDRS,
+    )?;
+
+    // get the denom of the staking token. this should be "ujuno"
     let staking_denom = deps.querier.query_bonded_denom()?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
@@ -87,12 +106,15 @@ pub fn prefs_to_msgs(
         })
         .collect();
 
-    // calculates the amount of ujuno that will be used for each target project accurately
+    // calculates the amount of ujuno that will be used for each target project accurately.
+    // these amounts are paired with the associated destination action
+    // for example (1000, JunoDestinationProject::JunoStaking { validator_address: "juno1..." })
     let compound_token_amounts = iter::zip(
         calculate_compound_amounts(&comp_prefs.clone().try_into()?, &total_rewards.amount)?,
         comp_prefs.relative,
     );
 
+    // generate the list of individual msgs to compound the user's rewards
     let compounding_msgs: Result<Vec<CosmosProtoMsg>, ContractError> = compound_token_amounts
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<Vec<CosmosProtoMsg>, ContractError> { match destination {
@@ -120,17 +142,20 @@ pub fn prefs_to_msgs(
                     bonding_period,
                     query_juno_wynd_swap(&querier, comp_token_amount)?
                 ),
-                JunoDestinationProject::TokenSwap { target_denom } => wynd_token_swap(
-                    target_address.clone(),
+                JunoDestinationProject::TokenSwap { target_denom } => wynd_helpers::wynd_swap::create_wyndex_swap_msg(
+                    &target_address,
                     comp_token_amount,
-                    staking_denom.clone(),
+                    AssetInfo::Native(staking_denom.clone()),
                     target_denom,
-                ),
+                    WYND_MULTI_HOP_ADDR.to_string(),
+                )
+                .map_err(|err| ContractError::Std(err)),
                 JunoDestinationProject::WyndLP {
                     contract_address,
                     bonding_period,
                 } => {
 
+                    // fetch the pool info so that we know how to do the swaps for entering the lp
                     let pool_info: wyndex::pair::PairInfo = querier.query_wasm_smart(
                         contract_address.to_string(),
                         &wyndex::pair::QueryMsg::Pair {},
@@ -145,6 +170,7 @@ pub fn prefs_to_msgs(
                         contract_address,
                         bonding_period,
                          pool_info.clone(),
+                         // checking the balance of the liquidity token to see if the user is already in the pool
                          querier.query_wasm_smart(
                             pool_info.liquidity_token,
                             &cw20::Cw20QueryMsg::Balance {
@@ -162,42 +188,6 @@ pub fn prefs_to_msgs(
     Ok(withdraw_rewards_msgs)
 }
 
-pub fn wynd_token_swap(
-    target_address: Addr,
-    comp_token_amount: Uint128,
-    staking_denom: String,
-    target_denom: AssetInfo,
-) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    match target_denom {
-        // swapping from ujuno to ujuno so nothing to do here
-        AssetInfo::Native(target_native_denom) if staking_denom == target_native_denom => {
-            Ok(vec![])
-        }
-        // create the swap via the multihop contract
-        _ => Ok(vec![CosmosProtoMsg::ExecuteContract(
-            create_exec_contract_msg(
-                WYND_MULTI_HOP_ADDR.to_string(),
-                &target_address,
-                &wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                    operations: vec![wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
-                        offer_asset_info: AssetInfo::Native(staking_denom.clone()),
-                        ask_asset_info: target_denom,
-                    }],
-                    receiver: None,
-                    max_spread: None,
-                    minimum_receive: None,
-                    referral_address: None,
-                    referral_commission: None,
-                },
-                Some(vec![Coin {
-                    denom: staking_denom,
-                    amount: comp_token_amount.to_string(),
-                }]),
-            )?,
-        )]),
-    }
-}
-
 pub fn neta_staking_msgs(
     target_address: Addr,
     comp_token_amount: Uint128,
@@ -208,26 +198,15 @@ pub fn neta_staking_msgs(
     }: SimulationResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // swap juno for neta
-    let neta_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        JUNO_NETA_PAIR_ADDR.to_string(),
+    let neta_swap_msg = wynd_pair_swap_msg(
         &target_address,
-        &wyndex::pair::ExecuteMsg::Swap {
-            offer_asset: Asset {
-                info: AssetInfo::Native(staking_denom.clone()),
-                amount: comp_token_amount,
-            },
-            ask_asset_info: Some(AssetInfo::Token(NETA_STAKING_ADDR.to_string())),
-            max_spread: None,
-            belief_price: None,
-            to: None,
-            referral_address: None,
-            referral_commission: None,
+        Asset {
+            info: AssetInfo::Native(staking_denom.clone()),
+            amount: comp_token_amount,
         },
-        Some(vec![Coin {
-            denom: staking_denom,
-            amount: comp_token_amount.to_string(),
-        }]),
-    )?);
+        AssetInfo::Token(NETA_CW20_ADDR.to_string()),
+        JUNO_NETA_PAIR_ADDR.to_string(),
+    )?;
 
     // stake neta
     let neta_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
@@ -255,26 +234,15 @@ pub fn wynd_staking_msgs(
     }: SimulationResponse,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // swap juno for wynd
-    let wynd_swap_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        JUNO_WYND_PAIR_ADDR.to_string(),
+    let wynd_swap_msg = wynd_pair_swap_msg(
         &target_address,
-        &wyndex::pair::ExecuteMsg::Swap {
-            offer_asset: Asset {
-                info: AssetInfo::Native(staking_denom.clone()),
-                amount: comp_token_amount,
-            },
-            ask_asset_info: Some(AssetInfo::Token(WYND_CW20_ADDR.to_string())),
-            max_spread: None,
-            belief_price: None,
-            to: None,
-            referral_address: None,
-            referral_commission: None,
+        Asset {
+            info: AssetInfo::Native(staking_denom.clone()),
+            amount: comp_token_amount,
         },
-        Some(vec![Coin {
-            denom: staking_denom,
-            amount: comp_token_amount.to_string(),
-        }]),
-    )?);
+        AssetInfo::Token(WYND_CW20_ADDR.to_string()),
+        JUNO_WYND_PAIR_ADDR.to_string(),
+    )?;
 
     // delegate wynd to the staking contract
     let wynd_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
@@ -294,7 +262,7 @@ pub fn wynd_staking_msgs(
 
 #[allow(clippy::too_many_arguments)]
 fn join_wynd_pool_msgs(
-    current_height: &u64,
+    _current_height: &u64,
     querier: &QuerierWrapper,
     target_address: Addr,
     comp_token_amount: Uint128,
@@ -309,83 +277,31 @@ fn join_wynd_pool_msgs(
     //     &wyndex::pair::QueryMsg::Pool {},
     // )?;
 
+    // check the number of assets in the pool, but realistically this is expected to be 2
     let asset_count: u128 = pool_info.asset_infos.len().try_into().unwrap();
+
+    // the amount of juno that will be used to swap for each asset in the pool
     let juno_amount_per_asset: Uint128 =
         comp_token_amount.checked_div_floor((asset_count, 1u128))?;
 
+    // the list of prepared swaps and assets that will be used to join the pool
     let pool_assets = wynd_lp_asset_swaps(
-        current_height,
         querier,
         &staking_denom,
-        &pool_contract_address,
         &juno_amount_per_asset,
         &pool_info,
         &target_address,
     )?;
 
-    let pool_join_funds: Vec<Asset> = pool_assets
-        .iter()
-        .map(
-            |WyndAssetLPMessages {
-                 target_asset_info, ..
-             }| target_asset_info.clone(),
-        )
-        .collect::<Vec<_>>();
-    let native_funds: Vec<Coin> = pool_assets
-        .iter()
-        .filter_map(
-            |WyndAssetLPMessages {
-                 target_asset_info, ..
-             }| {
-                if let Asset {
-                    info: AssetInfo::Native(native_denom),
-                    amount,
-                } = target_asset_info
-                {
-                    Some(Coin {
-                        denom: native_denom.clone(),
-                        amount: amount.to_string(),
-                    })
-                } else {
-                    None
-                }
-            },
-        )
-        .collect::<Vec<_>>();
+    // the final list of swap messages that need to be executed before joining the pool is possible
+    let mut swap_msgs: Vec<CosmosProtoMsg> = wynd_join_pool_msgs(
+        target_address.to_string(),
+        pool_contract_address,
+        pool_assets,
+    )?;
 
-    let mut swap_msgs: Vec<CosmosProtoMsg> = pool_assets
-        .iter()
-        .flat_map(|WyndAssetLPMessages { swap_msgs, .. }| swap_msgs.clone())
-        .collect::<Vec<_>>();
-
-    swap_msgs.append(&mut vec![
-        CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            pool_contract_address,
-            &target_address,
-            &wyndex::pair::ExecuteMsg::ProvideLiquidity {
-                assets: pool_join_funds,
-                slippage_tolerance: None,
-                receiver: None,
-            },
-            Some(native_funds),
-        )?),
-        // CosmosProtoMsg::ExecuteContract(
-        //     create_exec_contract_msg(
-        //         &pool_info.staking_addr.to_string(),
-        //         &target_address,
-        //         &cw20::Cw20ExecuteMsg::Send {
-        //             contract: pool_info.staking_addr.to_string(),
-        //             amount: todo!("set estimated lp tokens"),
-        //             msg: to_binary(
-        //                 &wyndex_stake::msg::ReceiveDelegationMsg::Delegate {
-        //                     unbonding_period: bonding_period.into(),
-
-        //             } )? ,
-        //         },
-        //         None
-        //     )?)
-    ]);
-
+    // as a temporary measure we bond the existing unbonded lp tokens- this is should be resolved when wyndex updates itself
+    // to add a bonding simulate function
     if !existing_lp_tokens.balance.is_zero() {
         swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
             pool_info.liquidity_token.to_string(),
@@ -406,140 +322,36 @@ fn join_wynd_pool_msgs(
     // wyndex::factory::ROUTE;
 }
 
-struct WyndAssetLPMessages {
-    /// The msgs to perform the token swaps and if applicable the increase allowances
-    swap_msgs: Vec<CosmosProtoMsg>,
-    /// The asset denom and amount that will be sent to the pool contract
-    target_asset_info: Asset,
-}
-
 /// Generates the wyndex swap messages and IncreaseAllowance (for cw20) messages that are needed before the actual pool can be entered.
 /// These messages should ensure that we have the correct amount of assets in the pool contract
-fn wynd_lp_asset_swaps(
-    current_height: &u64,
+pub fn wynd_lp_asset_swaps(
     querier: &QuerierWrapper,
     staking_denom: &String,
-    pool_contract_address: &str,
-    juno_amount_per_asset: &Uint128,
+    wynd_amount_per_asset: &Uint128,
     pool_info: &PairInfo,
     target_address: &Addr,
 ) -> Result<Vec<WyndAssetLPMessages>, ContractError> {
     pool_info
         .asset_infos
         .iter()
-        // map over each asset in the pool
+        // map over each asset in the pool to generate the swap msgs and the target asset info
         .map(|asset| -> Result<WyndAssetLPMessages, ContractError> {
-            match asset {
-                // if the asset is juno then we can just send it to the pool
-                AssetInfoValidated::Native(asset_denom) if asset_denom.eq(staking_denom) => {
-                    Ok(WyndAssetLPMessages {
-                        swap_msgs: vec![],
-                        target_asset_info: Asset {
-                            info: wyndex::asset::AssetInfo::Native(staking_denom.to_string()),
-                            amount: *juno_amount_per_asset,
-                        },
-                    })
-                }
-                asset => {
-                    // this swap operation and sim are usable regardless of if we are going to a native or cw20
-                    let swap_operation = wyndex_multi_hop::msg::SwapOperation::WyndexSwap {
-                        offer_asset_info: AssetInfo::Native(staking_denom.clone()),
-                        ask_asset_info: asset.clone().into(),
-                    };
+            let (swap_msgs, target_token_amount) = create_wyndex_swap_msg_with_simulation(
+                querier,
+                target_address,
+                *wynd_amount_per_asset,
+                AssetInfo::Token(staking_denom.clone()),
+                asset.clone().into(),
+                WYND_MULTI_HOP_ADDR.to_string(),
+            )?;
 
-                    // simulate the swap to know how much of the target asset we can expect to have
-                    let swap_simulate: wyndex_multi_hop::msg::SimulateSwapOperationsResponse =
-                        querier
-                            .query_wasm_smart(
-                                WYND_MULTI_HOP_ADDR.to_string(),
-                                &wyndex_multi_hop::msg::QueryMsg::SimulateSwapOperations {
-                                    offer_amount: *juno_amount_per_asset,
-                                    operations: vec![swap_operation.clone()],
-                                    referral: false,
-                                    referral_commission: None,
-                                },
-                            )
-                            .map_err(|_| ContractError::SwapSimulationError {
-                                from: staking_denom.clone(),
-                                to: asset.to_string(),
-                            })?;
-
-                    match asset {
-                        // target asset is a native token
-                        AssetInfoValidated::Native(target_token_denom) => {
-                            Ok(WyndAssetLPMessages {
-                                swap_msgs: vec![
-                                    // the swap to get the target native token
-                                    CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                        WYND_MULTI_HOP_ADDR.to_string(),
-                                        &target_address,
-                                        &wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                                            operations: vec![swap_operation],
-                                            minimum_receive: None,
-                                            receiver: None,
-                                            max_spread: None,
-                                            referral_address: None,
-                                            referral_commission: None,
-                                        },
-                                        Some(vec![Coin {
-                                            amount: juno_amount_per_asset.to_string(),
-                                            denom: staking_denom.clone(),
-                                        }]),
-                                    )?),
-                                ],
-                                target_asset_info: Asset {
-                                    info: wyndex::asset::AssetInfo::Native(
-                                        target_token_denom.to_string(),
-                                    ),
-                                    amount: swap_simulate.amount,
-                                },
-                            })
-                        }
-                        // target asset is some sort of cw20
-                        AssetInfoValidated::Token(cw20_token_addr) => {
-                            Ok(WyndAssetLPMessages {
-                                swap_msgs: vec![
-                                    // the swap to get the cw20
-                                    CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                        WYND_MULTI_HOP_ADDR.to_string(),
-                                        &target_address,
-                                        &wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations {
-                                            operations: vec![swap_operation],
-                                            receiver: None,
-                                            max_spread: None,
-                                            minimum_receive: None,
-                                            referral_address: None,
-                                            referral_commission: None,
-                                        },
-                                        Some(vec![Coin {
-                                            amount: juno_amount_per_asset.to_string(),
-                                            denom: staking_denom.clone(),
-                                        }]),
-                                    )?),
-                                    // the allocation of cw20 tokens the user is putting into the pool
-                                    CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                        cw20_token_addr.to_string(),
-                                        &target_address,
-                                        &cw20::Cw20ExecuteMsg::IncreaseAllowance {
-                                            spender: pool_contract_address.to_string(),
-                                            amount: swap_simulate.amount,
-                                            expires: Some(cw20::Expiration::AtHeight(
-                                                *current_height,
-                                            )),
-                                        },
-                                        None,
-                                    )?),
-                                ],
-
-                                target_asset_info: Asset {
-                                    info: AssetInfo::Token(cw20_token_addr.to_string()),
-                                    amount: swap_simulate.amount,
-                                },
-                            })
-                        }
-                    }
-                }
-            }
+            Ok(WyndAssetLPMessages {
+                swap_msgs,
+                target_asset_info: Asset {
+                    info: asset.clone().into(),
+                    amount: target_token_amount,
+                },
+            })
         })
         .collect()
 }

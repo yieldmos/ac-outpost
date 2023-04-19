@@ -6,6 +6,12 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("Wynd Helper Error: &{0}")]
+    WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
+
+    #[error("Outpost Utils: &{0}")]
+    OutpostError(#[from] outpost_utils::errors::OutpostError),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
@@ -21,14 +27,17 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("{0} is not a valid address. Cannot set as authorized address")]
+    InvalidAuthorizedAddress(String),
+
+    #[error("{0} is already an authorized compounder")]
+    DuplicateAuthorizedAddress(String),
+
     #[error("Could not query pendingRewards")]
     QueryPendingRewardsFailure,
 
     #[error("Could not simulate swap of {from} to {to}")]
     SwapSimulationError { from: String, to: String },
-
-    #[error("Outpost Utils: &{0}")]
-    OutpostError(#[from] outpost_utils::errors::OutpostError),
 
     #[error("Could not encode msg as any: {0}")]
     EncodeError(#[from] cosmos_sdk_proto::prost::EncodeError),

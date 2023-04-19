@@ -1,5 +1,6 @@
-use cosmwasm_std::{Addr, FullDelegation, QuerierWrapper, Uint128};
-use outpost_utils::{helpers::sum_coins, queries::query_wynd_pool_swap};
+use cosmwasm_std::{Addr, Deps, FullDelegation, QuerierWrapper, Uint128};
+use outpost_utils::helpers::sum_coins;
+use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
@@ -8,7 +9,8 @@ use wyndex::{
 use crate::{
     contract::{AllPendingRewards, PendingReward},
     execute::JUNO_NETA_PAIR_ADDR,
-    msg::VersionResponse,
+    msg::{AuthorizedCompoundersResponse, VersionResponse},
+    state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
 
@@ -18,15 +20,28 @@ pub fn query_version() -> VersionResponse {
     }
 }
 
+pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
+    let authorized_compound_addresses: Vec<Addr> =
+        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+    let admin: Addr = ADMIN.load(deps.storage).unwrap();
+    AuthorizedCompoundersResponse {
+        admin,
+        authorized_compound_addresses,
+    }
+}
+
+/// Queries the pending staking rewards for a given delegator
 pub fn query_pending_rewards(
     querier: &QuerierWrapper,
     delegator: &Addr,
     staking_denom: String,
 ) -> Result<AllPendingRewards, ContractError> {
+    // gets all of the individual delegations for the delegator
     let rewards_query: Result<Vec<PendingReward>, ContractError> = querier
         .query_all_delegations(delegator)?
         .into_iter()
         .map(
+            // each delegation is queried for its pending rewards
             |delegation| match querier.query_delegation(delegator, delegation.validator) {
                 Ok(Some(FullDelegation {
                     validator,
@@ -43,6 +58,7 @@ pub fn query_pending_rewards(
 
     let rewards = rewards_query?;
 
+    // sums the rewards
     let total = sum_coins(
         &staking_denom,
         &rewards
@@ -59,7 +75,7 @@ pub fn query_juno_neta_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
+    simulate_wynd_pool_swap(
         querier,
         JUNO_NETA_PAIR_ADDR.to_string(),
         &Asset {
@@ -76,7 +92,7 @@ pub fn query_juno_wynd_swap(
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
-    query_wynd_pool_swap(
+    simulate_wynd_pool_swap(
         querier,
         JUNO_NETA_PAIR_ADDR.to_string(),
         &Asset {
