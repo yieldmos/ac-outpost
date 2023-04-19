@@ -131,12 +131,17 @@ pub fn prefs_to_msgs(
     let compound_token_amounts =
         iter::zip(calculate_compound_amounts(prefs.clone(), rewards)?, prefs);
 
+    // translates from all of the comp prefs and on chain data to the list of all the resultant msgs that should be broadcast
     let mut compounding_msgs: Vec<CosmosProtoMsg> = compound_token_amounts
         .map(
             |(comp_token_amounts,
-                PoolCatchAllDestinationAction { destination, .. })| ->
-                Result<Vec<CosmosProtoMsg>, ContractError> {
+                PoolCatchAllDestinationAction { 
+                    destination,
+                    .. 
+                })| -> Result<Vec<CosmosProtoMsg>, ContractError> {
                 match destination {
+                    // ReturnToPool denotes that rewards should be returned to the pool that they 
+                    // originally came from. This is largely for making it possible to do a catch all
                     PoolCatchAllDestinationProject::ReturnToPool =>  join_wynd_pool_msgs(
                         &current_block.height,
                         &querier,
@@ -157,10 +162,13 @@ pub fn prefs_to_msgs(
                         )?
                     ),
 
+                    // Join a specific pool normally
                     PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLP {
                             contract_address,
                             bonding_period,
                         }) => {
+                            // if the pool we're going to compound into is the same as the pool we're
+                            // already in then we dont need to query new pool/pair info and can save that gas
                             let pool_info: wyndex::pair::PairInfo = if pool.contract_addr.to_string().eq(&contract_address) {
                                 pool.clone()
                             }else {
@@ -200,7 +208,8 @@ pub fn prefs_to_msgs(
                             querier, target_address.clone(),
                             comp_token_amounts, bonding_period
                         ),
-                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::TokenSwap { target_denom }) =>
+                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::TokenSwap { 
+                        target_denom }) =>
                         token_swap_msgs(
                             target_address.clone(),
                             comp_token_amounts,
@@ -216,11 +225,14 @@ pub fn prefs_to_msgs(
     Ok(all_msgs)
 }
 
+/// generates swap messages for going from some arbitrary pool rewards
+/// all converted into an arbitrary target denom
 pub fn token_swap_msgs(
     target_address: Addr,
     comp_token_amounts: Vec<AssetValidated>,
     target_denom: AssetInfo,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
+    // shuffle through all the rewards and generate swap msgs for each one
     let swap_msgs = comp_token_amounts
         .iter()
         .map(

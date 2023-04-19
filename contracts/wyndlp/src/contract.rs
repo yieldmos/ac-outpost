@@ -138,6 +138,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Version {} => to_binary(&queries::query_version()),
         QueryMsg::AuthorizedCompounders {} => {
+            // returns the list of authorized compounders and the admin
             to_binary(&queries::query_authorized_compounders(deps))
         }
     }
