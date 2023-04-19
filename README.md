@@ -26,8 +26,7 @@ Testing and the grants query are still in progress on all fronts. These must be 
 
 ## Packages
 
-| Package Name | Description |
-
-| ------------ | --------------------------------------------------------------------------- |
-| [utils](./packages/utils/README.md) | Base utilities for building outposts |
+| Package Name                                      | Description                                          |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| [utils](./packages/utils/README.md)               | Base utilities for building outposts                 |
 | [wynd-helpers](./packages/wynd-helpers/README.md) | Helpers for interacting with Wynd Staking and Wyndex |
