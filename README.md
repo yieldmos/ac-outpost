@@ -23,3 +23,11 @@ The expected flow should go as such:
 | `osmosis-1` | `mars lending` | `not started`                                 |
 
 Testing and the grants query are still in progress on all fronts. These must be codified before the v1 release.
+
+## Packages
+
+| Package Name | Description |
+
+| ------------ | --------------------------------------------------------------------------- |
+| [utils](./packages/utils/README.md) | Base utilities for building outposts |
+| [wynd-helpers](./packages/wynd-helpers/README.md) | Helpers for interacting with Wynd Staking and Wyndex |
