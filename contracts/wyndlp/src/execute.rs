@@ -17,7 +17,7 @@ use cosmwasm_std::{
     Uint128,
 };
 use outpost_utils::{
-    comp_prefs::{
+    juno_comp_prefs::{
         JunoDestinationProject, PoolCatchAllDestinationAction, PoolCatchAllDestinationProject,
         PoolCompoundPrefs, WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },

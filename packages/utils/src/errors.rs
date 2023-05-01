@@ -24,4 +24,7 @@ pub enum OutpostError {
 
     #[error("Compounder not authorized: {0}")]
     UnauthorizedCompounder(String),
+
+    #[error("Could not query pendingRewards")]
+    QueryPendingRewardsFailure,
 }

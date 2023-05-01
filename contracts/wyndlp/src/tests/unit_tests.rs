@@ -1,4 +1,6 @@
-use outpost_utils::comp_prefs::{JunoDestinationProject, PoolCatchAllDestinationAction};
+use outpost_utils::juno_comp_prefs::{
+    JunoDestinationProject, PoolCatchAllDestinationAction, PoolCatchAllDestinationProject,
+};
 use wyndex::asset::{AssetInfoValidated, AssetValidated};
 
 use crate::helpers::calculate_compound_amounts;
@@ -8,12 +10,11 @@ fn calc_lp_compound_amounts() {
     assert_eq!(
         calculate_compound_amounts(
             vec![PoolCatchAllDestinationAction {
-                destination:
-                    outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                        JunoDestinationProject::JunoStaking {
-                            validator_address: "btcvaloper1".to_string(),
-                        }
-                    ),
+                destination: PoolCatchAllDestinationProject::BasicDestination(
+                    JunoDestinationProject::JunoStaking {
+                        validator_address: "btcvaloper1".to_string(),
+                    }
+                ),
                 amount: 1_000_000_000_000_000_000u128.into()
             }],
             vec![AssetValidated {
@@ -31,12 +32,11 @@ fn calc_lp_compound_amounts() {
     assert_eq!(
         calculate_compound_amounts(
             vec![PoolCatchAllDestinationAction {
-                destination:
-                    outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                        JunoDestinationProject::JunoStaking {
-                            validator_address: "btcvaloper1".to_string(),
-                        }
-                    ),
+                destination: PoolCatchAllDestinationProject::BasicDestination(
+                    JunoDestinationProject::JunoStaking {
+                        validator_address: "btcvaloper1".to_string(),
+                    }
+                ),
                 amount: 1_000_000_000_000_000_000u128.into()
             }],
             vec![
@@ -67,21 +67,19 @@ fn calc_lp_compound_amounts() {
         calculate_compound_amounts(
             vec![
                 PoolCatchAllDestinationAction {
-                    destination:
-                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                            JunoDestinationProject::JunoStaking {
-                                validator_address: "btcvaloper1".to_string(),
-                            }
-                        ),
+                    destination: PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper1".to_string(),
+                        }
+                    ),
                     amount: 200_000_000_000_000_000u128.into()
                 },
                 PoolCatchAllDestinationAction {
-                    destination:
-                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                            JunoDestinationProject::JunoStaking {
-                                validator_address: "btcvaloper2".to_string(),
-                            }
-                        ),
+                    destination: PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper2".to_string(),
+                        }
+                    ),
                     amount: 800_000_000_000_000_000u128.into()
                 }
             ],
@@ -125,30 +123,27 @@ fn calc_lp_compound_amounts() {
         calculate_compound_amounts(
             vec![
                 PoolCatchAllDestinationAction {
-                    destination:
-                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                            JunoDestinationProject::JunoStaking {
-                                validator_address: "btcvaloper1".to_string(),
-                            }
-                        ),
+                    destination: PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper1".to_string(),
+                        }
+                    ),
                     amount: 333_333_333_333_333_333u128.into()
                 },
                 PoolCatchAllDestinationAction {
-                    destination:
-                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                            JunoDestinationProject::JunoStaking {
-                                validator_address: "btcvaloper2".to_string(),
-                            }
-                        ),
+                    destination: PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper2".to_string(),
+                        }
+                    ),
                     amount: 333_333_333_333_333_333u128.into()
                 },
                 PoolCatchAllDestinationAction {
-                    destination:
-                        outpost_utils::comp_prefs::PoolCatchAllDestinationProject::BasicDestination(
-                            JunoDestinationProject::JunoStaking {
-                                validator_address: "btcvaloper3".to_string(),
-                            }
-                        ),
+                    destination: PoolCatchAllDestinationProject::BasicDestination(
+                        JunoDestinationProject::JunoStaking {
+                            validator_address: "btcvaloper3".to_string(),
+                        }
+                    ),
                     amount: 333_333_333_333_333_333u128.into()
                 }
             ],

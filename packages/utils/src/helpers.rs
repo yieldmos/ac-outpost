@@ -37,7 +37,7 @@ pub fn calculate_compound_amounts(
 }
 
 /// checks that the prefs are both summing to 1 and that they are all positive and nonzero
-pub fn prefs_sum_to_one(comp_prefs: &CompoundPrefs) -> Result<bool, OutpostError> {
+pub fn prefs_sum_to_one<D>(comp_prefs: &CompoundPrefs<D>) -> Result<bool, OutpostError> {
     let total_pref_amounts =
         comp_prefs
             .relative
@@ -58,10 +58,10 @@ pub fn prefs_sum_to_one(comp_prefs: &CompoundPrefs) -> Result<bool, OutpostError
 
 /// try from to a vector of decimals will give the relative percentages
 /// that should be used for compounding the rewards
-impl TryFrom<CompoundPrefs> for Vec<Decimal> {
+impl<D> TryFrom<CompoundPrefs<D>> for Vec<Decimal> {
     type Error = OutpostError;
 
-    fn try_from(prefs: CompoundPrefs) -> Result<Self, OutpostError> {
+    fn try_from(prefs: CompoundPrefs<D>) -> Result<Self, OutpostError> {
         prefs
             .relative
             .iter()

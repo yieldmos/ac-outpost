@@ -122,7 +122,7 @@ fn generate_wynd_staking_msg() {
             delegator_addr,
             1000u128.into(),
             "ujuno".to_string(),
-            outpost_utils::comp_prefs::WyndStakingBondingPeriod::OneHundredEightyDays,
+            outpost_utils::juno_comp_prefs::WyndStakingBondingPeriod::OneHundredEightyDays,
             sim_response
         )
         .unwrap(),

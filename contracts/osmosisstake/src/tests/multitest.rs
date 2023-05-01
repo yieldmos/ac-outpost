@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use outpost_utils::juno_comp_prefs::JunoCompPrefs;
+use outpost_utils::osmosis_comp_prefs::OsmosisCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},
@@ -11,11 +11,11 @@ use crate::{
 pub struct OutpostContract(Addr);
 
 impl OutpostContract {
-    pub fn addr(&self) -> &Addr {
+    pub fn _addr(&self) -> &Addr {
         &self.0
     }
 
-    pub fn store_code(app: &mut App) -> u64 {
+    pub fn _store_code(app: &mut App) -> u64 {
         let contract = ContractWrapper::new(execute, instantiate, query);
         app.store_code(Box::new(contract))
     }
@@ -45,11 +45,11 @@ impl OutpostContract {
     }
 
     #[track_caller]
-    pub fn compound_funds(
+    pub fn _compound_funds(
         &self,
         app: &mut App,
         sender: &Addr,
-        comp_prefs: JunoCompPrefs,
+        comp_prefs: OsmosisCompPrefs,
         delegator_address: String,
     ) -> Result<(), ContractError> {
         app.execute_contract(

@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Deps, QuerierWrapper, StdResult, Uint128};
-use outpost_utils::comp_prefs::WyndLPBondingPeriod;
+use outpost_utils::juno_comp_prefs::WyndLPBondingPeriod;
 use wyndex::{asset::AssetValidated, pair::PairInfo};
 use wyndex_stake::msg::{AllStakedResponse, WithdrawableRewardsResponse};
 

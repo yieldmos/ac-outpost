@@ -1,7 +1,9 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use outpost_utils::juno_comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs};
-use wyndex::pair::PairInfo;
+use outpost_utils::{
+    comp_prefs::CompoundPrefs, juno_comp_prefs::JunoDestinationProject,
+    osmosis_comp_prefs::OsmosisCompPrefs,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -36,22 +38,14 @@ pub struct VersionResponse {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Compound {
-        /// list of pools to compound and how to compound each one
-        pools: Vec<PoolCompoundPrefs>,
-        /// comp prefs for any pool that was not specified in the pools list
-        other_pools: Option<Vec<PoolCatchAllDestinationAction>>,
-        /// Address of pools that the delegator is currently in.
-        /// If this is not provided, the contract will query wyndex directly
-        /// resulting in much higher gas usage.
-        /// https://api.wynddao.com/pools/user/{delegator_address} can furnish this information off chain
-        current_user_pools: Option<Vec<PairInfo>>,
-        delegator_address: String,
-    },
     AddAuthorizedCompounder {
         address: String,
     },
     RemoveAuthorizedCompounder {
         address: String,
+    },
+    Compound {
+        comp_prefs: OsmosisCompPrefs,
+        delegator_address: String,
     },
 }

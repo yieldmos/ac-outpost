@@ -6,12 +6,13 @@ use cosmos_sdk_proto::cosmos::{
 };
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
-    comp_prefs::{
-        CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod,
-        WyndStakingBondingPeriod,
-    },
+    comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
+    juno_comp_prefs::{
+        JunoCompPrefs, JunoDestinationProject, WyndLPBondingPeriod, WyndStakingBondingPeriod,
+    },
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+    queries::{query_pending_rewards, AllPendingRewards, PendingReward},
 };
 
 use wynd_helpers::{
@@ -24,7 +25,6 @@ use wyndex::{
 };
 
 use crate::{
-    contract::{AllPendingRewards, PendingReward},
     queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
@@ -46,7 +46,7 @@ pub fn compound(
     env: Env,
     info: MessageInfo,
     delegator_address: String,
-    comp_prefs: CompoundPrefs,
+    comp_prefs: JunoCompPrefs,
 ) -> Result<Response, ContractError> {
     // validate that the preference quantites sum to 1
     let _ = !prefs_sum_to_one(&comp_prefs)?;
@@ -71,7 +71,7 @@ pub fn compound(
         &env.block.height,
         staking_denom.to_string(),
         &delegator,
-        queries::query_pending_rewards(&deps.querier, &delegator, staking_denom)?,
+        query_pending_rewards(&deps.querier, &delegator, staking_denom)?,
         comp_prefs,
         deps.querier,
     )?;
@@ -91,7 +91,7 @@ pub fn prefs_to_msgs(
         rewards: pending_rewards,
         total: total_rewards,
     }: AllPendingRewards,
-    comp_prefs: CompoundPrefs,
+    comp_prefs: JunoCompPrefs,
     querier: QuerierWrapper,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // generate the withdraw rewards messages to grab all of the user's pending rewards
