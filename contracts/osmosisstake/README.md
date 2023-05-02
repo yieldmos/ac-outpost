@@ -14,6 +14,6 @@ The things you can do with your rewards during any given compounding.
 | `Token Swap`                                                       | `In Progress` | Can pick any token that's on Osmosis                       |
 | `Osmosis LPs`                                                      | `Not Started` | Must specify the given pool ID                             |
 | `Red Bank Farm Vaults`                                             | `Not Started` | Must specify the vault, leverage amount, and borrow amount |
-| `Red Bank Lending`                                                 | `Not Started` | Must specify the denom that you want to lend with.         |
+| `Red Bank Lending`                                                 | `In Progress` | Must specify the denom that you want to lend with.         |
 | If the lend denom is not OSMO a swap will occur before the lending |
 | `Red Bank Self Repaying Loans`                                     | `Not Started` |                                                            |

@@ -4,10 +4,12 @@ use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
 use cosmos_sdk_proto::cosmos::{authz::v1beta1::MsgExec, base::v1beta1::Coin};
 use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 use cosmos_sdk_proto::prost::EncodeError;
-use cosmos_sdk_proto::traits::{Message, MessageExt};
+use cosmos_sdk_proto::traits::{Message, MessageExt, TypeUrl};
 use cosmos_sdk_proto::Any;
 
 use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, StdError};
+
+use osmosis_std::types::osmosis::poolmanager::v1beta1::MsgSwapExactAmountIn;
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,6 +18,7 @@ pub enum CosmosProtoMsg {
     Delegate(MsgDelegate),
     ExecuteContract(MsgExecuteContract),
     Exec(MsgExec),
+    OsmosisSwapExactAmountIn(MsgSwapExactAmountIn),
 }
 
 impl TryFrom<&CosmosProtoMsg> for Any {
@@ -24,6 +27,14 @@ impl TryFrom<&CosmosProtoMsg> for Any {
             CosmosProtoMsg::WithdrawDelegatorReward(msg) => msg.to_any(),
             CosmosProtoMsg::Delegate(msg) => msg.to_any(),
             CosmosProtoMsg::ExecuteContract(msg) => msg.to_any(),
+            CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => {
+                let any = Any::default();
+
+                // let b: CosmosMsg = *msg.into::cosmwasm_std::CosmosMsg()?;
+
+                todo!("need to get the conversion to any working correctly");
+                Ok(Any::default())
+            }
             CosmosProtoMsg::Exec(msg) => Ok(Any {
                 type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
                 value: Binary::from(msg.encode_to_vec()).to_vec(),

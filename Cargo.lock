@@ -874,6 +874,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99227334921fae1a979cf0bfdfcc6b3e5ce376ef57e16fb6fb3ea2ed6095f80c"
 
 [[package]]
+name = "mars-owner"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ca010da465b4a5ea7274f59132d22b7c10765295c73d5744add2c1fea6c5e38"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
+ "thiserror",
+]
+
+[[package]]
+name = "mars-red-bank-types"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cca59bb17daa753c30d3c934e0779736200708cb89a34020fa805b1cb05e7278"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "mars-owner",
+ "mars-utils",
+ "thiserror",
+]
+
+[[package]]
+name = "mars-utils"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12bae572eda20842ade4bf8ab09ce0856cae5cff89dbeb7c51e9123489e48256"
+dependencies = [
+ "cosmwasm-std",
+ "thiserror",
+]
+
+[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -916,6 +952,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
+name = "osmosis-helpers"
+version = "0.2.2"
+dependencies = [
+ "cosmos-sdk-proto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20 1.0.1",
+ "osmosis-std 0.15.2",
+ "outpost-utils",
+ "schemars",
+ "serde",
+ "swaprouter",
+ "thiserror",
+]
+
+[[package]]
+name = "osmosis-std"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10d6fe6ac7fcba45ed61d738091d33c838c4cabbcf4892dc7aa56d19d39cc976"
+dependencies = [
+ "chrono",
+ "cosmwasm-std",
+ "osmosis-std-derive 0.13.2",
+ "prost 0.11.8",
+ "prost-types",
+ "schemars",
+ "serde",
+ "serde-cw-value",
+]
+
+[[package]]
 name = "osmosis-std"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -923,12 +991,24 @@ checksum = "a10a056b61279b3529aeaa623b0a4b37b39b4b7061e833ff963fb4bc614d5e13"
 dependencies = [
  "chrono",
  "cosmwasm-std",
- "osmosis-std-derive",
+ "osmosis-std-derive 0.15.2",
  "prost 0.11.8",
  "prost-types",
  "schemars",
  "serde",
  "serde-cw-value",
+]
+
+[[package]]
+name = "osmosis-std-derive"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a455e262a6fdfd3914f3a4e11e6bc0ce491901cb9d507d7856d7ef6e129e90c6"
+dependencies = [
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -952,6 +1032,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw20 1.0.1",
+ "osmosis-std 0.15.2",
  "schemars",
  "serde",
  "thiserror",
@@ -1259,6 +1340,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "swaprouter"
+version = "0.1.0"
+source = "git+https://github.com/osmosis-labs/osmosis.git?tag=v15.1.0#2baf3afd80b1ddf014a0da611e9ee05625c0ec94"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cw2 1.0.1",
+ "osmosis-std 0.13.2",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1542,16 +1639,14 @@ dependencies = [
  "cw20 1.0.1",
  "cw20-stake 2.1.0",
  "cw20-vesting",
- "osmosis-std",
+ "mars-red-bank-types",
+ "osmosis-helpers",
+ "osmosis-std 0.15.2",
  "outpost-utils",
  "schemars",
  "semver",
  "serde",
  "thiserror",
- "wynd-helpers",
- "wynd-stake",
- "wyndex",
- "wyndex-multi-hop",
 ]
 
 [[package]]

@@ -9,8 +9,8 @@ pub enum ContractError {
     #[error("Outpost Utils Error: &{0}")]
     OutpostError(#[from] outpost_utils::errors::OutpostError),
 
-    #[error("Wynd Helper Error: &{0}")]
-    WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
+    #[error("Osmosis Helper Error: &{0}")]
+    WyndHelperError(#[from] osmosis_helpers::errors::OsmosisHelperError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
@@ -35,6 +35,9 @@ pub enum ContractError {
 
     #[error("Could not encode msg as any: {0}")]
     EncodeError(#[from] cosmos_sdk_proto::prost::EncodeError),
+
+    #[error("Red Bank deposits disabled for asset: {0}")]
+    DepositDisabled(String),
 }
 
 impl From<semver::Error> for ContractError {
