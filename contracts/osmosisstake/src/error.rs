@@ -1,4 +1,4 @@
-use cosmwasm_std::{CheckedMultiplyFractionError, StdError};
+use cosmwasm_std::{CheckedMultiplyFractionError, Decimal, DecimalRangeExceeded, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -38,6 +38,12 @@ pub enum ContractError {
 
     #[error("Red Bank deposits disabled for asset: {0}")]
     DepositDisabled(String),
+
+    #[error("Red Bank target_ltv too high: {user_ltv} > {max_ltv}")]
+    LTVTooHigh { user_ltv: Decimal, max_ltv: Decimal },
+
+    #[error("Decimal Range Exceeded: {0}")]
+    DecimalRangeExceeded(#[from] DecimalRangeExceeded),
 }
 
 impl From<semver::Error> for ContractError {

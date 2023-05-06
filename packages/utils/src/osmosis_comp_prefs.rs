@@ -5,17 +5,39 @@ use crate::comp_prefs::CompoundPrefs;
 pub type OsmosisCompPrefs = CompoundPrefs<OsmosisDestinationProject>;
 
 #[cw_serde]
+pub enum RedBankLeverRewardTarget {
+    LeaveLiquid,
+    Reexpose,
+    Repay,
+}
+
+#[cw_serde]
 pub enum OsmosisDestinationProject {
-    OsmosisStaking {
-        validator_address: String,
-    },
-    TokenSwap {
-        target_denom: String,
-    },
+    /// Stake the tokens to a given validator
+    OsmosisStaking { validator_address: String },
+
+    /// Swap the given denom for the target denom and leave that token liquid.
+    TokenSwap { target_denom: String },
+    /// Pay back borrowed balance. Currently the first denom strings specified in the vector will be
+    /// paid back first. No order is guaranteed when no vector is passed in.
+    /// Eventually there should be an option to pay back the highest cost debt first
+    RedBankPayback(PaybackDenoms),
+
+    /// Deposit into redbank to potentially gain
     RedBankDeposit {
         /// IMPORTANT: if the deposit cap is reached, the compounding will not be forced to
         /// error out. Instead, the alloted funds for depositing will remain liquid and unswapped and undeposited
         target_denom: String,
+    },
+    /// Self repaying loan utilizing ATOM or stATOM as collateral
+    RedBankLeverLoop {
+        /// the denom to continuously lever up.
+        /// at time of writing the options are atom, osmo, usdc, wbtc, weth
+        denom: String,
+        /// this is the percentage of the collateral that will be borrowed.
+        /// should be a number with 18 places.
+        /// defaults to 50%
+        ltv_ratio: Option<u128>,
     },
     // OsmosisLiquidityPool { pool_id: u64 },
     // RedBankVault {
@@ -23,4 +45,12 @@ pub enum OsmosisDestinationProject {
     //     leverage_amount: u64,
 
     // },
+}
+
+#[cw_serde]
+pub enum PaybackDenoms {
+    /// Pay back the given denoms only
+    Only(Vec<String>),
+    /// If no denom is set then pay back loans indiscriminately otherwise start with the given denom and then move onto the others
+    Any(Option<Vec<String>>),
 }

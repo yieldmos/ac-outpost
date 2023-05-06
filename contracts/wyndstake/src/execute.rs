@@ -8,9 +8,10 @@ use crate::{
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
-    comp_prefs::{DestinationAction, },
+    comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
-    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg}, juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject, WyndLPBondingPeriod},
+    juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject, WyndLPBondingPeriod},
+    msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
     wynd_lp::{wynd_join_pool_msgs, WyndAssetLPMessages},

@@ -31,7 +31,7 @@ impl TryFrom<&CosmosProtoMsg> for Any {
                 let any = Any::default();
 
                 // let b: CosmosMsg = *msg.into::cosmwasm_std::CosmosMsg()?;
-
+                // MsgSwapExactAmountIn::encode(&self, buf)
                 todo!("need to get the conversion to any working correctly");
                 Ok(Any::default())
             }

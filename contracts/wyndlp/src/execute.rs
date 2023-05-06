@@ -17,11 +17,11 @@ use cosmwasm_std::{
     Uint128,
 };
 use outpost_utils::{
+    helpers::is_authorized_compounder,
     juno_comp_prefs::{
         JunoDestinationProject, PoolCatchAllDestinationAction, PoolCatchAllDestinationProject,
         PoolCompoundPrefs, WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },
-    helpers::is_authorized_compounder,
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
