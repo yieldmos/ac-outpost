@@ -5,13 +5,14 @@ use cosmos_sdk_proto::cosmos::{
 };
 use cosmwasm_std::{Addr, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 
-use mars_red_bank_types::red_bank::Market;
-use osmosis_helpers::osmosis_swap::generate_swap_msg;
+use mars_red_bank_types::red_bank::{Market, UserDebtResponse};
+use osmosis_helpers::osmosis_swap::{generate_swap_msg, simulate_exact_out_swap, generate_exact_out_swap_msg_from_sim};
+use osmosis_std::types::cosmos::base::v1beta1::Coin;
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
-    osmosis_comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject},
+    osmosis_comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, PaybackDenoms},
     queries::{query_pending_rewards, AllPendingRewards, PendingReward},
 };
 
@@ -20,6 +21,7 @@ use crate::{
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CosmosCoin;
 
 pub const RED_BANK_ADDRESS: &str =
     "osmo1c3ljch9dfw5kf52nfwpxd2zmj2ese7agnx0p9tenkrryasrle5sqf3ftpg";
@@ -190,7 +192,24 @@ pub fn prefs_to_msgs(
                     Ok(swap_msgs)
                 }
                 OsmosisDestinationProject::RedBankPayback(payback) => {
-                    unimplemented!("payback")
+                    let delegator_debts: Vec<UserDebtResponse> = querier.query_wasm_smart(
+                        RED_BANK_ADDRESS,
+                        &mars_red_bank_types::red_bank::QueryMsg::UserDebts {
+                            user: delegator_address.to_string(),
+                            start_after: None,
+                            limit: None
+                        },
+                    )?;
+
+                    let payback_msgs = create_redbank_payback_msgs(
+                        &querier,
+                        Coin {denom: staking_denom.to_string(), amount: comp_token_amount.into()},
+                        delegator_address,
+                        payback,
+                        delegator_debts,
+                    )?;
+
+                    Ok(payback_msgs)
                 }
                 // OsmosisDestinationProject::OsmosisLiquidityPool { pool_id } => {
                 //     unimplemented!("liquidity pool")
@@ -204,6 +223,97 @@ pub fn prefs_to_msgs(
     withdraw_rewards_msgs.append(&mut compounding_msgs?);
 
     Ok(withdraw_rewards_msgs)
+}
+
+/// Generates the swap messages necessary to payback the user's debts
+/// See the `PaybackDenoms` enum for more info on how this is parameterized
+fn create_redbank_payback_msgs(
+    querier: &QuerierWrapper,
+    from_token: Coin,
+    delegator_address: &Addr,
+    payback: PaybackDenoms,
+    delegator_debts: Vec<UserDebtResponse>,
+) -> Result<Vec<CosmosProtoMsg>, ContractError> {
+    // grab the ordered list of denoms to pay down and whether or not we should pay down other loans.
+    // just trying to normalize the data into a simpler format for us to work with
+    let (preferred_denoms, pay_other_loans) = match payback {
+        PaybackDenoms::Any(denoms) => {
+            (denoms.unwrap_or(vec![]), true)
+        }
+        PaybackDenoms::Only(denoms) => (denoms, false),
+    };
+
+    // the amount of token we have remaining to pay back loans during this compounding
+    let mut from_token_amount = Uint128::from_str(&from_token.amount)?;
+    // the swap msgs needed have the tokens to do the payback msg at the end
+    let mut swap_msgs: Vec<CosmosProtoMsg> = vec![];
+    // the list of tokens that we will be paying back in this compounding5
+    let mut payback_coins: Vec<CosmosCoin> = vec![];
+
+    // iterate over the `preferred_denoms`, checking to see if there's a user debt for that denom, if there is we generate a swap message for it and pay as much of that debt as possible, otherwise we move onto the next denom
+    for preferred_denom in preferred_denoms {
+        // check to see if the user has a debt for this denom
+        let debt = delegator_debts.clone().into_iter()
+            .find(|debt| debt.denom == preferred_denom);
+
+        match debt {
+            // if there's no debt for this denom then we move onto the next one
+            None => continue,
+            // if there is a debt then we need to generate a swap message for it
+            // and add it to the list of payback coins
+            Some(debt) => {
+                // sim the swap so we know if we have enough to pay off the debt                
+                let (sim, route) = simulate_exact_out_swap(querier,
+                     delegator_address, from_token.clone().denom, 
+                     Coin { denom: debt.denom.clone(), amount: debt.amount.into() })?;
+                
+                let required_token_in_for_debt = Uint128::from_str(&sim.token_in_amount)?;
+
+                    let mut swap = generate_exact_out_swap_msg_from_sim(
+                        delegator_address, 
+                        from_token.denom.clone(), 
+                        Coin { denom: debt.denom.clone(),
+                            // this likely isn't the right value. should be validated in unit tests
+                             amount: required_token_in_for_debt.min(from_token_amount).into() }, 
+                        sim, route)?;
+
+                    
+                        swap_msgs.append(&mut swap);
+                        payback_coins.push(CosmosCoin { 
+                            denom: debt.denom, 
+                            // this is also likely the wrong value. should be validated in unit tests
+                            amount: required_token_in_for_debt.min(from_token_amount).into() });
+
+                // now compare the amount of token needed to pay the debt with the amount of `from_token_amount` remaining
+                // if the `from_token_amount` is equal to the remaining debt then we can generate the swap and end the fn early with no more computation
+                if from_token_amount.le(&required_token_in_for_debt) {
+                    // we have no token left to pay debts with so we can end the loop
+                    from_token_amount = Uint128::zero();
+                    break;
+                }
+                // otherwise the `from_token_amount` is gt the remaining debt and we need to generate the swap and continue the loop
+                else {
+                    // subtract the amount of token we used to pay the debt from the `from_token_amount` so that we can use the rest on further debts during this compounding
+                    from_token_amount -= required_token_in_for_debt;
+                }
+
+            }
+        }       
+    }
+
+    // if we still have token left over and we're allowed to pay down other loans then we need to generate a swap for the remaining token
+    if pay_other_loans && from_token_amount.gt(&Uint128::zero()) {        
+        unimplemented!("pay other loans")
+    }
+
+    // push the redbank repay message into the swap_msgs vec at the end
+    swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+        RED_BANK_ADDRESS.to_string()
+        , delegator_address, 
+        &mars_red_bank_types::red_bank::ExecuteMsg::Repay { on_behalf_of: None }, 
+        Some(payback_coins))?));
+    
+    Ok(swap_msgs)
 }
 
 /// Generates the swap messages necessary to get to the denom we would like to deposit

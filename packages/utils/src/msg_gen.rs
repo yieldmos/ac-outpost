@@ -9,7 +9,9 @@ use cosmos_sdk_proto::Any;
 
 use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, StdError};
 
-use osmosis_std::types::osmosis::poolmanager::v1beta1::MsgSwapExactAmountIn;
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountOut,
+};
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,6 +21,7 @@ pub enum CosmosProtoMsg {
     ExecuteContract(MsgExecuteContract),
     Exec(MsgExec),
     OsmosisSwapExactAmountIn(MsgSwapExactAmountIn),
+    OsmosisSwapExactAmountOut(MsgSwapExactAmountOut),
 }
 
 impl TryFrom<&CosmosProtoMsg> for Any {
@@ -32,9 +35,12 @@ impl TryFrom<&CosmosProtoMsg> for Any {
 
                 // let b: CosmosMsg = *msg.into::cosmwasm_std::CosmosMsg()?;
                 // MsgSwapExactAmountIn::encode(&self, buf)
+                // MsgSwapExactAmountIn::TYPE_URL;
+                // MsgSwapExactAmountIn::encode(msg, &mut any.value)?;
                 todo!("need to get the conversion to any working correctly");
                 Ok(Any::default())
             }
+            CosmosProtoMsg::OsmosisSwapExactAmountOut(msg) => unimplemented!(),
             CosmosProtoMsg::Exec(msg) => Ok(Any {
                 type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
                 value: Binary::from(msg.encode_to_vec()).to_vec(),
