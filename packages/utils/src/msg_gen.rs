@@ -30,17 +30,14 @@ impl TryFrom<&CosmosProtoMsg> for Any {
             CosmosProtoMsg::WithdrawDelegatorReward(msg) => msg.to_any(),
             CosmosProtoMsg::Delegate(msg) => msg.to_any(),
             CosmosProtoMsg::ExecuteContract(msg) => msg.to_any(),
-            CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => {
-                let any = Any::default();
-
-                // let b: CosmosMsg = *msg.into::cosmwasm_std::CosmosMsg()?;
-                // MsgSwapExactAmountIn::encode(&self, buf)
-                // MsgSwapExactAmountIn::TYPE_URL;
-                // MsgSwapExactAmountIn::encode(msg, &mut any.value)?;
-                todo!("need to get the conversion to any working correctly");
-                Ok(Any::default())
-            }
-            CosmosProtoMsg::OsmosisSwapExactAmountOut(msg) => unimplemented!(),
+            CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => Ok(Any {
+                type_url: MsgSwapExactAmountIn::TYPE_URL.to_string(),
+                value: msg.clone().encode_to_vec(),
+            }),
+            CosmosProtoMsg::OsmosisSwapExactAmountOut(msg) => Ok(Any {
+                type_url: MsgSwapExactAmountOut::TYPE_URL.to_string(),
+                value: msg.clone().encode_to_vec(),
+            }),
             CosmosProtoMsg::Exec(msg) => Ok(Any {
                 type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
                 value: Binary::from(msg.encode_to_vec()).to_vec(),
