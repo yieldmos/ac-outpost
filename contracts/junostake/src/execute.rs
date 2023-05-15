@@ -25,7 +25,7 @@ use wyndex::{
 };
 
 use crate::{
-    queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
+    queries::{query_juno_neta_swap, query_juno_wynd_swap},
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };

@@ -18,13 +18,15 @@ use outpost_utils::{
 
 use crate::{
     queries::{depositable_token_amount, query_denom_market},
-    state::{ADMIN, AUTHORIZED_ADDRS},
-    ContractError,
+    state::{ADMIN, AUTHORIZED_ADDRS, OUTPOST_ADDRS},
+    ContractError, msg::OutpostAddresses,
 };
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CosmosCoin;
 
-pub const RED_BANK_ADDRESS: &str =
-    "osmo1c3ljch9dfw5kf52nfwpxd2zmj2ese7agnx0p9tenkrryasrle5sqf3ftpg";
+// const SWAPROUTER_ADDRESS: &str = "osmo1fy547nr4ewfc38z73ghr6x62p7eguuupm66xwk8v8rjnjyeyxdqs6gdqx7";
+
+// pub const RED_BANK_ADDRESS: &str =
+//     "osmo1c3ljch9dfw5kf52nfwpxd2zmj2ese7agnx0p9tenkrryasrle5sqf3ftpg";
 
 pub fn compound(
     deps: DepsMut,
@@ -33,6 +35,7 @@ pub fn compound(
     delegator_address: String,
     comp_prefs: OsmosisCompPrefs,
 ) -> Result<Response, ContractError> {
+    
     // validate that the preference quantites sum to 1
     let _ = !prefs_sum_to_one(&comp_prefs)?;
 
@@ -51,6 +54,9 @@ pub fn compound(
     // get the denom of the staking token. this should be "uosmo"
     let staking_denom = deps.querier.query_bonded_denom()?;
 
+    // get the defi primitives' contract addresses from storage
+    let outpost_addrs = OUTPOST_ADDRS.load(deps.storage)?;
+
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let sub_msgs = prefs_to_msgs(
         staking_denom.to_string(),
@@ -58,6 +64,7 @@ pub fn compound(
         query_pending_rewards(&deps.querier, &delegator, staking_denom)?,
         comp_prefs,
         deps.querier,
+        outpost_addrs
     )?;
 
     // the final exec message that will be broadcast and contains all the sub msgs
@@ -76,6 +83,10 @@ pub fn prefs_to_msgs(
     }: AllPendingRewards,
     comp_prefs: OsmosisCompPrefs,
     querier: QuerierWrapper,
+    OutpostAddresses {
+        osmosis_swap_router_address,
+        mars_red_bank_address
+    }: OutpostAddresses
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // generate the withdraw rewards messages to grab all of the user's pending rewards
     // these should be the first msgs in the tx so the user has funds to compound
@@ -116,7 +127,7 @@ pub fn prefs_to_msgs(
                     let (_, swap_msg) = generate_swap_msg(&querier, delegator_address, osmosis_std::types::cosmos::base::v1beta1::Coin {
                         amount: comp_token_amount.into(),
                         denom: staking_denom.clone()
-                    }, target_denom)?;
+                    }, target_denom, osmosis_swap_router_address.to_string())?;
 
                     Ok(swap_msg)
                 },
@@ -127,6 +138,8 @@ pub fn prefs_to_msgs(
                         staking_denom.clone(),
                         target_denom,
                         comp_token_amount,
+                        osmosis_swap_router_address.to_string(),
+                        mars_red_bank_address.to_string()
                     ),
                 OsmosisDestinationProject::RedBankLeverLoop { ltv_ratio,  denom } => {
                     
@@ -140,7 +153,8 @@ pub fn prefs_to_msgs(
                     // grab the market data from red bank, this will give us most of the 
                     // general info about how red bank handles this token.
                     // if the token isn't valid for redbank then this should error out and cancel the tx
-                    let denom_market = query_denom_market(&querier, denom.clone())?;
+                    let denom_market = query_denom_market(&querier, denom.clone(), 
+                    mars_red_bank_address.to_string())?;
 
                     // check that the target ltv is within the bounds of the market
                     // if the user selected 80% ltv but the market only allows 50% then we should error out
@@ -176,7 +190,7 @@ pub fn prefs_to_msgs(
                         &querier, delegator_address,
                         osmosis_std::types::cosmos::base::v1beta1::Coin {
                             amount: comp_token_amount.into(), denom: staking_denom.clone()
-                        }, denom)?;
+                        }, denom, osmosis_swap_router_address.to_string())?;
 
                         // get the rest of the necessary messages in order. these should be the deposit and borrow messages
                         // combine those with our swap_token message(s)
@@ -186,14 +200,15 @@ pub fn prefs_to_msgs(
                         target_ltv,
                         denom_market,
                         // user_position,
-                         redbank_denomwide_deposit_limit
+                         redbank_denomwide_deposit_limit,
+                        mars_red_bank_address.to_string(),
                     )?);
 
                     Ok(swap_msgs)
                 }
                 OsmosisDestinationProject::RedBankPayback(payback) => {
                     let delegator_debts: Vec<UserDebtResponse> = querier.query_wasm_smart(
-                        RED_BANK_ADDRESS,
+                        mars_red_bank_address.to_string(),
                         &mars_red_bank_types::red_bank::QueryMsg::UserDebts {
                             user: delegator_address.to_string(),
                             start_after: None,
@@ -207,6 +222,8 @@ pub fn prefs_to_msgs(
                         delegator_address,
                         payback,
                         delegator_debts,
+                        osmosis_swap_router_address.to_string(),
+                        mars_red_bank_address.to_string(),
                     )?;
 
                     Ok(payback_msgs)
@@ -233,6 +250,8 @@ fn create_redbank_payback_msgs(
     delegator_address: &Addr,
     payback: PaybackDenoms,
     delegator_debts: Vec<UserDebtResponse>,
+    swap_router_addr: String,
+    red_bank_addr: String,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // grab the ordered list of denoms to pay down and whether or not we should pay down other loans.
     // just trying to normalize the data into a simpler format for us to work with
@@ -265,7 +284,7 @@ fn create_redbank_payback_msgs(
                 // sim the swap so we know if we have enough to pay off the debt                
                 let (sim, route) = simulate_exact_out_swap(querier,
                      delegator_address, from_token.clone().denom, 
-                     Coin { denom: debt.denom.clone(), amount: debt.amount.into() })?;
+                     Coin { denom: debt.denom.clone(), amount: debt.amount.into() }, swap_router_addr.to_string())?;
                 
                 let required_token_in_for_debt = Uint128::from_str(&sim.token_in_amount)?;
 
@@ -302,14 +321,18 @@ fn create_redbank_payback_msgs(
     }
 
     // if we still have token left over and we're allowed to pay down other loans then we need to generate a swap for the remaining token
-    if pay_other_loans && from_token_amount.gt(&Uint128::zero()) {        
+    if pay_other_loans && from_token_amount.gt(&Uint128::zero()) {   
+        // come up with the list of debts that we didn't hit in the previous list
+
+        // iterate through the list and pay them off just like in the previous loop
+
         unimplemented!("pay other loans")
     }
 
     // push the redbank repay message into the swap_msgs vec at the end
     swap_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        RED_BANK_ADDRESS.to_string()
-        , delegator_address, 
+        red_bank_addr        , 
+        delegator_address, 
         &mars_red_bank_types::red_bank::ExecuteMsg::Repay { on_behalf_of: None }, 
         Some(payback_coins))?));
     
@@ -326,9 +349,11 @@ fn swap_and_deposit_to_redbank(
     staking_denom: String,
     target_denom: String,
     comp_token_amount: Uint128,
+    swap_router_addr: String,
+    red_bank_addr: String,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // grab the denom "market" info from red bank so we know if depositing is even aloud
-    let denom_market: Market = query_denom_market(querier, target_denom.clone())?;
+    let denom_market: Market = query_denom_market(querier, target_denom.clone(), red_bank_addr.to_string())?;
 
     // verify that the target denom is depositable
     let depositable_amount: Uint128 = depositable_token_amount(&denom_market)?;
@@ -346,7 +371,8 @@ fn swap_and_deposit_to_redbank(
             amount: comp_token_amount.into(),
             denom: staking_denom.clone(),
         },
-        target_denom.clone(),
+        target_denom.clone(), 
+        swap_router_addr.to_string()
     )?;
 
     // if the depositable amount is less than the comp token amount, we will swap the
@@ -355,7 +381,7 @@ fn swap_and_deposit_to_redbank(
 
     // create the message for depositing to red bank
     let deposit_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        RED_BANK_ADDRESS.to_string(),
+        red_bank_addr.to_string(),
         delegator_address,
         &mars_red_bank_types::red_bank::ExecuteMsg::Deposit { on_behalf_of: None },
         Some(vec![cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
@@ -376,6 +402,7 @@ fn redbank_lever_loop_msgs(
     Market { denom, max_loan_to_value, ..  }: Market,
     // user_position: UserPositionResponse,
     max_total_deposit: Uint128,
+    red_bank_addr: String,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
 
     let total_to_deposit: Uint128;
@@ -408,7 +435,7 @@ fn redbank_lever_loop_msgs(
 
         // create the message for depositing to red bank
         deposit_and_borrow_msgs.push( CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            RED_BANK_ADDRESS.to_string(),
+            red_bank_addr.to_string(),
             delegator_address,
             &mars_red_bank_types::red_bank::ExecuteMsg::Deposit { on_behalf_of: None },
             Some(vec![cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
@@ -428,7 +455,7 @@ fn redbank_lever_loop_msgs(
             let borrow_amount = total_to_borrow.min(available_to_borrow);
             // create the message for borrowing from red bank
             deposit_and_borrow_msgs.push( CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                RED_BANK_ADDRESS.to_string(),
+                red_bank_addr.to_string(),
                 delegator_address,
                 &mars_red_bank_types::red_bank::ExecuteMsg::Borrow { 
                     denom: denom.clone(), 

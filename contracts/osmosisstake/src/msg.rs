@@ -1,15 +1,19 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use outpost_utils::{
-    comp_prefs::CompoundPrefs, juno_comp_prefs::JunoDestinationProject,
-    osmosis_comp_prefs::OsmosisCompPrefs,
-};
+use outpost_utils::osmosis_comp_prefs::OsmosisCompPrefs;
+
+#[cw_serde]
+pub struct OutpostAddresses {
+    pub osmosis_swap_router_address: String,
+    pub mars_red_bank_address: String,
+}
 
 #[cw_serde]
 pub struct InstantiateMsg {
     /// Set the admin of the contract
     /// If none given it will be the contract creator
     pub admin: Option<String>,
+    pub outpost_addresses: OutpostAddresses,
 }
 
 #[cw_serde]

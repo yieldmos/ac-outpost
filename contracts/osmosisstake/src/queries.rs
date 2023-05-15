@@ -1,5 +1,4 @@
 use crate::{
-    execute::RED_BANK_ADDRESS,
     msg::{AuthorizedCompoundersResponse, VersionResponse},
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
@@ -23,9 +22,13 @@ pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse
     }
 }
 
-pub fn query_denom_market(querier: &QuerierWrapper, denom: String) -> StdResult<Market> {
+pub fn query_denom_market(
+    querier: &QuerierWrapper,
+    denom: String,
+    red_bank_address: String,
+) -> StdResult<Market> {
     querier.query_wasm_smart(
-        RED_BANK_ADDRESS,
+        red_bank_address,
         &mars_red_bank_types::red_bank::QueryMsg::Market { denom },
     )
 }

@@ -959,28 +959,11 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw20 1.0.1",
- "osmosis-std 0.15.2",
+ "osmosis-std",
  "outpost-utils",
  "schemars",
  "serde",
- "swaprouter",
  "thiserror",
-]
-
-[[package]]
-name = "osmosis-std"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d6fe6ac7fcba45ed61d738091d33c838c4cabbcf4892dc7aa56d19d39cc976"
-dependencies = [
- "chrono",
- "cosmwasm-std",
- "osmosis-std-derive 0.13.2",
- "prost 0.11.8",
- "prost-types",
- "schemars",
- "serde",
- "serde-cw-value",
 ]
 
 [[package]]
@@ -991,24 +974,12 @@ checksum = "a10a056b61279b3529aeaa623b0a4b37b39b4b7061e833ff963fb4bc614d5e13"
 dependencies = [
  "chrono",
  "cosmwasm-std",
- "osmosis-std-derive 0.15.2",
+ "osmosis-std-derive",
  "prost 0.11.8",
  "prost-types",
  "schemars",
  "serde",
  "serde-cw-value",
-]
-
-[[package]]
-name = "osmosis-std-derive"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a455e262a6fdfd3914f3a4e11e6bc0ce491901cb9d507d7856d7ef6e129e90c6"
-dependencies = [
- "itertools",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -1032,7 +1003,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw20 1.0.1",
- "osmosis-std 0.15.2",
+ "osmosis-std",
  "schemars",
  "serde",
  "thiserror",
@@ -1340,22 +1311,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "swaprouter"
-version = "0.1.0"
-source = "git+https://github.com/osmosis-labs/osmosis.git?tag=v15.1.0#2baf3afd80b1ddf014a0da611e9ee05625c0ec94"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-storage-plus 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "cw2 1.0.1",
- "osmosis-std 0.13.2",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1641,7 +1596,7 @@ dependencies = [
  "cw20-vesting",
  "mars-red-bank-types",
  "osmosis-helpers",
- "osmosis-std 0.15.2",
+ "osmosis-std",
  "outpost-utils",
  "schemars",
  "semver",

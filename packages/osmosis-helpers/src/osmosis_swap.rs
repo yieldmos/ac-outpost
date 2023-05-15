@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, QuerierWrapper, StdResult};
 
 use osmosis_std::types::{
@@ -10,9 +11,19 @@ use osmosis_std::types::{
 };
 
 use outpost_utils::msg_gen::CosmosProtoMsg;
-use swaprouter::msg::GetRouteResponse;
 
-const SWAPROUTER_ADDRESS: &str = "osmo1fy547nr4ewfc38z73ghr6x62p7eguuupm66xwk8v8rjnjyeyxdqs6gdqx7";
+// TODO: this should come from the swaprouter module instead of being copy and pasted here
+#[cw_serde]
+pub struct GetRouteResponse {
+    pub pool_route: Vec<SwapAmountInRoute>,
+}
+
+// TODO: this should come from the swaprouter module instead of being copy and pasted here
+#[cw_serde]
+pub struct GetRoute {
+    input_denom: String,
+    output_denom: String,
+}
 
 /// Queries the swaprouter's state to get a valid route from `from_denom` to `to_denom`
 pub fn query_swap_in_routes(
@@ -20,10 +31,11 @@ pub fn query_swap_in_routes(
     from_token: &String,
     // just for error reporting purposes
     to_denom: String,
+    swap_router_address: String,
 ) -> StdResult<Vec<SwapAmountInRoute>> {
     let route_response: GetRouteResponse = querier.query_wasm_smart(
-        SWAPROUTER_ADDRESS.to_string(),
-        &swaprouter::msg::QueryMsg::GetRoute {
+        swap_router_address,
+        &GetRoute {
             input_denom: from_token.clone(),
             output_denom: to_denom,
         },
@@ -47,10 +59,11 @@ pub fn query_swap_out_routes(
     from_token: &String,
     // just for error reporting purposes
     to_denom: String,
+    swap_router_address: String,
 ) -> StdResult<Vec<SwapAmountOutRoute>> {
     let route_response: GetRouteResponse = querier.query_wasm_smart(
-        SWAPROUTER_ADDRESS.to_string(),
-        &swaprouter::msg::QueryMsg::GetRoute {
+        swap_router_address,
+        &GetRoute {
             input_denom: from_token.clone(),
             output_denom: to_denom,
         },
@@ -74,6 +87,7 @@ pub fn simulate_exact_out_swap(
     delegator_address: &Addr,
     from_denom: String,
     to_token: Coin,
+    swap_router_address: String,
 ) -> StdResult<(EstimateSwapExactAmountOutResponse, Vec<SwapAmountOutRoute>)> {
     if from_denom == to_token.denom {
         return Ok((
@@ -84,8 +98,12 @@ pub fn simulate_exact_out_swap(
         ));
     }
 
-    let swap_route: Vec<SwapAmountOutRoute> =
-        query_swap_out_routes(querier, &from_denom.clone(), to_token.denom.clone())?;
+    let swap_route: Vec<SwapAmountOutRoute> = query_swap_out_routes(
+        querier,
+        &from_denom.clone(),
+        to_token.denom.clone(),
+        swap_router_address,
+    )?;
 
     let estimate = EstimateSwapExactAmountOutRequest {
         sender: delegator_address.to_string(),
@@ -128,9 +146,14 @@ pub fn simulate_swap(
     from_token: Coin,
     // just for error reporting purposes
     to_denom: String,
+    swap_router_address: String,
 ) -> StdResult<(EstimateSwapExactAmountInResponse, Vec<SwapAmountInRoute>)> {
-    let swap_route: Vec<SwapAmountInRoute> =
-        query_swap_in_routes(querier, &from_token.denom.clone(), to_denom.clone())?;
+    let swap_route: Vec<SwapAmountInRoute> = query_swap_in_routes(
+        querier,
+        &from_token.denom.clone(),
+        to_denom.clone(),
+        swap_router_address,
+    )?;
 
     let estimate = EstimateSwapExactAmountInRequest {
         sender: delegator_address.to_string(),
@@ -148,6 +171,7 @@ pub fn generate_swap_msg(
     delegator_address: &Addr,
     from_token: Coin,
     to_denom: String,
+    swap_router_address: String,
 ) -> StdResult<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>)> {
     if from_token.denom == to_denom {
         return Ok((
@@ -163,6 +187,7 @@ pub fn generate_swap_msg(
         delegator_address,
         from_token.clone(),
         to_denom.clone(),
+        swap_router_address,
     )?;
 
     let swap_msg = CosmosProtoMsg::OsmosisSwapExactAmountIn(MsgSwapExactAmountIn {

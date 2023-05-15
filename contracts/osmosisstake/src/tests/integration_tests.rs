@@ -5,7 +5,7 @@ use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::InstantiateMsg,
+    msg::{InstantiateMsg, OutpostAddresses},
     tests::multitest::OutpostContract,
 };
 
@@ -34,7 +34,13 @@ fn instantiate_with_defaults() {
         None,
         "Test Outpost",
         // &coins(100_000, "ubtc"),
-        &InstantiateMsg { admin: None },
+        &InstantiateMsg {
+            admin: None,
+            outpost_addresses: OutpostAddresses {
+                osmosis_swap_router_address: "".to_string(),
+                mars_red_bank_address: "".to_string(),
+            },
+        },
     )
     .unwrap();
 
@@ -105,7 +111,13 @@ fn validator_only_compounding() {
         &contract_admin_addr,
         None,
         "Test Outpost",
-        &InstantiateMsg { admin: None },
+        &InstantiateMsg {
+            admin: None,
+            outpost_addresses: OutpostAddresses {
+                osmosis_swap_router_address: "".to_string(),
+                mars_red_bank_address: "".to_string(),
+            },
+        },
     )
     .unwrap();
 

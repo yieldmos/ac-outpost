@@ -42,7 +42,9 @@ outpost-utils = { path = "./packages/utils" }
 wynd-helpers = { path = "./packages/wynd-helpers" }
 wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3" }
 osmosis-std = "0.15.2"
-swaprouter = { git = "https://github.com/osmosis-labs/osmosis.git", tag = "v15.1.0" }
+# swaprouter = { git = "https://github.com/osmosis-labs/osmosis.git", tag = "v15.1.0", features = [
+#     "library",
+# ] }
 osmosis-helpers = { path = "./packages/osmosis-helpers" }
 mars-red-bank-types = "1.0.0"
 

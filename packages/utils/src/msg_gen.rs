@@ -4,7 +4,7 @@ use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
 use cosmos_sdk_proto::cosmos::{authz::v1beta1::MsgExec, base::v1beta1::Coin};
 use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 use cosmos_sdk_proto::prost::EncodeError;
-use cosmos_sdk_proto::traits::{Message, MessageExt, TypeUrl};
+use cosmos_sdk_proto::traits::{Message, MessageExt};
 use cosmos_sdk_proto::Any;
 
 use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, StdError};
