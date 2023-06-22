@@ -29,7 +29,7 @@ pub enum OsmosisDestinationProject {
         /// error out. Instead, the alloted funds for depositing will remain liquid and unswapped and undeposited
         target_denom: String,
     },
-    /// Self repaying loan utilizing ATOM or stATOM as collateral
+    /// Continuously lever up the given denom
     RedBankLeverLoop {
         /// the denom to continuously lever up.
         /// at time of writing the options are atom, osmo, usdc, wbtc, weth
@@ -39,11 +39,19 @@ pub enum OsmosisDestinationProject {
         /// defaults to 50%
         ltv_ratio: Option<u128>,
     },
-    // OsmosisLiquidityPool { pool_id: u64 },
+
+    /// Convert to Ion and stake it
+    IonStaking {},
+
+    // Swap to the appropriate pool tokens, join the pool, and lock the tokens for 14 days if desired
+    OsmosisLiquidityPool {
+        pool_id: u64,
+        // If true, the pool tokens will be locked with a 14 day unbonding period
+        bond_tokens: bool,
+    },
     // RedBankVault {
     //     vault_address: String,
     //     leverage_amount: u64,
-
     // },
 }
 

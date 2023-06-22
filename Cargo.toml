@@ -22,7 +22,7 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 semver = "1"
-cosmos-sdk-proto = { version = "0.17", default-features = false, features = [
+cosmos-sdk-proto = { version = "0.19", default-features = false, features = [
     "cosmwasm",
 ] }
 cw20 = "1.0.1"

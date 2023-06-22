@@ -35,12 +35,8 @@ pub struct VersionResponse {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    AddAuthorizedCompounder {
-        address: String,
-    },
-    RemoveAuthorizedCompounder {
-        address: String,
-    },
+    AddAuthorizedCompounder(String),
+    RemoveAuthorizedCompounder(String),
     Compound {
         comp_prefs: JunoCompPrefs,
         delegator_address: String,

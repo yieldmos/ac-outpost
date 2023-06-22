@@ -85,7 +85,8 @@ pub fn prefs_to_msgs(
     querier: QuerierWrapper,
     OutpostAddresses {
         osmosis_swap_router_address,
-        mars_red_bank_address
+        mars_red_bank_address,
+        ion_dao_staking_address,
     }: OutpostAddresses
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // generate the withdraw rewards messages to grab all of the user's pending rewards
@@ -122,6 +123,29 @@ pub fn prefs_to_msgs(
                         }),
                         delegator_address: delegator_address.to_string(),
                     })])
+                },
+                OsmosisDestinationProject::IonStaking {  } => {
+                    let (sim, mut swap_msg) = generate_swap_msg(
+                        &querier, 
+                        delegator_address, 
+                        osmosis_std::types::cosmos::base::v1beta1::Coin {
+                        amount: comp_token_amount.into(),
+                        denom: staking_denom.clone()
+                    }, "uion".to_string(), osmosis_swap_router_address.to_string())?;
+
+                    swap_msg.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                        ion_dao_staking_address.clone(),
+                        delegator_address,
+                        &cw20_stake::msg::ReceiveMsg::Stake {  },
+                        Some(vec![cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
+                            denom: "uion".to_string(),
+                            amount: sim.token_out_amount,
+                        }]),
+                    )?));
+
+
+                    Ok(swap_msg)
+
                 },
                 OsmosisDestinationProject::TokenSwap { target_denom } => {
                     let (_, swap_msg) = generate_swap_msg(&querier, delegator_address, osmosis_std::types::cosmos::base::v1beta1::Coin {
@@ -228,9 +252,9 @@ pub fn prefs_to_msgs(
 
                     Ok(payback_msgs)
                 }
-                // OsmosisDestinationProject::OsmosisLiquidityPool { pool_id } => {
-                //     unimplemented!("liquidity pool")
-                // },
+                OsmosisDestinationProject::OsmosisLiquidityPool { pool_id, bond_tokens } => {
+                    unimplemented!("liquidity pool")
+                },
                 // _ => unimplemented!()
             } },
         )

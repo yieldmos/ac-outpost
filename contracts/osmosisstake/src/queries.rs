@@ -52,8 +52,8 @@ pub fn depositable_token_amount(
 
 /// Check that depositing pays more than borrowing. If this is false then
 /// levering up into the same asset likely isn't sensible.
-pub fn deposit_rate_gt_borrow_rate(market: &Market) -> bool {
-    market.borrow_rate;
+pub fn deposit_rate_gt_borrow_rate(_market: &Market) -> bool {
+    // market.borrow_rate;
 
     unimplemented!("need to determine the deposit reward rate");
 }

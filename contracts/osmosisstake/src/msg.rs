@@ -6,6 +6,7 @@ use outpost_utils::osmosis_comp_prefs::OsmosisCompPrefs;
 pub struct OutpostAddresses {
     pub osmosis_swap_router_address: String,
     pub mars_red_bank_address: String,
+    pub ion_dao_staking_address: String,
 }
 
 #[cw_serde]

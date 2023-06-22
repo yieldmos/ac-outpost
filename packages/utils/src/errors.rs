@@ -7,6 +7,12 @@ pub enum OutpostError {
     #[error("Outpost StdError: {0}")]
     Std(#[from] StdError),
 
+    #[error("Outpost admin could not be loaded")]
+    AdminLoadFailure(),
+
+    #[error("Outpost authorized admin could not be loaded")]
+    AuthorizedAdminLoadFailure(),
+
     #[error("Invalid prefs: Relative quantities must be non-zero and sum to 1")]
     InvalidPrefQtys,
 

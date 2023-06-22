@@ -20,7 +20,7 @@ pub fn query_version() -> VersionResponse {
 
 pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
     let authorized_compound_addresses: Vec<Addr> =
-        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or_default();
     let admin: Addr = ADMIN.load(deps.storage).unwrap();
     AuthorizedCompoundersResponse {
         admin,
@@ -42,7 +42,7 @@ pub fn query_juno_neta_swap(
         },
         "uneta".to_string(),
     )
-    .map_err(|e| ContractError::from(e))
+    .map_err(ContractError::from)
 }
 
 /// Queries wyndex for the amount of wynd that can be received for `from_token_amount` of juno
@@ -59,5 +59,5 @@ pub fn query_juno_wynd_swap(
         },
         "uwynd".to_string(),
     )
-    .map_err(|e| ContractError::from(e))
+    .map_err(ContractError::from)
 }

@@ -81,12 +81,16 @@ pub fn is_authorized_compounder(
     admin: Item<Addr>,
     authorized_addrs: Item<Vec<Addr>>,
 ) -> Result<(), OutpostError> {
-    if sender.ne(delegator) {
-        if sender.ne(&admin.load(deps.storage)?) {
-            if !authorized_addrs.load(deps.storage)?.contains(sender) {
-                return Err(OutpostError::UnauthorizedCompounder(sender.to_string()));
-            }
-        }
+    if sender.ne(delegator)
+        && sender.ne(&admin
+            .load(deps.storage)
+            .map_err(|_| OutpostError::AdminLoadFailure())?)
+        && !authorized_addrs
+            .load(deps.storage)
+            .map_err(|_| OutpostError::AuthorizedAdminLoadFailure())?
+            .contains(sender)
+    {
+        return Err(OutpostError::UnauthorizedCompounder(sender.to_string()));
     }
     Ok(())
 }

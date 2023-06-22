@@ -25,19 +25,18 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    match msg {
-        InstantiateMsg { admin } => {
-            let admin_addr = match admin {
-                Some(admin) => deps
-                    .api
-                    .addr_validate(&admin)
-                    .map_err(|_| ContractError::InvalidAuthorizedAddress(admin.to_string()))?,
-                None => info.sender,
-            };
+    let InstantiateMsg { admin } = msg;
 
-            ADMIN.save(deps.storage, &admin_addr)?;
-        }
-    }
+    let admin_addr = match admin {
+        Some(admin) => deps
+            .api
+            .addr_validate(&admin)
+            .map_err(|_| ContractError::InvalidAuthorizedAddress(admin.to_string()))?,
+        None => info.sender,
+    };
+
+    ADMIN.save(deps.storage, &admin_addr)?;
+    AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
 
     Ok(Response::default())
 }
@@ -61,7 +60,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::AddAuthorizedCompounder { address } => {
+        ExecuteMsg::AddAuthorizedCompounder(address) => {
             if info.sender != ADMIN.load(deps.storage)? {
                 return Err(ContractError::Unauthorized {});
             }
@@ -83,7 +82,7 @@ pub fn execute(
 
             Ok(Response::default())
         }
-        ExecuteMsg::RemoveAuthorizedCompounder { address } => {
+        ExecuteMsg::RemoveAuthorizedCompounder(address) => {
             if info.sender != ADMIN.load(deps.storage)? {
                 return Err(ContractError::Unauthorized {});
             }
