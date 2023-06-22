@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use outpost_utils::{
-    comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs},
     errors::OutpostError,
     helpers::prefs_sum_to_one,
+    juno_comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

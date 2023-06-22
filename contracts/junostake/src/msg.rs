@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use outpost_utils::comp_prefs::CompoundPrefs;
+use outpost_utils::juno_comp_prefs::JunoCompPrefs;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -35,14 +35,10 @@ pub struct VersionResponse {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    AddAuthorizedCompounder {
-        address: String,
-    },
-    RemoveAuthorizedCompounder {
-        address: String,
-    },
+    AddAuthorizedCompounder(String),
+    RemoveAuthorizedCompounder(String),
     Compound {
-        comp_prefs: CompoundPrefs,
+        comp_prefs: JunoCompPrefs,
         delegator_address: String,
     },
 }

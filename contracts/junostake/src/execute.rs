@@ -6,12 +6,13 @@ use cosmos_sdk_proto::cosmos::{
 };
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
-    comp_prefs::{
-        CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod,
-        WyndStakingBondingPeriod,
-    },
+    comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
+    juno_comp_prefs::{
+        JunoCompPrefs, JunoDestinationProject, WyndLPBondingPeriod, WyndStakingBondingPeriod,
+    },
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
+    queries::{query_pending_rewards, AllPendingRewards, PendingReward},
 };
 
 use wynd_helpers::{
@@ -24,8 +25,7 @@ use wyndex::{
 };
 
 use crate::{
-    contract::{AllPendingRewards, PendingReward},
-    queries::{self, query_juno_neta_swap, query_juno_wynd_swap},
+    queries::{query_juno_neta_swap, query_juno_wynd_swap},
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
@@ -46,7 +46,7 @@ pub fn compound(
     env: Env,
     info: MessageInfo,
     delegator_address: String,
-    comp_prefs: CompoundPrefs,
+    comp_prefs: JunoCompPrefs,
 ) -> Result<Response, ContractError> {
     // validate that the preference quantites sum to 1
     let _ = !prefs_sum_to_one(&comp_prefs)?;
@@ -55,7 +55,7 @@ pub fn compound(
     let delegator: Addr = deps.api.addr_validate(&delegator_address)?;
 
     // validate that the user is authorized to compound
-    let _ = is_authorized_compounder(
+    is_authorized_compounder(
         deps.as_ref(),
         &info.sender,
         &delegator,
@@ -71,7 +71,7 @@ pub fn compound(
         &env.block.height,
         staking_denom.to_string(),
         &delegator,
-        queries::query_pending_rewards(&deps.querier, &delegator, staking_denom)?,
+        query_pending_rewards(&deps.querier, &delegator, staking_denom)?,
         comp_prefs,
         deps.querier,
     )?;
@@ -91,7 +91,7 @@ pub fn prefs_to_msgs(
         rewards: pending_rewards,
         total: total_rewards,
     }: AllPendingRewards,
-    comp_prefs: CompoundPrefs,
+    comp_prefs: JunoCompPrefs,
     querier: QuerierWrapper,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // generate the withdraw rewards messages to grab all of the user's pending rewards
@@ -143,13 +143,13 @@ pub fn prefs_to_msgs(
                     query_juno_wynd_swap(&querier, comp_token_amount)?
                 ),
                 JunoDestinationProject::TokenSwap { target_denom } => wynd_helpers::wynd_swap::create_wyndex_swap_msg(
-                    &target_address,
+                    target_address,
                     comp_token_amount,
                     AssetInfo::Native(staking_denom.clone()),
                     target_denom,
                     WYND_MULTI_HOP_ADDR.to_string(),
                 )
-                .map_err(|err| ContractError::Std(err)),
+                .map_err(ContractError::Std),
                 JunoDestinationProject::WyndLP {
                     contract_address,
                     bonding_period,
@@ -201,7 +201,7 @@ pub fn neta_staking_msgs(
     let neta_swap_msg = wynd_pair_swap_msg(
         &target_address,
         Asset {
-            info: AssetInfo::Native(staking_denom.clone()),
+            info: AssetInfo::Native(staking_denom),
             amount: comp_token_amount,
         },
         AssetInfo::Token(NETA_CW20_ADDR.to_string()),
@@ -237,7 +237,7 @@ pub fn wynd_staking_msgs(
     let wynd_swap_msg = wynd_pair_swap_msg(
         &target_address,
         Asset {
-            info: AssetInfo::Native(staking_denom.clone()),
+            info: AssetInfo::Native(staking_denom),
             amount: comp_token_amount,
         },
         AssetInfo::Token(WYND_CW20_ADDR.to_string()),
@@ -326,7 +326,7 @@ fn join_wynd_pool_msgs(
 /// These messages should ensure that we have the correct amount of assets in the pool contract
 pub fn wynd_lp_asset_swaps(
     querier: &QuerierWrapper,
-    staking_denom: &String,
+    staking_denom: &str,
     wynd_amount_per_asset: &Uint128,
     pool_info: &PairInfo,
     target_address: &Addr,
@@ -340,7 +340,7 @@ pub fn wynd_lp_asset_swaps(
                 querier,
                 target_address,
                 *wynd_amount_per_asset,
-                AssetInfo::Token(staking_denom.clone()),
+                AssetInfo::Token(staking_denom.to_string()),
                 asset.clone().into(),
                 WYND_MULTI_HOP_ADDR.to_string(),
             )?;

@@ -8,8 +8,9 @@ use crate::{
 use cosmos_sdk_proto::cosmos::{base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
 use outpost_utils::{
-    comp_prefs::{CompoundPrefs, DestinationAction, JunoDestinationProject, WyndLPBondingPeriod},
+    comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one},
+    juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject, WyndLPBondingPeriod},
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use wynd_helpers::{
@@ -40,7 +41,7 @@ pub fn compound(
     env: Env,
     info: MessageInfo,
     delegator_address: String,
-    comp_prefs: CompoundPrefs,
+    comp_prefs: JunoCompPrefs,
 ) -> Result<Response, ContractError> {
     // check that the compounding preference quantities are valid
     let _ = !prefs_sum_to_one(&comp_prefs)?;
@@ -80,7 +81,7 @@ pub fn prefs_to_msgs(
     target_address: &Addr,
     staking_denom: String,
     total_rewards: Uint128,
-    comp_prefs: CompoundPrefs,
+    comp_prefs: JunoCompPrefs,
     querier: QuerierWrapper,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
     // Generate msg for withdrawing the wynd rewards.

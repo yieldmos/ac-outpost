@@ -24,9 +24,6 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Could not query pendingRewards")]
-    QueryPendingRewardsFailure,
-
     #[error("{0} is not a valid address. Cannot set as authorized address")]
     InvalidAuthorizedAddress(String),
 

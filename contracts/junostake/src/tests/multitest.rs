@@ -1,10 +1,10 @@
-use cosmwasm_std::{Addr, Coin, StdResult};
+use cosmwasm_std::{Addr, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use outpost_utils::comp_prefs::CompoundPrefs;
+use outpost_utils::juno_comp_prefs::JunoCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg},
     ContractError,
 };
 
@@ -49,7 +49,7 @@ impl OutpostContract {
         &self,
         app: &mut App,
         sender: &Addr,
-        comp_prefs: CompoundPrefs,
+        comp_prefs: JunoCompPrefs,
         delegator_address: String,
     ) -> Result<(), ContractError> {
         app.execute_contract(

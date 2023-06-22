@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use outpost_utils::comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs};
+use outpost_utils::juno_comp_prefs::{PoolCatchAllDestinationAction, PoolCompoundPrefs};
 use wyndex::pair::PairInfo;
 
 #[cw_serde]

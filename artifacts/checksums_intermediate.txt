@@ -1,3 +1,0 @@
-913c96cb97fa9afbd0c4fc97a24799ad96201c484f142a9ddf95f67cc3480ebd  target/wasm32-unknown-unknown/release/ymos_junostake_outpost.wasm
-af5c1340c033dfcea380006b59c2cfa3742aa20251acb2986f97bdbdf39b112a  target/wasm32-unknown-unknown/release/ymos_wyndlp_outpost.wasm
-8389da0d25362ad70070023a01399418a0b4d0944fe08b210a9e75c3804b01e2  target/wasm32-unknown-unknown/release/ymos_wyndstake_outpost.wasm

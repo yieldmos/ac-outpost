@@ -1,0 +1,430 @@
+{
+  "contract_name": "ymos-osmostake-outpost",
+  "contract_version": "0.2.2",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "required": [
+      "outpost_addresses"
+    ],
+    "properties": {
+      "admin": {
+        "description": "Set the admin of the contract If none given it will be the contract creator",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "outpost_addresses": {
+        "$ref": "#/definitions/OutpostAddresses"
+      }
+    },
+    "additionalProperties": false,
+    "definitions": {
+      "OutpostAddresses": {
+        "type": "object",
+        "required": [
+          "ion_dao_staking_address",
+          "mars_red_bank_address",
+          "osmosis_swap_router_address"
+        ],
+        "properties": {
+          "ion_dao_staking_address": {
+            "type": "string"
+          },
+          "mars_red_bank_address": {
+            "type": "string"
+          },
+          "osmosis_swap_router_address": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "add_authorized_compounder"
+        ],
+        "properties": {
+          "add_authorized_compounder": {
+            "type": "object",
+            "required": [
+              "address"
+            ],
+            "properties": {
+              "address": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "remove_authorized_compounder"
+        ],
+        "properties": {
+          "remove_authorized_compounder": {
+            "type": "object",
+            "required": [
+              "address"
+            ],
+            "properties": {
+              "address": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "compound"
+        ],
+        "properties": {
+          "compound": {
+            "type": "object",
+            "required": [
+              "comp_prefs",
+              "delegator_address"
+            ],
+            "properties": {
+              "comp_prefs": {
+                "$ref": "#/definitions/CompoundPrefs_for_OsmosisDestinationProject"
+              },
+              "delegator_address": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "CompoundPrefs_for_OsmosisDestinationProject": {
+        "type": "object",
+        "required": [
+          "relative"
+        ],
+        "properties": {
+          "relative": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DestinationAction_for_OsmosisDestinationProject"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DestinationAction_for_OsmosisDestinationProject": {
+        "type": "object",
+        "required": [
+          "amount",
+          "destination"
+        ],
+        "properties": {
+          "amount": {
+            "description": "the percentage of the rewards that should be sent to this destination this is a number with 18 decimal places for example \"250000000000000000\" is 25%",
+            "type": "integer",
+            "format": "uint128",
+            "minimum": 0.0
+          },
+          "destination": {
+            "$ref": "#/definitions/OsmosisDestinationProject"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OsmosisDestinationProject": {
+        "oneOf": [
+          {
+            "description": "Stake the tokens to a given validator",
+            "type": "object",
+            "required": [
+              "osmosis_staking"
+            ],
+            "properties": {
+              "osmosis_staking": {
+                "type": "object",
+                "required": [
+                  "validator_address"
+                ],
+                "properties": {
+                  "validator_address": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Swap the given denom for the target denom and leave that token liquid.",
+            "type": "object",
+            "required": [
+              "token_swap"
+            ],
+            "properties": {
+              "token_swap": {
+                "type": "object",
+                "required": [
+                  "target_denom"
+                ],
+                "properties": {
+                  "target_denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Pay back borrowed balance. Currently the first denom strings specified in the vector will be paid back first. No order is guaranteed when no vector is passed in. Eventually there should be an option to pay back the highest cost debt first",
+            "type": "object",
+            "required": [
+              "red_bank_payback"
+            ],
+            "properties": {
+              "red_bank_payback": {
+                "$ref": "#/definitions/PaybackDenoms"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Deposit into redbank to potentially gain",
+            "type": "object",
+            "required": [
+              "red_bank_deposit"
+            ],
+            "properties": {
+              "red_bank_deposit": {
+                "type": "object",
+                "required": [
+                  "target_denom"
+                ],
+                "properties": {
+                  "target_denom": {
+                    "description": "IMPORTANT: if the deposit cap is reached, the compounding will not be forced to error out. Instead, the alloted funds for depositing will remain liquid and unswapped and undeposited",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Continuously lever up the given denom",
+            "type": "object",
+            "required": [
+              "red_bank_lever_loop"
+            ],
+            "properties": {
+              "red_bank_lever_loop": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "description": "the denom to continuously lever up. at time of writing the options are atom, osmo, usdc, wbtc, weth",
+                    "type": "string"
+                  },
+                  "ltv_ratio": {
+                    "description": "this is the percentage of the collateral that will be borrowed. should be a number with 18 places. defaults to 50%",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint128",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Convert to Ion and stake it",
+            "type": "object",
+            "required": [
+              "ion_staking"
+            ],
+            "properties": {
+              "ion_staking": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "osmosis_liquidity_pool"
+            ],
+            "properties": {
+              "osmosis_liquidity_pool": {
+                "type": "object",
+                "required": [
+                  "bond_tokens",
+                  "pool_id"
+                ],
+                "properties": {
+                  "bond_tokens": {
+                    "type": "boolean"
+                  },
+                  "pool_id": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "PaybackDenoms": {
+        "oneOf": [
+          {
+            "description": "Pay back the given denoms only",
+            "type": "object",
+            "required": [
+              "only"
+            ],
+            "properties": {
+              "only": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "If no denom is set then pay back loans indiscriminately otherwise start with the given denom and then move onto the others",
+            "type": "object",
+            "required": [
+              "any"
+            ],
+            "properties": {
+              "any": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "authorized_compounders"
+        ],
+        "properties": {
+          "authorized_compounders": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "authorized_compounders": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AuthorizedCompoundersResponse",
+      "type": "object",
+      "required": [
+        "admin",
+        "authorized_compound_addresses"
+      ],
+      "properties": {
+        "admin": {
+          "$ref": "#/definitions/Addr"
+        },
+        "authorized_compound_addresses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Addr"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    },
+    "version": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "VersionResponse",
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
