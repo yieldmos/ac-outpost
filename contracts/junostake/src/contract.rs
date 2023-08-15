@@ -9,7 +9,7 @@ use semver::Version;
 use crate::error::ContractError;
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{ADMIN, AUTHORIZED_ADDRS};
+use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 
 // version info for migration info
@@ -25,7 +25,10 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let InstantiateMsg { admin } = msg;
+    let InstantiateMsg {
+        admin,
+        project_addresses,
+    } = msg;
 
     let admin_addr = match admin {
         Some(admin) => deps
@@ -37,6 +40,7 @@ pub fn instantiate(
 
     ADMIN.save(deps.storage, &admin_addr)?;
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
+    PROJECT_ADDRS.save(deps.storage, &project_addresses)?;
 
     Ok(Response::default())
 }
@@ -101,7 +105,20 @@ pub fn execute(
         ExecuteMsg::Compound {
             delegator_address,
             comp_prefs,
-        } => execute::compound(deps, env, info, delegator_address, comp_prefs),
+            tax_fee,
+        } => {
+            let addresses = PROJECT_ADDRS.load(deps.storage)?;
+
+            execute::compound(
+                deps,
+                env,
+                info,
+                addresses,
+                delegator_address,
+                comp_prefs,
+                tax_fee,
+            )
+        }
     }
 }
 

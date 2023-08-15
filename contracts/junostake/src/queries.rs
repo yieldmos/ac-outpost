@@ -6,7 +6,6 @@ use wyndex::{
 };
 
 use crate::{
-    execute::JUNO_NETA_PAIR_ADDR,
     msg::{AuthorizedCompoundersResponse, VersionResponse},
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
@@ -30,12 +29,13 @@ pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse
 
 /// Queries wyndex for the amount of neta that can be received for `from_token_amount` of juno
 pub fn query_juno_neta_swap(
+    juno_neta_addr: String,
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
     simulate_wynd_pool_swap(
         querier,
-        JUNO_NETA_PAIR_ADDR.to_string(),
+        juno_neta_addr,
         &Asset {
             info: AssetInfo::Native("ujuno".to_string()),
             amount: from_token_amount,
@@ -47,12 +47,13 @@ pub fn query_juno_neta_swap(
 
 /// Queries wyndex for the amount of wynd that can be received for `from_token_amount` of juno
 pub fn query_juno_wynd_swap(
+    juno_wynd_addr: String,
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
     simulate_wynd_pool_swap(
         querier,
-        JUNO_NETA_PAIR_ADDR.to_string(),
+        juno_wynd_addr,
         &Asset {
             info: AssetInfo::Native("ujuno".to_string()),
             amount: from_token_amount,

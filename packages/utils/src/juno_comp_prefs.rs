@@ -10,20 +10,53 @@ pub type JunoCompPrefs = CompoundPrefs<JunoDestinationProject>;
 
 #[cw_serde]
 pub enum JunoDestinationProject {
-    JunoStaking {
-        validator_address: String,
-    },
+    /// Native Staking on juno
+    JunoStaking { validator_address: String },
+    /// Staking to WyndDAO
     WyndStaking {
         bonding_period: WyndStakingBondingPeriod,
     },
-    WyndLP {
+    /// Joining any Wyndex LP
+    WyndLp {
         contract_address: String,
         bonding_period: WyndLPBondingPeriod,
     },
-    TokenSwap {
-        target_denom: AssetInfo,
+    /// Swapping to an abitrary token via Wyndex
+    TokenSwap { target_denom: AssetInfo },
+    /// Neta Staking
+    NetaStaking,
+    /// Gelotto reoccuring lotteries
+    GelottoLottery(GelottoLottery),
+    /// Spark IBC Campaign Funding
+    SparkIbcCampaign(FundMsg),
+    /// Swap on BalanceDao
+    BalanceDao,
+    /// Send tokens to a specific address
+    SendTokens { denom: String, address: String },
+}
+
+#[cw_serde]
+pub enum GelottoLottery {
+    Lottery1,
+    Lottery2,
+}
+
+/// Polyfilled FundMsg from SparkIBC
+#[cw_serde]
+pub enum FundMsg {
+    FundGeneral {
+        donor_address_type: AddressType,
     },
-    NetaStaking {},
+    FundCampaign {
+        campaign_name: String,
+        donor_address_type: AddressType,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum AddressType {
+    Private,
+    Validator,
 }
 
 #[cw_serde]

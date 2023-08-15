@@ -14,7 +14,7 @@ pub fn query_version() -> VersionResponse {
 
 pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse {
     let authorized_compound_addresses: Vec<Addr> =
-        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or(vec![]);
+        AUTHORIZED_ADDRS.load(deps.storage).unwrap_or_default();
     let admin: Addr = ADMIN.load(deps.storage).unwrap();
     AuthorizedCompoundersResponse {
         admin,

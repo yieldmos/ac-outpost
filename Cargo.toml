@@ -41,12 +41,14 @@ wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3
 outpost-utils = { path = "./packages/utils" }
 wynd-helpers = { path = "./packages/wynd-helpers" }
 wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3" }
-osmosis-std = "0.15.2"
+osmosis-std = "0.15.3"
 # swaprouter = { git = "https://github.com/osmosis-labs/osmosis.git", tag = "v15.1.0", features = [
 #     "library",
 # ] }
 osmosis-helpers = { path = "./packages/osmosis-helpers" }
 mars-red-bank-types = "1.0.0"
+withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", version = "0.2.6" }
+
 
 [profile.release.package.ymos-junostake-outpost]
 codegen-units = 1
