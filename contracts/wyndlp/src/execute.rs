@@ -163,7 +163,7 @@ pub fn prefs_to_msgs(
                     ),
 
                     // Join a specific pool normally
-                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLP {
+                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndLp {
                             contract_address,
                             bonding_period,
                         }) => {
@@ -199,10 +199,10 @@ pub fn prefs_to_msgs(
                             comp_token_amounts,
                             validator_address,
                         ),
-                    PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::NetaStaking {}) => neta_staking_msgs(
-                        querier, target_address.clone(),
-                        comp_token_amounts
-                    ),
+                    // PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::NetaStaking {}) => neta_staking_msgs(
+                    //     querier, target_address.clone(),
+                    //     comp_token_amounts
+                    // ),
                     PoolCatchAllDestinationProject::BasicDestination(JunoDestinationProject::WyndStaking { bonding_period }) =>
                         wynd_staking_msgs(
                             querier, target_address.clone(),
@@ -215,6 +215,7 @@ pub fn prefs_to_msgs(
                             comp_token_amounts,
                             target_denom,
                         ),
+                        _ => unimplemented!("This destination project is not yet implemented")
             } },
         )
         .collect::<Result<Vec<_>, ContractError>>()

@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal};
-use outpost_utils::juno_comp_prefs::JunoCompPrefs;
+use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, JunoCompPrefs};
+use wyndex::asset::AssetInfo;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -9,7 +10,7 @@ pub struct InstantiateMsg {
     pub admin: Option<String>,
 
     /// All of the addresses that the compounder can interact with
-    pub project_addresses: ProjectAddresses,
+    pub project_addresses: ContractAddresses,
 }
 
 #[cw_serde]
@@ -48,29 +49,11 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-pub struct ProjectAddresses {
-    pub wynd_addresses: WyndAddresses,
-    pub neta_addresses: NetaAddresses,
-    pub gelotto_addresses: GelottoAddresses,
-    pub authzpp_addresses: AuthzppAddresses,
+pub struct ContractAddresses {
+    pub usdc: AssetInfo,
+    pub authzpp: AuthzppAddresses,
+    pub destination_projects: DestinationProjectAddresses,
 }
-
-#[cw_serde]
-pub struct WyndAddresses {
-    pub cw20: String,
-    pub multihop: String,
-    pub juno_neta_pair: String,
-    pub juno_wynd_pair: String,
-}
-
-#[cw_serde]
-pub struct NetaAddresses {
-    pub cw20: String,
-    pub staking: String,
-}
-
-#[cw_serde]
-pub struct GelottoAddresses {}
 
 #[cw_serde]
 pub struct AuthzppAddresses {

@@ -17,4 +17,5 @@ cw20 = { workspace = true }
 wyndex = { workspace = true }
 wyndex-multi-hop = { workspace = true }
 osmosis-std = { workspace = true }
-withdraw-rewards-tax-grant = { workspace = true }
+white-whale = { workspace = true }
+# withdraw-rewards-tax-grant = { workspace = true }

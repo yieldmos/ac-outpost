@@ -116,11 +116,11 @@ pub fn prefs_to_msgs(
                             comp_token_amount)?
                     )
                 ,
-                JunoDestinationProject::NetaStaking {} => neta_staking_msgs(
-                    target_address.clone(),
-                    query_wynd_neta_swap(&querier,
-                        comp_token_amount)?
-                ),
+                // JunoDestinationProject::NetaStaking {} => neta_staking_msgs(
+                //     target_address.clone(),
+                //     query_wynd_neta_swap(&querier,
+                //         comp_token_amount)?
+                // ),
                 JunoDestinationProject::WyndStaking { bonding_period } =>
                     // going back to staking wynd is simple here since it requires no swaps
                     // so we can just shoot back a delegate msg and be done
@@ -141,7 +141,7 @@ pub fn prefs_to_msgs(
                     AssetInfo::Token(WYND_CW20_ADDR.to_string()),
                     target_denom,
                 ),
-                JunoDestinationProject::WyndLP {
+                JunoDestinationProject::WyndLp {
                     contract_address,
                     bonding_period,
                 } => {
@@ -166,6 +166,7 @@ pub fn prefs_to_msgs(
                             },
                         )?
                     )},
+                    _ => unimplemented!("This destination is not yet supported")
             } },
         )
         .collect::<Result<Vec<_>, ContractError>>()
@@ -252,7 +253,7 @@ pub fn juno_staking_msgs(
             amount: comp_token_amount,
         },
         AssetInfo::Native("ujuno".to_string()),
-        JUNO_WYND_PAIR_ADDR.to_string(),
+        JUNO_WYND_PAIR_ADDR,
     )?;
 
     // stake juno

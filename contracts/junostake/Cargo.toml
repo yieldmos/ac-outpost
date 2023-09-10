@@ -34,7 +34,7 @@ library = []
 
 
 [dependencies]
-withdraw-rewards-tax-grant = { workspace = true }
+# withdraw-rewards-tax-grant = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-storage = { workspace = true }
@@ -51,7 +51,12 @@ cw20-vesting = { workspace = true }
 wyndex = { workspace = true }
 wyndex-multi-hop = { workspace = true }
 wynd-stake = { workspace = true }
+wynd-helpers = { workspace = true }
 outpost-utils = { workspace = true }
+balance-token-swap = { workspace = true }
+bjuno-token = { workspace = true }
+sejuno-token = { workspace = true }
+bond-router = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

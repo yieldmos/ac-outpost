@@ -29,7 +29,7 @@ pub fn query_authorized_compounders(deps: Deps) -> AuthorizedCompoundersResponse
 
 /// Queries wyndex for the amount of neta that can be received for `from_token_amount` of juno
 pub fn query_juno_neta_swap(
-    juno_neta_addr: String,
+    juno_neta_addr: &str,
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {
@@ -47,7 +47,7 @@ pub fn query_juno_neta_swap(
 
 /// Queries wyndex for the amount of wynd that can be received for `from_token_amount` of juno
 pub fn query_juno_wynd_swap(
-    juno_wynd_addr: String,
+    juno_wynd_addr: &str,
     querier: &QuerierWrapper,
     from_token_amount: Uint128,
 ) -> Result<SimulationResponse, ContractError> {

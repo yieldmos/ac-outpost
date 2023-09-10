@@ -106,7 +106,7 @@ pub fn simulate_exact_out_swap(
     )?;
 
     let estimate = EstimateSwapExactAmountOutRequest {
-        sender: delegator_address.to_string(),
+        // sender: delegator_address.to_string(),
         pool_id: swap_route.clone().first().unwrap().pool_id,
         token_out: to_token.denom,
         routes: swap_route.clone(),
@@ -156,7 +156,7 @@ pub fn simulate_swap(
     )?;
 
     let estimate = EstimateSwapExactAmountInRequest {
-        sender: delegator_address.to_string(),
+        // sender: delegator_address.to_string(),
         pool_id: swap_route.clone().first().unwrap().pool_id,
         token_in: from_token.denom,
         routes: swap_route.clone(),

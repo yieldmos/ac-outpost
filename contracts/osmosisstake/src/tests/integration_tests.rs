@@ -37,6 +37,7 @@ fn instantiate_with_defaults() {
         &InstantiateMsg {
             admin: None,
             outpost_addresses: OutpostAddresses {
+                ion_dao_staking_address: "".to_string(),
                 osmosis_swap_router_address: "".to_string(),
                 mars_red_bank_address: "".to_string(),
             },
@@ -114,6 +115,7 @@ fn validator_only_compounding() {
         &InstantiateMsg {
             admin: None,
             outpost_addresses: OutpostAddresses {
+                ion_dao_staking_address: "".to_string(),
                 osmosis_swap_router_address: "".to_string(),
                 mars_red_bank_address: "".to_string(),
             },

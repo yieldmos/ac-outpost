@@ -54,14 +54,14 @@ pub fn query_wynd_juno_swap(
 ) -> Result<SimulationResponse, ContractError> {
     simulate_wynd_pool_swap(
         querier,
-        JUNO_WYND_PAIR_ADDR.to_string(),
+        JUNO_WYND_PAIR_ADDR,
         &Asset {
             info: AssetInfo::Token(WYND_CW20_ADDR.to_string()),
             amount: from_token_amount,
         },
         "ujuno".to_string(),
     )
-    .map_err(|e| ContractError::from(e))
+    .map_err(ContractError::from)
 }
 
 /// Queries wyndex for the amount of neta that can be received for `from_token_amount` of wynd

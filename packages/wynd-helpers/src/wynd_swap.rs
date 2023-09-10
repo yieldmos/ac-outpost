@@ -12,7 +12,7 @@ use crate::errors::WyndHelperError;
 /// IMPORTANT: you must provide the pair contract address for the simulation
 pub fn simulate_wynd_pool_swap(
     querier: &QuerierWrapper,
-    pool_address: String,
+    pool_address: &str,
     from_token: &Asset,
     // just for error reporting purposes
     to_denom: String,
@@ -30,7 +30,7 @@ pub fn wynd_pair_swap_msg(
     sender: &Addr,
     offer_asset: Asset,
     ask_asset: AssetInfo,
-    pair_contract_address: String,
+    pair_contract_address: &str,
 ) -> Result<CosmosProtoMsg, WyndHelperError> {
     let swap_msg = match offer_asset.info.clone() {
         AssetInfo::Native(denom) => {
@@ -59,7 +59,7 @@ pub fn wynd_pair_swap_msg(
                 offer_token_address,
                 sender,
                 &cw20::Cw20ExecuteMsg::Send {
-                    contract: pair_contract_address,
+                    contract: pair_contract_address.to_owned(),
                     amount: offer_asset.amount,
                     msg: to_binary(&wyndex::pair::Cw20HookMsg::Swap {
                         ask_asset_info: Some(ask_asset),
@@ -83,13 +83,13 @@ pub fn wynd_pair_swap_msg(
 pub fn simulate_and_swap_wynd_pair(
     querier: &QuerierWrapper,
     sender: &Addr,
-    pair_contract_address: String,
+    pair_contract_address: &str,
     offer_asset: Asset,
     ask_asset: AssetInfo,
 ) -> Result<(CosmosProtoMsg, SimulationResponse), WyndHelperError> {
     let simulation = simulate_wynd_pool_swap(
         querier,
-        pair_contract_address.clone(),
+        pair_contract_address,
         &offer_asset,
         ask_asset.to_string(),
     )?;
