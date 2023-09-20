@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal};
+use cosmwasm_std::{Addr, Decimal, Timestamp};
+use cw_grant_spec::grants::GrantSpec;
 use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, JunoCompPrefs};
 use wyndex::asset::AssetInfo;
 
@@ -25,6 +26,12 @@ pub enum QueryMsg {
 
     #[returns(AuthorizedCompoundersResponse)]
     AuthorizedCompounders {},
+
+    #[returns(Vec<GrantSpec>)]
+    GrantSpec {
+        expiration: Timestamp,
+        comp_prefs: JunostakeCompoundPrefs,
+    },
 }
 
 #[cw_serde]

@@ -1,11 +1,12 @@
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, JunostakeCompoundPrefs, QueryMsg};
+use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, JunostakeCompoundPrefs, QueryMsg};
 use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use cw2::{get_contract_version, set_contract_version};
+use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use semver::Version;
 
 // version info for migration info
@@ -103,9 +104,22 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 #[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Version {} => to_binary(&queries::query_version()),
         QueryMsg::AuthorizedCompounders {} => to_binary(&queries::query_authorized_compounders(deps)),
+        QueryMsg::GrantSpec { comp_prefs, expiration } => {
+            let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
+            to_binary(&QueryMsg::query_grants(GrantStructure {
+                grantee: env.contract.address.clone(),
+                granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
+                expiration,
+                grant_contract: env.contract.address,
+                grant_data: CompPrefsWithAddresses {
+                    comp_prefs,
+                    project_addresses,
+                },
+            }))
+        }
     }
 }
