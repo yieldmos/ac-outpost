@@ -4,18 +4,18 @@ use outpost_utils::juno_comp_prefs::JunoCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg},
+    msg::{ExecuteMsg, InstantiateMsg, JunostakeCompoundPrefs},
     ContractError,
 };
 
 pub struct OutpostContract(Addr);
 
 impl OutpostContract {
-    pub fn addr(&self) -> &Addr {
+    pub fn _addr(&self) -> &Addr {
         &self.0
     }
 
-    pub fn store_code(app: &mut App) -> u64 {
+    pub fn _store_code(app: &mut App) -> u64 {
         let contract = ContractWrapper::new(execute, instantiate, query);
         app.store_code(Box::new(contract))
     }
@@ -36,7 +36,7 @@ impl OutpostContract {
             code_id,
             sender.clone(),
             &instantiate_msg,
-            &vec![],
+            &[],
             label,
             admin.map(Addr::to_string),
         )
@@ -45,7 +45,7 @@ impl OutpostContract {
     }
 
     #[track_caller]
-    pub fn compound_funds(
+    pub fn _compound_funds(
         &self,
         app: &mut App,
         sender: &Addr,
@@ -55,11 +55,12 @@ impl OutpostContract {
         app.execute_contract(
             sender.clone(),
             self.0.clone(),
-            &ExecuteMsg::Compound {
+            &ExecuteMsg::Compound(JunostakeCompoundPrefs {
                 comp_prefs,
                 delegator_address,
-            },
-            &vec![],
+                tax_fee: None,
+            }),
+            &[],
         )
         .map_err(|err| err.downcast::<ContractError>().unwrap())?;
 

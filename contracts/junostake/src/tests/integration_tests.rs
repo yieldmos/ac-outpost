@@ -1,11 +1,13 @@
-use cosmwasm_std::{
-    coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator,
-};
+use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
+use outpost_utils::juno_comp_prefs::{
+    DaoAddress, DaoAddresses, DestinationProjectAddresses, GelottoAddresses, RacoonBetAddresses, SparkIbcAddresses,
+    WhiteWhaleSatelliteAddresses, WyndAddresses,
+};
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::InstantiateMsg,
+    msg::{AuthzppAddresses, ContractAddresses, InstantiateMsg},
     tests::multitest::OutpostContract,
 };
 
@@ -19,7 +21,7 @@ fn auctioning_contract() -> Box<dyn Contract<Empty>> {
 fn instantiate_with_defaults() {
     let sender = Addr::unchecked("sender");
 
-    let mut app = App::new(|router, _api, storage| {
+    let mut app = App::new(|_router, _api, _storage| {
         // router.bank
         // .init_balance(storage, &sender, coins(100_000, "ubtc"))
         // .unwrap();
@@ -27,14 +29,91 @@ fn instantiate_with_defaults() {
 
     let contract_id = app.store_code(auctioning_contract());
 
-    let contract = OutpostContract::instantiate(
+    let _contract = OutpostContract::instantiate(
         &mut app,
         contract_id,
         &sender,
         None,
         "Test Outpost",
         // &coins(100_000, "ubtc"),
-        &InstantiateMsg { admin: None },
+        &InstantiateMsg {
+            admin: None,
+            project_addresses: ContractAddresses {
+                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+                authzpp: AuthzppAddresses {
+                    withdraw_tax: "".to_string(),
+                },
+                destination_projects: DestinationProjectAddresses {
+                    wynd: WyndAddresses {
+                        cw20: "".to_string(),
+                        multihop: "".to_string(),
+                        juno_wynd_pair: "".to_string(),
+                    },
+                    gelotto: GelottoAddresses {
+                        pick3_contract: "".to_string(),
+                        pick4_contract: "".to_string(),
+                        pick5_contract: "".to_string(),
+                    },
+                    daos: DaoAddresses {
+                        neta: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        signal: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        posthuman: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        kleomedes: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        cannalabs: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        muse: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                    },
+                    spark_ibc: SparkIbcAddresses { fund: "".to_string() },
+                    balance_dao: "".to_string(),
+                    white_whale: WhiteWhaleSatelliteAddresses {
+                        amp_whale: wyndex::asset::AssetInfo::Native("".to_string()),
+                        bone_whale: wyndex::asset::AssetInfo::Native("".to_string()),
+                        market: "".to_string(),
+                        rewards: "".to_string(),
+                    },
+                    racoon_bet: RacoonBetAddresses {
+                        game: "".to_string(),
+                        juno_usdc_wynd_pair: "".to_string(),
+                    },
+                    juno_lsds: outpost_utils::juno_comp_prefs::JunoLsdAddresses {
+                        bone_juno: "".to_string(),
+                        wy_juno: "".to_string(),
+                        se_juno: "".to_string(),
+                        b_juno: "".to_string(),
+                        amp_juno: "".to_string(),
+                    },
+                },
+            },
+        },
     )
     .unwrap();
 
@@ -99,13 +178,90 @@ fn validator_only_compounding() {
 
     let contract_id = app.store_code(auctioning_contract());
 
-    let contract = OutpostContract::instantiate(
+    let _contract = OutpostContract::instantiate(
         &mut app,
         contract_id,
         &contract_admin_addr,
         None,
         "Test Outpost",
-        &InstantiateMsg { admin: None },
+        &InstantiateMsg {
+            admin: None,
+            project_addresses: ContractAddresses {
+                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+                authzpp: AuthzppAddresses {
+                    withdraw_tax: "".to_string(),
+                },
+                destination_projects: DestinationProjectAddresses {
+                    wynd: WyndAddresses {
+                        cw20: "".to_string(),
+                        multihop: "".to_string(),
+                        juno_wynd_pair: "".to_string(),
+                    },
+                    gelotto: GelottoAddresses {
+                        pick3_contract: "".to_string(),
+                        pick4_contract: "".to_string(),
+                        pick5_contract: "".to_string(),
+                    },
+                    daos: DaoAddresses {
+                        neta: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        signal: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        posthuman: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        kleomedes: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        cannalabs: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                        muse: DaoAddress {
+                            cw20: "".to_string(),
+                            staking: "".to_string(),
+                            juno_wyndex_pair: Some("".to_string()),
+                            wynd_wyndex_pair: None,
+                        },
+                    },
+                    spark_ibc: SparkIbcAddresses { fund: "".to_string() },
+                    balance_dao: "".to_string(),
+                    white_whale: WhiteWhaleSatelliteAddresses {
+                        amp_whale: wyndex::asset::AssetInfo::Native("".to_string()),
+                        bone_whale: wyndex::asset::AssetInfo::Native("".to_string()),
+                        market: "".to_string(),
+                        rewards: "".to_string(),
+                    },
+                    racoon_bet: RacoonBetAddresses {
+                        game: "".to_string(),
+                        juno_usdc_wynd_pair: "".to_string(),
+                    },
+                    juno_lsds: outpost_utils::juno_comp_prefs::JunoLsdAddresses {
+                        bone_juno: "".to_string(),
+                        wy_juno: "".to_string(),
+                        se_juno: "".to_string(),
+                        b_juno: "".to_string(),
+                        amp_juno: "".to_string(),
+                    },
+                },
+            },
+        },
     )
     .unwrap();
 
@@ -132,9 +288,7 @@ fn validator_only_compounding() {
 
     assert_eq!(app.wrap().query_all_balances(&delegator_addr).unwrap(), &[]);
     assert_eq!(
-        app.wrap()
-            .query_all_delegations(delegator_addr.clone())
-            .unwrap(),
+        app.wrap().query_all_delegations(delegator_addr.clone()).unwrap(),
         vec![Delegation {
             delegator: delegator_addr.clone(),
             validator: start_validator_addr.to_string(),

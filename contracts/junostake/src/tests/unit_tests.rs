@@ -3,10 +3,13 @@ use cosmwasm_std::{to_binary, Addr};
 use outpost_utils::msg_gen::CosmosProtoMsg;
 use wyndex::{asset::AssetInfo, pair::SimulationResponse};
 
-use crate::execute::{
-    neta_staking_msgs, wynd_staking_msgs, JUNO_NETA_PAIR_ADDR, JUNO_WYND_PAIR_ADDR, NETA_CW20_ADDR,
-    NETA_STAKING_ADDR, WYND_CW20_ADDR,
-};
+use crate::execute::{neta_staking_msgs, wynd_staking_msgs};
+
+const JUNO_NETA_PAIR_ADDR: &str = "juno1h6x5jlvn6jhpnu63ufe4sgv4utyk8hsfl5rqnrpg2cvp6ccuq4lqwqnzra";
+const NETA_CW20_ADDR: &str = "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr";
+const NETA_STAKING_ADDR: &str = "juno1q2qjg8x9q3zj6x5q2qjg8x9q3zj6x5q2qjg8x9";
+const WYND_CW20_ADDR: &str = "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9";
+const JUNO_WYND_PAIR_ADDR: &str = "juno1a7lmc8e04hcs4y2275cultvg83u636ult4pmnwktr6l9nhrh2e8qzxfdwf";
 
 #[test]
 fn generate_neta_staking_msg() {
@@ -47,8 +50,7 @@ fn generate_neta_staking_msg() {
             msg: to_binary(&cw20::Cw20ExecuteMsg::Send {
                 contract: NETA_STAKING_ADDR.to_string(),
                 amount: 100u128.into(),
-                msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {})
-                    .expect("failed to encode cw20 send msg"),
+                msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {}).expect("failed to encode cw20 send msg"),
             })
             .expect("failed to encode cw20 send msg")
             .to_vec(),
@@ -58,6 +60,8 @@ fn generate_neta_staking_msg() {
 
     assert_eq!(
         neta_staking_msgs(
+            NETA_CW20_ADDR,
+            JUNO_NETA_PAIR_ADDR,
             delegator_addr,
             1000u128.into(),
             "ujuno".to_string(),
@@ -119,6 +123,8 @@ fn generate_wynd_staking_msg() {
 
     assert_eq!(
         wynd_staking_msgs(
+            WYND_CW20_ADDR,
+            JUNO_WYND_PAIR_ADDR,
             delegator_addr,
             1000u128.into(),
             "ujuno".to_string(),

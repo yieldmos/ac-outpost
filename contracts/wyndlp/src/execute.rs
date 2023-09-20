@@ -114,18 +114,20 @@ pub fn prefs_to_msgs(
         prefs,
     }: PoolRewardsWithPrefs,
 ) -> Result<Vec<CosmosProtoMsg>, ContractError> {
-    // Generate msg for withdrawing the wynd rewards.
-    // This should be the first msgs in the tx so the user has funds to compound
-    let mut all_msgs: Vec<CosmosProtoMsg> =
-        vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            pool.staking_addr.to_string(),
-            &target_address.to_string(),
-            &wyndex_stake::msg::ExecuteMsg::WithdrawRewards {
-                owner: None,
-                receiver: None,
-            },
-            None,
-        )?)];
+    // // Generate msg for withdrawing the wynd rewards.
+    // // This should be the first msgs in the tx so the user has funds to compound
+    // let mut all_msgs: Vec<CosmosProtoMsg> =
+    //     vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+    //         pool.staking_addr.to_string(),
+    //         &target_address.to_string(),
+    //         &wyndex_stake::msg::ExecuteMsg::WithdrawRewards {
+    //             owner: None,
+    //             receiver: None,
+    //         },
+    //         None,
+    //     )?)];
+     let mut all_msgs: Vec<CosmosProtoMsg> = vec![];
+    
 
     // calculates the amount of each token that will be used for compounding each specified "destination project"
     let compound_token_amounts =
@@ -275,19 +277,19 @@ pub fn wynd_staking_msgs(
     )?;
 
     // delegate wynd to the staking contract
-    let wynd_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-        WYND_CW20_ADDR.to_string(),
-        &target_address,
-        &cw20_vesting::ExecuteMsg::Delegate {
-            amount: expected_wynd,
-            msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
-                unbonding_period: bonding_period.into(),
-            })?,
-        },
-        None,
-    )?);
+    // let wynd_stake_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+    //     WYND_CW20_ADDR.to_string(),
+    //     &target_address,
+    //     &cw20_vesting::ExecuteMsg::Delegate {
+    //         amount: expected_wynd,
+    //         msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+    //             unbonding_period: bonding_period.into(),
+    //         })?,
+    //     },
+    //     None,
+    // )?);
 
-    swap_msgs.push(wynd_stake_msg);
+    // swap_msgs.push(wynd_stake_msg);
 
     Ok(swap_msgs)
 }
@@ -441,24 +443,24 @@ pub fn join_wynd_pool_msgs(
         assets,
     )?;
 
-    // this is a stopgap for testing purposes
-    // since we can't know yet how many gamm tokens to stake/bond
-    // we'll just stake the existing LP tokens besides the ones we're adding in today's compounding
-    // in the next compounding we'll get the new LP tokens and stake those
-    if !existing_lp_tokens.balance.is_zero() {
-        join_pool_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            pool_info.liquidity_token.to_string(),
-            &target_address,
-            &cw20::Cw20ExecuteMsg::Send {
-                contract: pool_info.staking_addr.to_string(),
-                amount: existing_lp_tokens.balance,
-                msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
-                    unbonding_period: bonding_period.into(),
-                })?,
-            },
-            None,
-        )?));
-    }
+    // // this is a stopgap for testing purposes
+    // // since we can't know yet how many gamm tokens to stake/bond
+    // // we'll just stake the existing LP tokens besides the ones we're adding in today's compounding
+    // // in the next compounding we'll get the new LP tokens and stake those
+    // if !existing_lp_tokens.balance.is_zero() {
+    //     join_pool_msgs.push(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+    //         pool_info.liquidity_token.to_string(),
+    //         &target_address,
+    //         &cw20::Cw20ExecuteMsg::Send {
+    //             contract: pool_info.staking_addr.to_string(),
+    //             amount: existing_lp_tokens.balance,
+    //             msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+    //                 unbonding_period: bonding_period.into(),
+    //             })?,
+    //         },
+    //         None,
+    //     )?));
+    // }
 
     Ok(join_pool_msgs)
 }

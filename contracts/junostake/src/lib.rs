@@ -10,3 +10,6 @@ pub mod state;
 mod tests;
 
 pub use crate::error::ContractError;
+
+#[cfg(feature = "interface")]
+pub use crate::contract::YmosJunostakeOutpost;

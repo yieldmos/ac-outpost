@@ -31,10 +31,11 @@ overflow-checks = true
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+interface = ["dep:cw-orch"]
 
 
 [dependencies]
-# withdraw-rewards-tax-grant = { workspace = true }
+withdraw-rewards-tax-grant = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-storage = { workspace = true }
@@ -57,6 +58,8 @@ balance-token-swap = { workspace = true }
 bjuno-token = { workspace = true }
 sejuno-token = { workspace = true }
 bond-router = { workspace = true }
+cw-grant-spec = { workspace = true }
+cw-orch = { workspace = true, optional = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

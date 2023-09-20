@@ -18,6 +18,7 @@ pub struct MigrateMsg {}
 
 #[cw_serde]
 #[derive(QueryResponses)]
+#[cfg_attr(feature = "interface", derive(cw_orch::QueryFns))]
 pub enum QueryMsg {
     #[returns(VersionResponse)]
     Version {},
@@ -38,14 +39,24 @@ pub struct VersionResponse {
 }
 
 #[cw_serde]
+#[cfg_attr(feature = "interface", derive(cw_orch::ExecuteFns))]
 pub enum ExecuteMsg {
     AddAuthorizedCompounder(String),
     RemoveAuthorizedCompounder(String),
-    Compound {
-        comp_prefs: JunoCompPrefs,
-        delegator_address: String,
-        tax_fee: Option<Decimal>,
-    },
+    Compound(JunostakeCompoundPrefs),
+}
+
+#[cw_serde]
+pub struct JunostakeCompoundPrefs {
+    pub comp_prefs: JunoCompPrefs,
+    pub delegator_address: String,
+    pub tax_fee: Option<Decimal>,
+}
+
+#[cw_serde]
+pub struct CompPrefsWithAddresses {
+    pub comp_prefs: JunostakeCompoundPrefs,
+    pub project_addresses: ContractAddresses,
 }
 
 #[cw_serde]
@@ -58,5 +69,5 @@ pub struct ContractAddresses {
 #[cw_serde]
 pub struct AuthzppAddresses {
     pub withdraw_tax: String,
-    pub allowlist_send: String,
+    // pub allowlist_send: String,
 }

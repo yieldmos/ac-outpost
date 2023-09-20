@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
 use wyndex::asset::AssetInfo;
@@ -95,6 +93,18 @@ impl std::fmt::Display for StakingDao {
         }
     }
 }
+impl StakingDao {
+    pub fn get_daos_addresses(&self, addresses: &DaoAddresses) -> DaoAddress {
+        match self {
+            StakingDao::Neta => addresses.neta.clone(),
+            StakingDao::Signal => addresses.signal.clone(),
+            StakingDao::Posthuman => addresses.posthuman.clone(),
+            StakingDao::Kleomedes => addresses.kleomedes.clone(),
+            StakingDao::CannaLabs => addresses.cannalabs.clone(),
+            StakingDao::Muse => addresses.muse.clone(),
+        }
+    }
+}
 
 #[cw_serde]
 pub enum JunoLsd {
@@ -114,6 +124,18 @@ pub enum JunoLsd {
     /// https://www.erisprotocol.com/juno/amplifier
     Eris,
 }
+impl JunoLsd {
+    pub fn get_mint_address(&self, addresses: &JunoLsdAddresses) -> String {
+        match self {
+            JunoLsd::Backbone => addresses.amp_juno.clone(),
+            JunoLsd::Wynd => addresses.wy_juno.clone(),
+            JunoLsd::StakeEasySe => addresses.se_juno.clone(),
+            JunoLsd::StakeEasyB => addresses.b_juno.clone(),
+            JunoLsd::Eris => addresses.amp_juno.clone(),
+        }
+    }
+}
+
 impl std::fmt::Display for JunoLsd {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
@@ -172,14 +194,9 @@ pub enum RacoonBetExec {
 
 #[cw_serde]
 pub enum GelottoLottery {
-    Pick2every10min,
-    Pick3every15min,
-    Pick1every6min,
-    Pick5every30min,
-    Pick2every45min,
-    Pick5every2day,
-    Pick4every1day,
-    Pick3every1hour,
+    Pick3,
+    Pick4,
+    Pick5,
 }
 
 /// Polyfilled FundMsg from SparkIBC
@@ -350,7 +367,7 @@ pub struct JunoLsdAddresses {
     pub se_juno: String,
     // juno1wwnhkagvcd3tjz6f8vsdsw5plqnw8qy2aj3rrhqr2axvktzv9q2qz8jxn3
     pub b_juno: String,
-    // juno17cya4sw72h4886zsm2lk3udxaw5m8ssgpsl6nd6xl6a4ukepdgkqeuv99x
+    //
     pub amp_juno: String,
 }
 
@@ -417,12 +434,17 @@ pub struct WyndAddresses {
 #[cw_serde]
 pub struct DaoAddress {
     pub cw20: String,
+    pub staking: String,
     pub juno_wyndex_pair: Option<String>,
     pub wynd_wyndex_pair: Option<String>,
 }
 
 #[cw_serde]
-pub struct GelottoAddresses {}
+pub struct GelottoAddresses {
+    pub pick3_contract: String,
+    pub pick4_contract: String,
+    pub pick5_contract: String,
+}
 
 #[cw_serde]
 pub struct Bond {}

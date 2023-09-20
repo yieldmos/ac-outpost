@@ -1,7 +1,6 @@
 use cosmwasm_std::{Addr, Deps, QuerierWrapper, StdResult, Uint128};
 use outpost_utils::juno_comp_prefs::WyndLPBondingPeriod;
 use wyndex::{asset::AssetValidated, pair::PairInfo};
-use wyndex_stake::msg::{AllStakedResponse, WithdrawableRewardsResponse};
 
 use crate::{
     execute::WYNDDEX_FACTORY_ADDR,
@@ -64,23 +63,23 @@ pub fn query_pending_rewards(
     pool_addr: &Addr,
     delegator: &Addr,
 ) -> Option<Vec<AssetValidated>> {
-    let rewards_resp: StdResult<WithdrawableRewardsResponse> = querier.query_wasm_smart(
-        pool_addr.to_string(),
-        &wyndex_stake::msg::QueryMsg::WithdrawableRewards {
-            owner: delegator.to_string(),
-        },
-    );
+    // let rewards_resp: StdResult<WithdrawableRewardsResponse> = querier.query_wasm_smart(
+    //     pool_addr.to_string(),
+    //     &wyndex_stake::msg::QueryMsg::WithdrawableRewards {
+    //         owner: delegator.to_string(),
+    //     },
+    // );
 
-    if let Ok(WithdrawableRewardsResponse { rewards }) = rewards_resp {
-        let pending_rewards: Vec<AssetValidated> = rewards
-            .into_iter()
-            .filter(|asset| asset.amount > Uint128::zero())
-            .collect();
+    // if let Ok(WithdrawableRewardsResponse { rewards }) = rewards_resp {
+    //     let pending_rewards: Vec<AssetValidated> = rewards
+    //         .into_iter()
+    //         .filter(|asset| asset.amount > Uint128::zero())
+    //         .collect();
 
-        if pending_rewards.len() > 0 {
-            return Some(pending_rewards);
-        }
-    }
+    //     if pending_rewards.len() > 0 {
+    //         return Some(pending_rewards);
+    //     }
+    // }
 
     None
 }
@@ -92,22 +91,23 @@ pub fn get_max_user_pool_bonding_period(
     pool_addr: &Addr,
     delegator_addr: &Addr,
 ) -> Result<WyndLPBondingPeriod, ContractError> {
-    let AllStakedResponse { stakes }: AllStakedResponse = querier.query_wasm_smart(
-        pool_addr.to_string(),
-        &wyndex_stake::msg::QueryMsg::AllStaked {
-            address: delegator_addr.to_string(),
-        },
-    )?;
+    // let AllStakedResponse { stakes }: AllStakedResponse = querier.query_wasm_smart(
+    //     pool_addr.to_string(),
+    //     &wyndex_stake::msg::QueryMsg::AllStaked {
+    //         address: delegator_addr.to_string(),
+    //     },
+    // )?;
 
-    let max_bonding_period: WyndLPBondingPeriod = stakes
-        .iter()
-        .map(|stake| stake.unbonding_period)
-        .max()
-        .ok_or_else(|| ContractError::NoPoolUnbondingPeriod {
-            user: delegator_addr.to_string(),
-            pool: pool_addr.to_string(),
-        })?
-        .try_into()?;
+    // let max_bonding_period: WyndLPBondingPeriod = stakes
+    //     .iter()
+    //     .map(|stake| stake.unbonding_period)
+    //     .max()
+    //     .ok_or_else(|| ContractError::NoPoolUnbondingPeriod {
+    //         user: delegator_addr.to_string(),
+    //         pool: pool_addr.to_string(),
+    //     })?
+    //     .try_into()?;
 
-    Ok(max_bonding_period)
+    // Ok(max_bonding_period)
+    Err(ContractError::NotImplemented {})
 }

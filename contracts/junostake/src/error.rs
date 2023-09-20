@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("Outpost Utils Error: &{0}")]
     OutpostError(#[from] outpost_utils::errors::OutpostError),
 
+    #[error("Authzpp Withdraw Tax: &{0}")]
+    AuthzppWithdrawTax(#[from] withdraw_rewards_tax_grant::ContractError),
+
     #[error("Wynd Helper Error: &{0}")]
     WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
 
