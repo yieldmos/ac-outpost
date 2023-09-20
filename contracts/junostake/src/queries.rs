@@ -1,8 +1,8 @@
-use cosmwasm_std::{Addr, Decimal, Deps, QuerierWrapper, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, QuerierWrapper, StdResult, Uint128};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use cw_grant_spec::grants::{
-    ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit, GrantSpec, GrantType,
-    StakeAuthorizationPolicy, StakeAuthorizationType, StakeAuthorizationValidators,
+    ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit, ContractExecutionSetting, GrantRequirement,
+    GrantType, StakeAuthorizationPolicy, StakeAuthorizationType, StakeAuthorizationValidators,
 };
 
 use outpost_utils::juno_comp_prefs::{DaoAddress, JunoDestinationProject, JunoLsd, RacoonBetGame};
@@ -74,7 +74,7 @@ pub fn query_juno_wynd_swap(
 impl Grantable for QueryMsg {
     type GrantSettings = CompPrefsWithAddresses;
 
-    fn query_grants(grant_structure: GrantStructure<Self::GrantSettings>) -> Vec<GrantSpec> {
+    fn query_grants(grant_structure: GrantStructure<Self::GrantSettings>) -> StdResult<Vec<GrantRequirement>> {
         let GrantStructure {
             granter,
             expiration,
@@ -91,11 +91,12 @@ impl Grantable for QueryMsg {
             expiration,
             grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
             grant_data: GrantSpecData {
+                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr.clone()),
                 max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
             },
-        });
+        })?;
 
-        [withdraw_tax_grants, gen_comp_pref_grants(grant_structure)].concat()
+        Ok([withdraw_tax_grants, gen_comp_pref_grants(grant_structure)?].concat())
     }
 }
 
@@ -111,11 +112,11 @@ pub fn gen_comp_pref_grants(
                 project_addresses,
             },
     }: GrantStructure<CompPrefsWithAddresses>,
-) -> Vec<GrantSpec> {
-    let grant_specs = comp_prefs.relative.iter().flat_map(|action| -> Vec<GrantSpec> {
+) -> StdResult<Vec<GrantRequirement>> {
+    let grant_specs = comp_prefs.relative.iter().flat_map(|action| -> Vec<GrantRequirement> {
         match action.destination.clone() {
             JunoDestinationProject::Unallocated {} => vec![],
-            JunoDestinationProject::JunoStaking { validator_address } => vec![GrantSpec {
+            JunoDestinationProject::JunoStaking { validator_address } => vec![GrantRequirement::GrantSpec {
                 grant_type: GrantType::StakeAuthorization {
                     max_tokens: None,
                     authorization_type: StakeAuthorizationType::Delegate,
@@ -142,41 +143,41 @@ pub fn gen_comp_pref_grants(
 
                 vec![
                     // staking permission
-                    GrantSpec {
-                        grant_type: GrantType::ContractExecutionAuthorization {
+                    GrantRequirement::GrantSpec {
+                        grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                             contract_addr: Addr::unchecked(staking),
                             limit: ContractExecutionAuthorizationLimit::default(),
                             filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                 keys: vec![required_key.clone()],
                             },
-                        },
+                        }]),
                         granter: granter.clone(),
                         grantee: grantee.clone(),
                         expiration,
                     },
                     // swap permission
-                    GrantSpec {
-                        grant_type: GrantType::ContractExecutionAuthorization {
+                    GrantRequirement::GrantSpec {
+                        grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                             contract_addr: Addr::unchecked(swap_address),
                             limit: ContractExecutionAuthorizationLimit::default(),
                             filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                 keys: vec![required_key],
                             },
-                        },
+                        }]),
                         granter: granter.clone(),
                         grantee: grantee.clone(),
                         expiration,
                     },
                 ]
             }
-            JunoDestinationProject::BalanceDao {} => vec![GrantSpec {
-                grant_type: GrantType::ContractExecutionAuthorization {
+            JunoDestinationProject::BalanceDao {} => vec![GrantRequirement::GrantSpec {
+                grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                     contract_addr: Addr::unchecked(project_addresses.destination_projects.balance_dao.clone()),
                     limit: ContractExecutionAuthorizationLimit::default(),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                         keys: vec!["swap".to_string()],
                     },
-                },
+                }]),
                 granter: granter.clone(),
                 grantee: grantee.clone(),
                 expiration,
@@ -184,20 +185,20 @@ pub fn gen_comp_pref_grants(
             JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => unimplemented!(),
             JunoDestinationProject::SendTokens { denom: _denom, address } => vec![
                 // general multihop swap
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
                 },
                 // send to the given user
-                GrantSpec {
+                GrantRequirement::GrantSpec {
                     grant_type: GrantType::SendAuthorization {
                         spend_limit: None,
                         allow_list: Some(vec![Addr::unchecked(address.clone())]),
@@ -207,8 +208,8 @@ pub fn gen_comp_pref_grants(
                     expiration,
                 },
             ],
-            JunoDestinationProject::MintLsd { lsd_type } => vec![GrantSpec {
-                grant_type: GrantType::ContractExecutionAuthorization {
+            JunoDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::GrantSpec {
+                grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                     contract_addr: Addr::unchecked(
                         lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
                     ),
@@ -220,42 +221,42 @@ pub fn gen_comp_pref_grants(
                         }
                         .to_string()],
                     },
-                },
+                }]),
                 granter: granter.clone(),
                 grantee: grantee.clone(),
                 expiration,
             }],
             JunoDestinationProject::WhiteWhaleSatellite { asset } => vec![
                 // general multihop swap
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
                 },
                 // bonding to the market
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.white_whale.market.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["mint".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
                 },
             ],
             JunoDestinationProject::WyndStaking { bonding_period } => vec![],
-            JunoDestinationProject::RacoonBet { game } => vec![GrantSpec {
-                grant_type: GrantType::ContractExecutionAuthorization {
+            JunoDestinationProject::RacoonBet { game } => vec![GrantRequirement::GrantSpec {
+                grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                     contract_addr: Addr::unchecked(project_addresses.destination_projects.racoon_bet.game.clone()),
                     limit: ContractExecutionAuthorizationLimit::default(),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
@@ -265,21 +266,21 @@ pub fn gen_comp_pref_grants(
                         }
                         .to_string()],
                     },
-                },
+                }]),
                 granter: granter.clone(),
                 grantee: grantee.clone(),
                 expiration,
             }],
             JunoDestinationProject::TokenSwap { target_denom } => vec![
                 // general multihop swap
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
@@ -290,28 +291,28 @@ pub fn gen_comp_pref_grants(
                 bonding_period,
             } => vec![
                 // general multihop swap
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
                 },
                 // bonding to the pool
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(contract_address.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             // might need a bond key as well
                             keys: vec!["send".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
@@ -319,27 +320,27 @@ pub fn gen_comp_pref_grants(
             ],
             JunoDestinationProject::SparkIbcCampaign { fund } => vec![
                 // general multihop swap
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
                 },
                 // funding campaign
-                GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization {
+                GrantRequirement::GrantSpec {
+                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.spark_ibc.fund.clone()),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["fund".to_string()],
                         },
-                    },
+                    }]),
                     granter: granter.clone(),
                     grantee: grantee.clone(),
                     expiration,
@@ -348,5 +349,5 @@ pub fn gen_comp_pref_grants(
         }
     });
 
-    grant_specs.collect()
+    Ok(grant_specs.collect())
 }

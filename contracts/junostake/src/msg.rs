@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Timestamp};
-use cw_grant_spec::grants::GrantSpec;
+use cw_grant_spec::grants::GrantRequirement;
 use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, JunoCompPrefs};
 use wyndex::asset::AssetInfo;
 
@@ -27,7 +27,7 @@ pub enum QueryMsg {
     #[returns(AuthorizedCompoundersResponse)]
     AuthorizedCompounders {},
 
-    #[returns(Vec<GrantSpec>)]
+    #[returns(Vec<GrantRequirement>)]
     GrantSpec {
         expiration: Timestamp,
         comp_prefs: JunostakeCompoundPrefs,
@@ -68,6 +68,7 @@ pub struct CompPrefsWithAddresses {
 
 #[cw_serde]
 pub struct ContractAddresses {
+    pub take_rate_addr: String,
     pub usdc: AssetInfo,
     pub authzpp: AuthzppAddresses,
     pub destination_projects: DestinationProjectAddresses,

@@ -112,6 +112,7 @@ fn instantiate_with_defaults() {
                         amp_juno: "".to_string(),
                     },
                 },
+                take_rate_addr: "".to_string(),
             },
         },
     )
@@ -187,6 +188,7 @@ fn validator_only_compounding() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
+                take_rate_addr: "".to_string(),
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses {
                     withdraw_tax: "".to_string(),

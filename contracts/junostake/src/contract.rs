@@ -119,7 +119,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     comp_prefs,
                     project_addresses,
                 },
-            }))
+            })?)
         }
     }
 }
