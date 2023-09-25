@@ -1,3 +1,4 @@
+use anybuf::Anybuf;
 // use cw_orch::prelude::interchain_channel_builder::InterchainChannelBuilder;
 // use cw_orch::starship::Starship;
 use cw_orch::{anyhow, daemon::DaemonBuilder, prelude::*};
@@ -19,7 +20,7 @@ pub fn main() -> anyhow::Result<()> {
             "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string(),
         ),
         authzpp: ymos_junostake_outpost::msg::AuthzppAddresses {
-            withdraw_tax: "juno17smslv6t6daej4zdydx432574zrn9av3304nsm5xf5k4yayz7zcqqz5ts3"
+            withdraw_tax: "juno1nak433pjd39et4g6jjclxk7yfmtfsd5m43su04rxe9ggttdvjwpqsumv30"
                 .to_string(),
         },
         destination_projects: outpost_utils::juno_comp_prefs::DestinationProjectAddresses {
@@ -31,9 +32,12 @@ pub fn main() -> anyhow::Result<()> {
                     .to_string(),
             },
             gelotto: outpost_utils::juno_comp_prefs::GelottoAddresses {
-                pick3_contract: todo!(),
-                pick4_contract: todo!(),
-                pick5_contract: todo!(),
+                pick3_contract: "juno1v466lyrhsflkt9anxt4wyx7mtw8w2uyk0qxkqskqfj90rmwhph7s0dxvga"
+                    .to_string(),
+                pick4_contract: "juno16xy5m05z6n4vnfzcf8cvd3anxhg4g2k8vvr4q2knv4akynfstr9qjmhdhs"
+                    .to_string(),
+                pick5_contract: "juno1txn3kejj4qrehua9vlg3hk4wunqafqunfy83cz5hg2xa3z3pkgssk4tzu4"
+                    .to_string(),
             },
             daos: outpost_utils::juno_comp_prefs::DaoAddresses {
                 neta: DaoAddress {
@@ -146,12 +150,12 @@ pub fn main() -> anyhow::Result<()> {
     };
 
     let rt = Runtime::new().unwrap();
+    dotenv::dotenv().ok();
     env_logger::init();
 
     let juno = networks::JUNO_1;
 
     let juno_chain = DaemonBuilder::default()
-        .mnemonic("mutual october carry brief borrow region leisure rude crouch legal grape rich tongue random drill spirit foil egg nice pet focus mind enjoy garden")
         .handle(rt.handle())
         .chain(juno.clone())
         .build()?;
@@ -167,22 +171,37 @@ pub fn main() -> anyhow::Result<()> {
     println!("junostake code id: {}", junostake.code_id()?);
 
     // single spark points ledger on juno
-    if junostake.address().is_ok() && junostake.is_running_latest()? {
-        println!(
-            "junostake is already latest, no need to reinstantiate. code id: {}",
-            junostake.code_id()?
-        );
-    } else {
+    if junostake.address().is_err() {
         junostake.instantiate(
             &ymos_junostake_outpost::msg::InstantiateMsg {
                 admin: Some(juno_chain.sender().to_string()),
                 project_addresses: junostake_project_addresses.clone(),
             },
-            None,
+            Some(&Addr::unchecked(juno_chain.sender().to_string())),
             None,
         )?;
+    } else {
+        junostake.migrate_if_needed(&ymos_junostake_outpost::msg::InstantiateMsg {
+            admin: Some(juno_chain.sender().to_string()),
+            project_addresses: junostake_project_addresses.clone(),
+        })?;
     }
     println!("junostake: {}", junostake.addr_str()?);
 
     Ok(())
+}
+
+pub fn feeshare_msg(
+    contract_address: String,
+    deployer_address: String,
+    withdrawer_address: String,
+) -> cosmrs::Any {
+    cosmrs::Any {
+        type_url: "/juno.feeshare.v1.MsgRegisterFeeShare".to_string(),
+        value: Anybuf::new()
+            .append_string(1, contract_address)
+            .append_string(2, deployer_address)
+            .append_string(3, withdrawer_address)
+            .into_vec(),
+    }
 }

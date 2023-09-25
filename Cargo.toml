@@ -49,8 +49,8 @@ osmosis-std = "0.15.3"
 osmosis-helpers = { path = "./packages/osmosis-helpers" }
 mars-red-bank-types = "1.0.0"
 white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", tag = "v1.4.0-juno-1-token_factory-hotfix" }
-cw-grant-spec = { git = "https://github.com/kakucodes/authzpp", version = "0.2.8" }
-withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", version = "0.2.8", features = [
+cw-grant-spec = { git = "https://github.com/kakucodes/authzpp", version = "0.3.0" }
+withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", version = "0.3.0", features = [
     "library",
 ] }
 balance-token-swap = { git = "https://github.com/racoon-supply-rac/balance-dao", features = [

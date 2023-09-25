@@ -1,13 +1,15 @@
 use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
-use cosmwasm_std::{to_binary, Addr, Attribute, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128};
+use cosmwasm_std::{
+    coin, to_binary, Addr, Attribute, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128,
+};
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins},
     juno_comp_prefs::{
-        JunoCompPrefs, JunoDestinationProject, JunoLsd, RacoonBetExec, RacoonBetGame, SparkIbcFund, WyndLPBondingPeriod,
-        WyndStakingBondingPeriod,
+        GelottoExecute, JunoCompPrefs, JunoDestinationProject, JunoLsd, RacoonBetExec, RacoonBetGame, SparkIbcFund,
+        WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
@@ -291,8 +293,39 @@ pub fn prefs_to_msgs(
                             ],
                         })
                     }
-                    JunoDestinationProject::GelottoLottery { .. } => {
-                        unimplemented!("gelotto")
+                    JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => {
+                        // 25k ujuno per ticket
+                        let tickets_to_buy = comp_token_amount / Uint128::from(25_000u128);
+                        Ok(DestProjectMsgs {
+                            msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                                lottery.get_lottery_address(&project_addresses.destination_projects.gelotto.clone()),
+                                target_address,
+                                &GelottoExecute::SenderBuySeed {
+                                    referrer: Some(Addr::unchecked(project_addresses.take_rate_addr.clone())),
+                                    count: u128::from(tickets_to_buy) as u16,
+                                    seed: lucky_phrase,
+                                },
+                                Some(vec![Coin {
+                                    amount: (tickets_to_buy * Uint128::from(25_000u128)).into(),
+                                    denom: staking_denom.clone(),
+                                }]),
+                            )?)],
+                            sub_msgs: vec![],
+                            attributes: vec![
+                                Attribute {
+                                    key: "subaction".to_string(),
+                                    value: "gelotto lottery".to_string(),
+                                },
+                                Attribute {
+                                    key: "lottery".to_string(),
+                                    value: lottery.to_string(),
+                                },
+                                Attribute {
+                                    key: "tickets".to_string(),
+                                    value: tickets_to_buy.to_string(),
+                                },
+                            ],
+                        })
                     }
                     JunoDestinationProject::RacoonBet { game } => {
                         // can't use racoon bet unless the value of the play is at least $1 usdc

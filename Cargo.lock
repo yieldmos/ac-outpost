@@ -81,6 +81,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anybuf"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f14538dd5b6befdc12b11aae1dddee64b670534d4fdbd28057bcc7c976c0e4eb"
+
+[[package]]
 name = "anyhow"
 version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -137,8 +143,8 @@ dependencies = [
 
 [[package]]
 name = "authzpp-utils"
-version = "0.2.8"
-source = "git+https://github.com/kakucodes/authzpp#15ef0e913d04555648d457b3745ca9f1608c71b0"
+version = "0.3.0"
+source = "git+https://github.com/kakucodes/authzpp#1f0071e9eab81122b5a1649bf50b797f4041e96a"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -790,11 +796,12 @@ dependencies = [
 
 [[package]]
 name = "cw-grant-spec"
-version = "0.2.8"
-source = "git+https://github.com/kakucodes/authzpp#15ef0e913d04555648d457b3745ca9f1608c71b0"
+version = "0.3.0"
+source = "git+https://github.com/kakucodes/authzpp#1f0071e9eab81122b5a1649bf50b797f4041e96a"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "itertools 0.11.0",
  "schemars",
  "serde",
  "thiserror",
@@ -1467,6 +1474,8 @@ dependencies = [
 name = "deploy"
 version = "0.1.0"
 dependencies = [
+ "anybuf",
+ "cosmrs",
  "cosmwasm-std",
  "cw-orch",
  "cw20-base 0.13.4",
@@ -2584,9 +2593,9 @@ dependencies = [
 
 [[package]]
 name = "matchit"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed1202b2a6f884ae56f04cff409ab315c5ce26b5e58d7412e484f01fd52f52ef"
+checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
 name = "memchr"
@@ -3441,9 +3450,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.101.5"
+version = "0.101.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45a27e3b59326c16e23d30aeb7a36a24cc0d29e71d68ff611cdfb4a01d013bed"
+checksum = "3c7d5dece342910d9ba34d259310cae3e0154b873b35408b787b59bce53d34fe"
 dependencies = [
  "ring",
  "untrusted",
@@ -3616,9 +3625,9 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0293b4b29daaf487284529cc2f5675b8e57c61f70167ba415a463651fd6a918"
+checksum = "ad977052201c6de01a8ef2aa3378c4bd23217a056337d1d6da40468d267a4fb0"
 
 [[package]]
 name = "serde"
@@ -3714,9 +3723,9 @@ dependencies = [
 
 [[package]]
 name = "sha1"
-version = "0.10.5"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f04293dc80c3993519f2d7f6f511707ee7094fe0c6d3406feb330cdb3540eba3"
+checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -4086,9 +4095,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.28"
+version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17f6bb557fd245c28e6411aa56b6403c689ad95061f50e4be16c274e70a17e48"
+checksum = "426f806f4089c493dcac0d24c29c01e2c38baf8e30f1b716ee37e83d200b18fe"
 dependencies = [
  "deranged",
  "serde",
@@ -4098,15 +4107,15 @@ dependencies = [
 
 [[package]]
 name = "time-core"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7300fbefb4dadc1af235a9cef3737cea692a9d97e1b9cbcd4ebdae6f8868e6fb"
+checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.14"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a942f44339478ef67935ab2bbaec2fb0322496cf3cbe84b261e06ac3814c572"
+checksum = "4ad70d68dba9e1f8aceda7aa6711965dfec1cac869f311a51bd08b3a2ccbce20"
 dependencies = [
  "time-core",
 ]
@@ -4734,8 +4743,8 @@ dependencies = [
 
 [[package]]
 name = "withdraw-rewards-tax-grant"
-version = "0.2.8"
-source = "git+https://github.com/kakucodes/authzpp#15ef0e913d04555648d457b3745ca9f1608c71b0"
+version = "0.3.0"
+source = "git+https://github.com/kakucodes/authzpp#1f0071e9eab81122b5a1649bf50b797f4041e96a"
 dependencies = [
  "authzpp-utils",
  "cosmos-sdk-proto",

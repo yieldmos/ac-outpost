@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Uint128};
 use wyndex::asset::AssetInfo;
 
 use crate::{
@@ -33,7 +33,7 @@ pub enum JunoDestinationProject {
     /// https://gelotto.io/app/games/max
     GelottoLottery {
         lottery: GelottoLottery,
-        lucky_phrase: Option<String>,
+        lucky_phrase: u32,
     },
     /// Spark IBC Campaign Funding
     /// https://sparkibc.zone/earn
@@ -197,6 +197,16 @@ pub enum GelottoLottery {
     Pick3,
     Pick4,
     Pick5,
+}
+// implement Display for gelotto lottery
+impl std::fmt::Display for GelottoLottery {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            GelottoLottery::Pick3 => write!(f, "Pick 3"),
+            GelottoLottery::Pick4 => write!(f, "Pick 4"),
+            GelottoLottery::Pick5 => write!(f, "Pick 5"),
+        }
+    }
 }
 
 /// Polyfilled FundMsg from SparkIBC
@@ -445,6 +455,24 @@ pub struct GelottoAddresses {
     pub pick4_contract: String,
     pub pick5_contract: String,
 }
+impl GelottoLottery {
+    pub fn get_lottery_address(&self, addresses: &GelottoAddresses) -> String {
+        match self {
+            GelottoLottery::Pick3 => addresses.pick3_contract.clone(),
+            GelottoLottery::Pick4 => addresses.pick4_contract.clone(),
+            GelottoLottery::Pick5 => addresses.pick5_contract.clone(),
+        }
+    }
+}
 
 #[cw_serde]
 pub struct Bond {}
+
+#[cw_serde]
+pub enum GelottoExecute {
+    SenderBuySeed {
+        referrer: Option<Addr>,
+        count: u16,
+        seed: u32,
+    },
+}
