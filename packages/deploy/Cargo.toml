@@ -15,6 +15,7 @@ cw-orch = { workspace = true }
 ymos-junostake-outpost = { path = "../../contracts/junostake", features = [
     "interface",
 ] }
+white-whale = { workspace = true }
 wyndex = { workspace = true }
 outpost-utils = { workspace = true }
 tokio = "1.31.0"

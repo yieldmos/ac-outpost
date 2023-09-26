@@ -388,6 +388,13 @@ pub struct WhiteWhaleSatelliteAddresses {
     // ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF
     pub bone_whale: AssetInfo,
 
+    pub juno_amp_whale_path: white_whale::pool_network::router::SwapRoute,
+    pub juno_bone_whale_path: white_whale::pool_network::router::SwapRoute,
+
+    // The contract address for the multihop router
+    // juno128lewlw6kv223uw4yzdffl8rnh3k9qs8vrf6kef28579w8ygccyq7m90n2
+    pub terraswap_multihop_router: String,
+
     /// The contract address for bonding to the satellite market
     // juno1n8slcc79dmwuzdxhsesvhcncaqfg9h4czdm5t5ey8x25ajmn3xzqyde4wv
     pub market: String,

@@ -263,7 +263,13 @@ pub fn gen_comp_pref_grants(
                 // general multihop swap
                 GrantRequirement::GrantSpec {
                     grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                        contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
+                        contract_addr: Addr::unchecked(
+                            project_addresses
+                                .destination_projects
+                                .white_whale
+                                .terraswap_multihop_router
+                                .clone(),
+                        ),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],

@@ -1483,6 +1483,7 @@ dependencies = [
  "env_logger",
  "outpost-utils",
  "tokio",
+ "white-whale",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "ymos-junostake-outpost",
 ]
@@ -4071,6 +4072,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6093bad37da69aab9d123a8091e4be0aa4a03e4d601ec641c327398315f62b64"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "terraswap-helpers"
+version = "0.2.2"
+dependencies = [
+ "cosmos-sdk-proto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20 1.1.0",
+ "outpost-utils",
+ "schemars",
+ "serde",
+ "thiserror",
+ "white-whale",
 ]
 
 [[package]]

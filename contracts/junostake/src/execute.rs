@@ -297,19 +297,24 @@ pub fn prefs_to_msgs(
                         // 25k ujuno per ticket
                         let tickets_to_buy = comp_token_amount / Uint128::from(25_000u128);
                         Ok(DestProjectMsgs {
-                            msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                lottery.get_lottery_address(&project_addresses.destination_projects.gelotto.clone()),
-                                target_address,
-                                &GelottoExecute::SenderBuySeed {
-                                    referrer: Some(Addr::unchecked(project_addresses.take_rate_addr.clone())),
-                                    count: u128::from(tickets_to_buy) as u16,
-                                    seed: lucky_phrase,
-                                },
-                                Some(vec![Coin {
-                                    amount: (tickets_to_buy * Uint128::from(25_000u128)).into(),
-                                    denom: staking_denom.clone(),
-                                }]),
-                            )?)],
+                            // if we dont have enough to buy a ticket, then we dont send any msgs
+                            msgs: if tickets_to_buy.gt(&Uint128::zero()) {
+                                vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                                    lottery.get_lottery_address(&project_addresses.destination_projects.gelotto.clone()),
+                                    target_address,
+                                    &GelottoExecute::SenderBuySeed {
+                                        referrer: Some(Addr::unchecked(project_addresses.take_rate_addr.clone())),
+                                        count: u128::from(tickets_to_buy).clamp(0u128, u16::MAX as u128) as u16,
+                                        seed: lucky_phrase,
+                                    },
+                                    Some(vec![Coin {
+                                        amount: (tickets_to_buy * Uint128::from(25_000u128)).into(),
+                                        denom: staking_denom.clone(),
+                                    }]),
+                                )?)]
+                            } else {
+                                vec![]
+                            },
                             sub_msgs: vec![],
                             attributes: vec![
                                 Attribute {

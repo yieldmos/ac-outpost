@@ -5,6 +5,10 @@ use cw_orch::{anyhow, daemon::DaemonBuilder, prelude::*};
 use outpost_utils::juno_comp_prefs::DaoAddress;
 // use spark_ibc_sender::state::{Config, SparkContractAddr};
 use tokio::runtime::Runtime;
+use white_whale::pool_network::{
+    asset::AssetInfo,
+    router::{SwapOperation, SwapRoute},
+};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -128,6 +132,98 @@ pub fn main() -> anyhow::Result<()> {
                     .to_string(),
                 rewards: "juno184ghwgprva7dlr2hwhzgvt6mem6zx78fygk0cpw7klssmzyf67tqdtwt3h"
                     .to_string(),
+                    
+                juno_amp_whale_path: SwapRoute {
+                    offer_asset_info: AssetInfo::NativeToken {
+                        denom: "ujuno".to_string(),
+                    },
+                    ask_asset_info: AssetInfo::NativeToken {
+                        denom:
+                            "ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF"
+                                .to_string(),
+                    },
+                    swap_operations: vec![
+                        // swap juno for usdc
+                        SwapOperation::TerraSwap {
+                            offer_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
+
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                            }
+                        },
+                        // usdc to whale
+                        SwapOperation::TerraSwap {
+                            offer_asset_info:  AssetInfo::NativeToken {
+                                denom:
+                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                            },
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                            }
+                        },
+                        // whale to ampwhale
+                        SwapOperation::TerraSwap {
+                            offer_asset_info:  AssetInfo::NativeToken {
+                                denom:
+                                "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                            },
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF".to_string()
+                            }
+                        },
+                    ],
+                },
+
+                juno_bone_whale_path: SwapRoute {
+                    offer_asset_info: AssetInfo::NativeToken {
+                        denom: "ujuno".to_string(),
+                    },
+                    ask_asset_info: AssetInfo::NativeToken {
+                        denom:
+                            "ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF"
+                                .to_string(),
+                    },
+                    swap_operations: vec![
+                        // swap juno for usdc
+                        SwapOperation::TerraSwap {
+                            offer_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
+
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                            }
+                        },
+                        // usdc to whale
+                        SwapOperation::TerraSwap {
+                            offer_asset_info:  AssetInfo::NativeToken {
+                                denom:
+                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                            },
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                            }
+                        },
+                        // whale to ampwhale
+                        SwapOperation::TerraSwap {
+                            offer_asset_info:  AssetInfo::NativeToken {
+                                denom:
+                                "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                            },
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF".to_string()
+                            }
+                        },
+                    ],
+                },
+
+                terraswap_multihop_router:
+                    "juno128lewlw6kv223uw4yzdffl8rnh3k9qs8vrf6kef28579w8ygccyq7m90n2".to_string(),
+                // juno_bone_whale_path: todo!(),
             },
             racoon_bet: outpost_utils::juno_comp_prefs::RacoonBetAddresses {
                 game: "juno1h8p0jmfn06nfqpn0medn698h950vnl7v54m2azkyjdqjlzcly7jszxh7yu".to_string(),
