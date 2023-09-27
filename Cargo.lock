@@ -5011,6 +5011,7 @@ dependencies = [
  "sejuno-token",
  "semver",
  "serde",
+ "terraswap-helpers",
  "thiserror",
  "withdraw-rewards-tax-grant",
  "wynd-helpers",

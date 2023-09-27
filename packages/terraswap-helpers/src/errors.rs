@@ -2,7 +2,7 @@ use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum WyndHelperError {
+pub enum TerraswapHelperError {
     #[error("Outpost StdError: {0}")]
     Std(#[from] StdError),
 

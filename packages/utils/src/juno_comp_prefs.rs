@@ -384,12 +384,12 @@ pub struct JunoLsdAddresses {
 #[cw_serde]
 pub struct WhiteWhaleSatelliteAddresses {
     // ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF
-    pub amp_whale: AssetInfo,
+    pub amp_whale: String,
     // ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF
-    pub bone_whale: AssetInfo,
+    pub bone_whale: String,
 
-    pub juno_amp_whale_path: white_whale::pool_network::router::SwapRoute,
-    pub juno_bone_whale_path: white_whale::pool_network::router::SwapRoute,
+    pub juno_amp_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub juno_bone_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
 
     // The contract address for the multihop router
     // juno128lewlw6kv223uw4yzdffl8rnh3k9qs8vrf6kef28579w8ygccyq7m90n2

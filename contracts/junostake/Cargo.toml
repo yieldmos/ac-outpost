@@ -60,7 +60,7 @@ sejuno-token = { workspace = true }
 bond-router = { workspace = true }
 cw-grant-spec = { workspace = true }
 cw-orch = { workspace = true, optional = true }
-
+terraswap-helpers = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

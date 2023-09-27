@@ -406,8 +406,49 @@ pub fn prefs_to_msgs(
                             attributes,
                         })
                     }
-                    JunoDestinationProject::WhiteWhaleSatellite { .. } => {
-                        unimplemented!()
+                    JunoDestinationProject::WhiteWhaleSatellite { asset } => {
+                        let swap_op = match asset {
+                            AssetInfo::Native(denom)
+                                if denom.eq(&project_addresses.destination_projects.white_whale.amp_whale) =>
+                            {
+                                Some(project_addresses.destination_projects.white_whale.juno_amp_whale_path.clone())
+                            }
+                            // Ok(DestProjectMsgs {
+                            //     msgs: swap_msg,
+                            //     sub_msgs: vec![],
+                            //     attributes: vec![
+                            //         Attribute {
+                            //             key: "subaction".to_string(),
+                            //             value: "white whale satellite".to_string(),
+                            //         },
+                            //         Attribute {
+                            //             key: "bonding_asset".to_string(),
+                            //             value: denom.to_string(),
+                            //         },
+                            //     ],
+                            // })
+                            AssetInfo::Native(denom)
+                                if denom.eq(&project_addresses.destination_projects.white_whale.amp_whale) =>
+                            {
+                                Some(project_addresses.destination_projects.white_whale.bone_whale.clone())
+                            }
+
+                            // if the asset isn't ampWHALE or bWhale then we can't do anything
+                            _ => None, //  Ok(DestProjectMsgs {
+                                       //     msgs: vec![],
+                                       //     sub_msgs: vec![],
+                                       //     attributes: vec![
+                                       //         Attribute {
+                                       //             key: "subaction".to_string(),
+                                       //             value: "white whale satellite".to_string(),
+                                       //         },
+                                       //         Attribute {
+                                       //             key: "type".to_string(),
+                                       //             value: "skipped".to_string(),
+                                       //         },
+                                       //     ],
+                                       // })
+                        };
                     }
                     JunoDestinationProject::BalanceDao {} => Ok(DestProjectMsgs {
                         msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
