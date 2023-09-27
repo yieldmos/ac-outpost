@@ -5013,6 +5013,7 @@ dependencies = [
  "serde",
  "terraswap-helpers",
  "thiserror",
+ "white-whale",
  "withdraw-rewards-tax-grant",
  "wynd-helpers",
  "wynd-stake",

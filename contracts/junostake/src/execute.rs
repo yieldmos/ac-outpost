@@ -2,7 +2,8 @@ use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Attribute, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Uint128,
+    coin, to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Timestamp,
+    Uint128,
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
@@ -13,6 +14,8 @@ use outpost_utils::{
     },
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
+use terraswap_helpers::terraswap_swap::{create_swap_msg, create_terraswap_swap_msg_with_simulation};
+
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
 use wynd_helpers::{
@@ -76,7 +79,7 @@ pub fn compound(
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let sub_msgs = prefs_to_msgs(
         &project_addresses,
-        &env.block.height,
+        &env.block,
         staking_denom.to_string(),
         &delegator,
         sum_coins(&staking_denom, &delegator_rewards),
@@ -106,7 +109,7 @@ pub fn compound(
 /// CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
     project_addresses: &ContractAddresses,
-    current_height: &u64,
+    block: &BlockInfo,
     staking_denom: String,
     target_address: &Addr,
     total_rewards: cosmwasm_std::Coin,
@@ -264,7 +267,7 @@ pub fn prefs_to_msgs(
                         Ok(DestProjectMsgs {
                             msgs: join_wynd_pool_msgs(
                                 project_addresses.destination_projects.wynd.multihop.to_string(),
-                                current_height,
+                                &block.height,
                                 &querier,
                                 target_address.clone(),
                                 comp_token_amount,
@@ -407,48 +410,90 @@ pub fn prefs_to_msgs(
                         })
                     }
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
-                        let swap_op = match asset {
+                        let swap_op = match asset.clone() {
                             AssetInfo::Native(denom)
                                 if denom.eq(&project_addresses.destination_projects.white_whale.amp_whale) =>
                             {
                                 Some(project_addresses.destination_projects.white_whale.juno_amp_whale_path.clone())
                             }
-                            // Ok(DestProjectMsgs {
-                            //     msgs: swap_msg,
-                            //     sub_msgs: vec![],
-                            //     attributes: vec![
-                            //         Attribute {
-                            //             key: "subaction".to_string(),
-                            //             value: "white whale satellite".to_string(),
-                            //         },
-                            //         Attribute {
-                            //             key: "bonding_asset".to_string(),
-                            //             value: denom.to_string(),
-                            //         },
-                            //     ],
-                            // })
                             AssetInfo::Native(denom)
                                 if denom.eq(&project_addresses.destination_projects.white_whale.amp_whale) =>
                             {
-                                Some(project_addresses.destination_projects.white_whale.bone_whale.clone())
+                                Some(
+                                    project_addresses
+                                        .destination_projects
+                                        .white_whale
+                                        .juno_bone_whale_path
+                                        .clone(),
+                                )
                             }
-
                             // if the asset isn't ampWHALE or bWhale then we can't do anything
-                            _ => None, //  Ok(DestProjectMsgs {
-                                       //     msgs: vec![],
-                                       //     sub_msgs: vec![],
-                                       //     attributes: vec![
-                                       //         Attribute {
-                                       //             key: "subaction".to_string(),
-                                       //             value: "white whale satellite".to_string(),
-                                       //         },
-                                       //         Attribute {
-                                       //             key: "type".to_string(),
-                                       //             value: "skipped".to_string(),
-                                       //         },
-                                       //     ],
-                                       // })
+                            _ => None,
                         };
+
+                        if let (Some(swap_op), AssetInfo::Native(denom)) = (swap_op, asset.clone()) {
+                            let (swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
+                                &querier,
+                                target_address,
+                                comp_token_amount,
+                                swap_op,
+                                project_addresses
+                                    .destination_projects
+                                    .white_whale
+                                    .terraswap_multihop_router
+                                    .clone(),
+                            )?;
+
+                            return Ok(DestProjectMsgs {
+                                msgs: [
+                                    swap_msgs,
+                                    vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                                        project_addresses.destination_projects.white_whale.market.clone(),
+                                        target_address,
+                                        &white_whale::whale_lair::Bond {
+                                            asset: white_whale::pool_network::asset::Asset {
+                                                amount: sim,
+                                                info: white_whale::pool_network::asset::AssetInfo::NativeToken {
+                                                    denom: denom.to_string(),
+                                                },
+                                            },
+                                            timestamp: block.time,
+                                            weight: Uint128::from(1u128),
+                                        },
+                                        Some(vec![Coin {
+                                            denom: denom.to_string(),
+                                            amount: sim.into(),
+                                        }]),
+                                    )?)],
+                                ]
+                                .concat(),
+                                sub_msgs: vec![],
+                                attributes: vec![
+                                    Attribute {
+                                        key: "subaction".to_string(),
+                                        value: "white whale satellite".to_string(),
+                                    },
+                                    Attribute {
+                                        key: "bonding_asset".to_string(),
+                                        value: denom.to_string(),
+                                    },
+                                ],
+                            });
+                        }
+                        Ok(DestProjectMsgs {
+                            msgs: vec![],
+                            sub_msgs: vec![],
+                            attributes: vec![
+                                Attribute {
+                                    key: "subaction".to_string(),
+                                    value: "white whale satellite".to_string(),
+                                },
+                                Attribute {
+                                    key: "type".to_string(),
+                                    value: "skipped".to_string(),
+                                },
+                            ],
+                        })
                     }
                     JunoDestinationProject::BalanceDao {} => Ok(DestProjectMsgs {
                         msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
