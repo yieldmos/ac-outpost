@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Addr, Decimal, Deps, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Decimal, Deps, QuerierWrapper, StdResult, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
     ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit, ContractExecutionSetting, GrantRequirement,
@@ -105,7 +105,7 @@ pub fn gen_comp_pref_grants(
         granter,
         grantee,
         expiration,
-        grant_contract,
+        grant_contract: _grant_contract,
         grant_data:
             CompPrefsWithAddresses {
                 comp_prefs: JunostakeCompoundPrefs { comp_prefs, .. },
@@ -159,7 +159,7 @@ pub fn gen_comp_pref_grants(
                     GrantRequirement::GrantSpec {
                         grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                             contract_addr: Addr::unchecked(swap_address),
-                            limit: ContractExecutionAuthorizationLimit::default(),
+                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                             filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                 keys: vec![required_key],
                             },
@@ -173,7 +173,7 @@ pub fn gen_comp_pref_grants(
             JunoDestinationProject::BalanceDao {} => vec![GrantRequirement::GrantSpec {
                 grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                     contract_addr: Addr::unchecked(project_addresses.destination_projects.balance_dao.clone()),
-                    limit: ContractExecutionAuthorizationLimit::default(),
+                    limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                         keys: vec!["swap".to_string()],
                     },
@@ -190,7 +190,7 @@ pub fn gen_comp_pref_grants(
                     contract_addr: Addr::unchecked(
                         lottery.get_lottery_address(&project_addresses.destination_projects.gelotto),
                     ),
-                    limit: ContractExecutionAuthorizationLimit::default(),
+                    limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                         keys: vec!["sender_buy_seed".to_string()],
                     },
@@ -199,23 +199,25 @@ pub fn gen_comp_pref_grants(
                 grantee: grantee.clone(),
                 expiration,
             }],
-            JunoDestinationProject::SendTokens { denom, address } => vec![
+            JunoDestinationProject::SendTokens { denom, address } => [
                 // general multihop swap
-                // TODO: this grant isn't needed if we're swapping to juno
-                GrantRequirement::GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                        contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
-                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                            keys: vec!["execute_swap_operations".to_string()],
-                        },
-                    }]),
-                    granter: granter.clone(),
-                    grantee: grantee.clone(),
-                    expiration,
+                match denom.clone() {
+                    AssetInfo::Native(token_denom) if token_denom.eq("ujuno") => vec![],
+                    _ => vec![GrantRequirement::GrantSpec {
+                        grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
+                            contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
+                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
+                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                                keys: vec!["execute_swap_operations".to_string()],
+                            },
+                        }]),
+                        granter: granter.clone(),
+                        grantee: grantee.clone(),
+                        expiration,
+                    }],
                 },
                 // send to the given user
-                match denom {
+                vec![match denom {
                     // if it's a native denom we need a send authorization
                     AssetInfo::Native(denom) => GrantRequirement::GrantSpec {
                         grant_type: GrantType::SendAuthorization {
@@ -239,14 +241,15 @@ pub fn gen_comp_pref_grants(
                         grantee: grantee.clone(),
                         expiration,
                     },
-                },
-            ],
+                }],
+            ]
+            .concat(),
             JunoDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::GrantSpec {
                 grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                     contract_addr: Addr::unchecked(
                         lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
                     ),
-                    limit: ContractExecutionAuthorizationLimit::default(),
+                    limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                         keys: vec![match lsd_type {
                             JunoLsd::StakeEasySe | JunoLsd::StakeEasyB => "mint",
@@ -259,40 +262,49 @@ pub fn gen_comp_pref_grants(
                 grantee: grantee.clone(),
                 expiration,
             }],
-            JunoDestinationProject::WhiteWhaleSatellite { asset: _asset } => vec![
-                // general multihop swap
-                GrantRequirement::GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                        contract_addr: Addr::unchecked(
-                            project_addresses
-                                .destination_projects
-                                .white_whale
-                                .terraswap_multihop_router
-                                .clone(),
-                        ),
-                        limit: ContractExecutionAuthorizationLimit::default(),
-                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                            keys: vec!["execute_swap_operations".to_string()],
-                        },
-                    }]),
-                    granter: granter.clone(),
-                    grantee: grantee.clone(),
-                    expiration,
-                },
-                // bonding to the market
-                GrantRequirement::GrantSpec {
-                    grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                        contract_addr: Addr::unchecked(project_addresses.destination_projects.white_whale.market.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
-                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                            keys: vec!["mint".to_string()],
-                        },
-                    }]),
-                    granter: granter.clone(),
-                    grantee: grantee.clone(),
-                    expiration,
-                },
-            ],
+            JunoDestinationProject::WhiteWhaleSatellite { asset } => {
+                let denom = match asset {
+                    AssetInfo::Native(denom) => denom,
+                    AssetInfo::Token(token) => token,
+                };
+
+                vec![
+                    // general terraswap multihop swap
+                    GrantRequirement::GrantSpec {
+                        grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
+                            contract_addr: Addr::unchecked(
+                                project_addresses
+                                    .destination_projects
+                                    .white_whale
+                                    .terraswap_multihop_router
+                                    .clone(),
+                            ),
+                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
+                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                                keys: vec!["execute_swap_operations".to_string()],
+                            },
+                        }]),
+                        granter: granter.clone(),
+                        grantee: grantee.clone(),
+                        expiration,
+                    },
+                    // bonding to the market
+                    GrantRequirement::GrantSpec {
+                        grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
+                            contract_addr: Addr::unchecked(
+                                project_addresses.destination_projects.white_whale.market.clone(),
+                            ),
+                            limit: ContractExecutionAuthorizationLimit::single_fund_limit(denom),
+                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                                keys: vec!["bond".to_string()],
+                            },
+                        }]),
+                        granter: granter.clone(),
+                        grantee: grantee.clone(),
+                        expiration,
+                    },
+                ]
+            }
             JunoDestinationProject::WyndStaking {
                 bonding_period: _bonding_period,
             } => vec![
@@ -300,7 +312,7 @@ pub fn gen_comp_pref_grants(
                 GrantRequirement::GrantSpec {
                     grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.juno_wynd_pair.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
+                        limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["swap".to_string()],
                         },
@@ -327,7 +339,7 @@ pub fn gen_comp_pref_grants(
             JunoDestinationProject::RacoonBet { game } => vec![GrantRequirement::GrantSpec {
                 grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                     contract_addr: Addr::unchecked(project_addresses.destination_projects.racoon_bet.game.clone()),
-                    limit: ContractExecutionAuthorizationLimit::default(),
+                    limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                         keys: vec![match game {
                             RacoonBetGame::Slot { .. } => "slot",
@@ -347,7 +359,7 @@ pub fn gen_comp_pref_grants(
                 GrantRequirement::GrantSpec {
                     grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
+                        limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
@@ -365,7 +377,7 @@ pub fn gen_comp_pref_grants(
                 GrantRequirement::GrantSpec {
                     grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
+                        limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
@@ -394,7 +406,7 @@ pub fn gen_comp_pref_grants(
                 GrantRequirement::GrantSpec {
                     grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.wynd.multihop.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
+                        limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["execute_swap_operations".to_string()],
                         },
@@ -407,7 +419,13 @@ pub fn gen_comp_pref_grants(
                 GrantRequirement::GrantSpec {
                     grant_type: GrantType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
                         contract_addr: Addr::unchecked(project_addresses.destination_projects.spark_ibc.fund.clone()),
-                        limit: ContractExecutionAuthorizationLimit::default(),
+                        limit: ContractExecutionAuthorizationLimit::single_fund_limit(
+                            if let AssetInfo::Native(usdc) = project_addresses.usdc.clone() {
+                                usdc
+                            } else {
+                                "".to_string()
+                            },
+                        ),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             keys: vec!["fund".to_string()],
                         },

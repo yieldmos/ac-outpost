@@ -9,6 +9,7 @@ use white_whale::pool_network::{
     asset::AssetInfo,
     router::{SwapOperation, SwapRoute},
 };
+use ymos_junostake_outpost::msg::ExecuteMsgFns;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -257,6 +258,10 @@ pub fn main() -> anyhow::Result<()> {
             Some(&Addr::unchecked(juno_chain.sender().to_string())),
             None,
         )?;
+
+        // add yieldmos.juno as an authorized compounder
+        junostake
+        .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
     } else {
         junostake.migrate_if_needed(&ymos_junostake_outpost::msg::InstantiateMsg {
             admin: Some(juno_chain.sender().to_string()),
@@ -265,6 +270,7 @@ pub fn main() -> anyhow::Result<()> {
     }
     println!("junostake: {}", junostake.addr_str()?);
 
+    
     Ok(())
 }
 
