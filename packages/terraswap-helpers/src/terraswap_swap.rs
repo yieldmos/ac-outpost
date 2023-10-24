@@ -1,12 +1,10 @@
-use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
-use cosmwasm_std::{to_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
+use cosmwasm_std::{to_binary, Addr, QuerierWrapper, StdError, Uint128};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use white_whale::pool_network::{
     asset::AssetInfo,
-    router::{ExecuteMsg, SimulateSwapOperationsResponse, SwapOperation, SwapRoute},
+    router::{ExecuteMsg, SimulateSwapOperationsResponse, SwapOperation},
 };
-
-use crate::errors::TerraswapHelperError;
 
 // /// Queries the Wyndex pool for the amount of `to_denom` that can be received for `from_token`
 // /// IMPORTANT: you must provide the pair contract address for the simulation

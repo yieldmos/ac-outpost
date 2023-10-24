@@ -15,9 +15,7 @@ cosmwasm-std = { version = "1.1.3", default-features = false, features = [
     "staking",
 ] }
 cosmwasm-storage = "1.1.3"
-cw-orch = { git = "https://github.com/AbstractSDK/cw-orchestrator", features = [
-    "daemon",
-] }
+cw-orch = { version = "0.16.4", features = ["daemon"] }
 cw-storage-plus = "1.0.1"
 cw-multi-test = "0.16.5"
 cw2 = "1.0.1"

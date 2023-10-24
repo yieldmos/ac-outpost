@@ -15,7 +15,9 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub project_addresses: Option<ContractAddresses>,
+}
 
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -51,6 +53,7 @@ pub enum ExecuteMsg {
     AddAuthorizedCompounder(String),
     RemoveAuthorizedCompounder(String),
     Compound(JunostakeCompoundPrefs),
+    UpdateProjectAddresses(ContractAddresses),
 }
 
 #[cw_serde]
@@ -75,6 +78,7 @@ pub struct ContractAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct AuthzppAddresses {
     pub withdraw_tax: String,
     // pub allowlist_send: String,

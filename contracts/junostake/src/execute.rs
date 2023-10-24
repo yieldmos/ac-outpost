@@ -2,7 +2,7 @@ use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Timestamp,
+    to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, SubMsg,
     Uint128,
 };
 use outpost_utils::{
@@ -14,7 +14,7 @@ use outpost_utils::{
     },
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
-use terraswap_helpers::terraswap_swap::{create_swap_msg, create_terraswap_swap_msg_with_simulation};
+use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
 
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
@@ -39,7 +39,7 @@ use crate::{
 #[derive(Default)]
 pub struct DestProjectMsgs {
     pub msgs: Vec<CosmosProtoMsg>,
-    pub sub_msgs: Vec<Vec<CosmosProtoMsg>>,
+    pub sub_msgs: Vec<(u64, Vec<CosmosProtoMsg>, ReplyOn)>,
     pub attributes: Vec<Attribute>,
 }
 
@@ -77,7 +77,7 @@ pub fn compound(
         .simulate_with_contract_execute(deps.querier, tax_fee)?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
-    let sub_msgs = prefs_to_msgs(
+    let all_msgs = prefs_to_msgs(
         &project_addresses,
         &env.block,
         staking_denom.to_string(),
@@ -87,7 +87,7 @@ pub fn compound(
         deps.querier,
     )?;
 
-    let msgs = sub_msgs.iter().fold(DestProjectMsgs::default(), |mut acc, msg| {
+    let combined_msgs = all_msgs.iter().fold(DestProjectMsgs::default(), |mut acc, msg| {
         acc.msgs.append(&mut msg.msgs.clone());
         acc.sub_msgs.append(&mut msg.sub_msgs.clone());
         acc.attributes.append(&mut msg.attributes.clone());
@@ -95,14 +95,38 @@ pub fn compound(
     });
 
     // the final exec message that will be broadcast and contains all the sub msgs
-    let exec_msg = create_exec_msg(&env.contract.address, msgs.msgs)?;
+    let exec_msg = create_exec_msg(&env.contract.address, combined_msgs.msgs)?;
 
-    Ok(Response::default()
+    let resp = Response::default()
         .add_attribute("action", "outpost compound")
         .add_message(withdraw_msg)
         .add_attribute("subaction", "withdraw rewards")
         .add_message(exec_msg)
-        .add_attributes(msgs.attributes))
+        .add_submessages(
+            combined_msgs
+                .sub_msgs
+                .into_iter()
+                .filter_map(|sub_msg| {
+                    if let (Ok(exec_msg), false) = (
+                        create_exec_msg(&env.contract.address, sub_msg.1.clone()),
+                        sub_msg.1.is_empty(),
+                    ) {
+                        Some((sub_msg.0, exec_msg, sub_msg.2))
+                    } else {
+                        None
+                    }
+                })
+                .map(|(id, msg, reply_on)| SubMsg {
+                    msg,
+                    gas_limit: None,
+                    id,
+                    reply_on,
+                })
+                .collect::<Vec<SubMsg>>(),
+        )
+        .add_attributes(combined_msgs.attributes);
+
+    Ok(resp)
 }
 
 /// Converts the user's compound preferences into a list of
@@ -190,7 +214,7 @@ pub fn prefs_to_msgs(
                             dao_addresses.cw20.clone(),
                             &target_address,
                             &cw20::Cw20ExecuteMsg::Send {
-                                contract: dao_addresses.cw20,
+                                contract: dao_addresses.staking,
                                 amount: expected_dao_token_amount,
                                 msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
                             },
@@ -505,7 +529,22 @@ pub fn prefs_to_msgs(
                                 amount: comp_token_amount.into(),
                             }]),
                         )?)],
-                        sub_msgs: vec![],
+                        sub_msgs: vec![
+                        //     (
+                        //     // disregard the result of the balance dao swap in case it fails
+                        //     0u64,
+                        //     vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                        //         project_addresses.destination_projects.balance_dao.clone(),
+                        //         target_address,
+                        //         &balance_token_swap::msg::ExecuteMsg::Swap {},
+                        //         Some(vec![Coin {
+                        //             denom: staking_denom.clone(),
+                        //             amount: comp_token_amount.into(),
+                        //         }]),
+                        //     )?)],
+                        //     ReplyOn::Error,
+                        // )
+                        ],
                         attributes: vec![
                             Attribute {
                                 key: "subaction".to_string(),

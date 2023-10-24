@@ -341,6 +341,7 @@ impl From<CompoundPrefs<JunoDestinationProject>> for Vec<PoolCatchAllDestination
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct DestinationProjectAddresses {
     pub wynd: WyndAddresses,
     pub gelotto: GelottoAddresses,
@@ -354,6 +355,7 @@ pub struct DestinationProjectAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct RacoonBetAddresses {
     // juno1h8p0jmfn06nfqpn0medn698h950vnl7v54m2azkyjdqjlzcly7jszxh7yu
     pub game: String,
@@ -362,12 +364,14 @@ pub struct RacoonBetAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct SparkIbcAddresses {
     // juno1a6rna5tcl6p97rze6hnd5ug35kadqhudvr5f4mtr6s0yd5mruhss8gzrdy
     pub fund: String,
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct JunoLsdAddresses {
     // juno102at0mu2xeluyw9efg257yy6pyhv088qqhmp4f8wszqcwxnpdcgqsfq0nv
     pub bone_juno: String,
@@ -382,6 +386,7 @@ pub struct JunoLsdAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct WhiteWhaleSatelliteAddresses {
     // ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF
     pub amp_whale: String,
@@ -405,6 +410,7 @@ pub struct WhiteWhaleSatelliteAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct DaoAddresses {
     // cw20: juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr
     // staking: juno1a7x8aj7k38vnj9edrlymkerhrl5d4ud3makmqhx6vt3dhu0d824qh038zh
@@ -439,6 +445,7 @@ pub struct DaoAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct WyndAddresses {
     // juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9
     pub cw20: String,
@@ -449,6 +456,7 @@ pub struct WyndAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct DaoAddress {
     pub cw20: String,
     pub staking: String,
@@ -457,6 +465,7 @@ pub struct DaoAddress {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct GelottoAddresses {
     pub pick3_contract: String,
     pub pick4_contract: String,

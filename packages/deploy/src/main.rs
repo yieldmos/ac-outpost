@@ -59,7 +59,7 @@ pub fn main() -> anyhow::Result<()> {
                 signal: DaoAddress {
                     cw20: "juno14lycavan8gvpjn97aapzvwmsj8kyrvf644p05r0hu79namyj3ens87650k"
                         .to_string(),
-                    staking: "juno14lycavan8gvpjn97aapzvwmsj8kyrvf644p05r0hu79namyj3ens87650k"
+                    staking: "juno1v0km8gytmzpmtnwv8mpx26kctt5szuzudhg209fxee57yh9u2cvs88rn7p"
                         .to_string(),
                     juno_wyndex_pair: Some(
                         "juno1p3eed298qx3nyhs3grld07jrf9vjsjsmdd2kmmh3crk87emjcx5stp409y"
@@ -70,7 +70,7 @@ pub fn main() -> anyhow::Result<()> {
                 posthuman: DaoAddress {
                     cw20: "juno1rws84uz7969aaa7pej303udhlkt3j9ca0l3egpcae98jwak9quzq8szn2l"
                         .to_string(),
-                    staking: "juno1rws84uz7969aaa7pej303udhlkt3j9ca0l3egpcae98jwak9quzq8szn2l"
+                    staking: "juno1jktfdt5g2d0fguvy8r8pl4gly7wps8phkwy08z6upc4nazkumrwq7lj0vn"
                         .to_string(),
                     juno_wyndex_pair: Some(
                         "juno17jv00cm4f3twr548jzayu57g9txvd4zdh54mdg9qpjs7samlphjsykylsq"
@@ -81,7 +81,7 @@ pub fn main() -> anyhow::Result<()> {
                 kleomedes: DaoAddress {
                     cw20: "juno10gthz5ufgrpuk5cscve2f0hjp56wgp90psqxcrqlg4m9mcu9dh8q4864xy"
                         .to_string(),
-                    staking: "juno10gthz5ufgrpuk5cscve2f0hjp56wgp90psqxcrqlg4m9mcu9dh8q4864xy"
+                    staking: "juno1zqp6uh3eg09s0h24rkwukkkg3pch49g0ndc53z9l8wrvh9dhf4nsj0ur49"
                         .to_string(),
                     juno_wyndex_pair: Some(
                         "juno1dpqgt3ja2kdxs94ltjw9ncdsexts9e3dx5qpnl20zvgdguzjelhqstf8zg"
@@ -92,7 +92,7 @@ pub fn main() -> anyhow::Result<()> {
                 cannalabs: DaoAddress {
                     cw20: "juno1vn38rzq0wc7zczp4dhy0h5y5kxh2jjzeahwe30c9cc6dw3lkyk5qn5rmfa"
                         .to_string(),
-                    staking: "juno1vn38rzq0wc7zczp4dhy0h5y5kxh2jjzeahwe30c9cc6dw3lkyk5qn5rmfa"
+                    staking: "juno1066vq5g9qdprhgjst444rgf0zknhlqwmdnm7xyqhprt9whctzzxqdx90lu"
                         .to_string(),
                     juno_wyndex_pair: Some(
                         "juno17ckp36lmgtt7jtuggdv2j39eh4alcnl35szu6quh747nujags07swwq0nh"
@@ -106,7 +106,7 @@ pub fn main() -> anyhow::Result<()> {
                 muse: DaoAddress {
                     cw20: "juno1p8x807f6h222ur0vssqy3qk6mcpa40gw2pchquz5atl935t7kvyq894ne3"
                         .to_string(),
-                    staking: "juno1p8x807f6h222ur0vssqy3qk6mcpa40gw2pchquz5atl935t7kvyq894ne3"
+                    staking: "juno17gdhjxt2d5mhx6paxc85g4pr5myew8pq0lm7usdsavsfk34ldrsqqhtafc"
                         .to_string(),
                     juno_wyndex_pair: Some(
                         "juno1rcssjyqgr6vzalss77d43v30c2qpyzzg607ua8gte2shqgtvu24sg8gs8r"
@@ -263,10 +263,10 @@ pub fn main() -> anyhow::Result<()> {
         junostake
         .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
     } else {
-        junostake.migrate_if_needed(&ymos_junostake_outpost::msg::InstantiateMsg {
-            admin: Some(juno_chain.sender().to_string()),
-            project_addresses: junostake_project_addresses.clone(),
-        })?;
+        junostake.migrate(&ymos_junostake_outpost::msg::MigrateMsg {
+        
+            project_addresses: Some( junostake_project_addresses.clone()),
+        }, junostake.code_id()?)?;
     }
     println!("junostake: {}", junostake.addr_str()?);
 

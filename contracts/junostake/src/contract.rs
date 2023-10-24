@@ -1,10 +1,10 @@
 use crate::error::ContractError;
-use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, JunostakeCompoundPrefs, QueryMsg};
+use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, JunostakeCompoundPrefs, MigrateMsg, QueryMsg};
 use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use semver::Version;
@@ -12,6 +12,16 @@ use semver::Version;
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ac-outpost-junostake";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg {
+        // an id of 0 means we don't care about the response
+        Reply { id: 0, .. } => Ok(Response::default()),
+        // TODO handle non-zero ids
+        _ => Err(ContractError::Unauthorized {}),
+    }
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 #[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
@@ -40,13 +50,21 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 #[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: InstantiateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
     if storage_version < version {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     }
+
+    if let MigrateMsg {
+        project_addresses: Some(addresses),
+    } = msg
+    {
+        PROJECT_ADDRS.save(deps.storage, &addresses)?
+    }
+
     Ok(Response::default())
 }
 
@@ -54,6 +72,14 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: InstantiateMsg) -> Result<Respons
 #[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::UpdateProjectAddresses(addresses) => {
+            if info.sender != ADMIN.load(deps.storage)? {
+                return Err(ContractError::Unauthorized {});
+            }
+            PROJECT_ADDRS.save(deps.storage, &addresses)?;
+
+            Ok(Response::default())
+        }
         ExecuteMsg::AddAuthorizedCompounder(address) => {
             if info.sender != ADMIN.load(deps.storage)? {
                 return Err(ContractError::Unauthorized {});

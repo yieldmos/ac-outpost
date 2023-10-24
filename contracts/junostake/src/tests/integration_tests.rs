@@ -4,6 +4,7 @@ use outpost_utils::juno_comp_prefs::{
     DaoAddress, DaoAddresses, DestinationProjectAddresses, GelottoAddresses, RacoonBetAddresses, SparkIbcAddresses,
     WhiteWhaleSatelliteAddresses, WyndAddresses,
 };
+use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
 
 use crate::{
     contract::{execute, instantiate, query},
@@ -39,80 +40,10 @@ fn instantiate_with_defaults() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
-                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
-                authzpp: AuthzppAddresses {
-                    withdraw_tax: "".to_string(),
-                },
-                destination_projects: DestinationProjectAddresses {
-                    wynd: WyndAddresses {
-                        cw20: "".to_string(),
-                        multihop: "".to_string(),
-                        juno_wynd_pair: "".to_string(),
-                    },
-                    gelotto: GelottoAddresses {
-                        pick3_contract: "".to_string(),
-                        pick4_contract: "".to_string(),
-                        pick5_contract: "".to_string(),
-                    },
-                    daos: DaoAddresses {
-                        neta: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        signal: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        posthuman: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        kleomedes: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        cannalabs: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        muse: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                    },
-                    spark_ibc: SparkIbcAddresses { fund: "".to_string() },
-                    balance_dao: "".to_string(),
-                    white_whale: WhiteWhaleSatelliteAddresses {
-                        amp_whale: wyndex::asset::AssetInfo::Native("".to_string()),
-                        bone_whale: wyndex::asset::AssetInfo::Native("".to_string()),
-                        market: "".to_string(),
-                        rewards: "".to_string(),
-                    },
-                    racoon_bet: RacoonBetAddresses {
-                        game: "".to_string(),
-                        juno_usdc_wynd_pair: "".to_string(),
-                    },
-                    juno_lsds: outpost_utils::juno_comp_prefs::JunoLsdAddresses {
-                        bone_juno: "".to_string(),
-                        wy_juno: "".to_string(),
-                        se_juno: "".to_string(),
-                        b_juno: "".to_string(),
-                        amp_juno: "".to_string(),
-                    },
-                },
                 take_rate_addr: "".to_string(),
+                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+                authzpp: AuthzppAddresses::default(),
+                destination_projects: DestinationProjectAddresses::default(),
             },
         },
     )
@@ -190,78 +121,8 @@ fn validator_only_compounding() {
             project_addresses: ContractAddresses {
                 take_rate_addr: "".to_string(),
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
-                authzpp: AuthzppAddresses {
-                    withdraw_tax: "".to_string(),
-                },
-                destination_projects: DestinationProjectAddresses {
-                    wynd: WyndAddresses {
-                        cw20: "".to_string(),
-                        multihop: "".to_string(),
-                        juno_wynd_pair: "".to_string(),
-                    },
-                    gelotto: GelottoAddresses {
-                        pick3_contract: "".to_string(),
-                        pick4_contract: "".to_string(),
-                        pick5_contract: "".to_string(),
-                    },
-                    daos: DaoAddresses {
-                        neta: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        signal: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        posthuman: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        kleomedes: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        cannalabs: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                        muse: DaoAddress {
-                            cw20: "".to_string(),
-                            staking: "".to_string(),
-                            juno_wyndex_pair: Some("".to_string()),
-                            wynd_wyndex_pair: None,
-                        },
-                    },
-                    spark_ibc: SparkIbcAddresses { fund: "".to_string() },
-                    balance_dao: "".to_string(),
-                    white_whale: WhiteWhaleSatelliteAddresses {
-                        amp_whale: wyndex::asset::AssetInfo::Native("".to_string()),
-                        bone_whale: wyndex::asset::AssetInfo::Native("".to_string()),
-                        market: "".to_string(),
-                        rewards: "".to_string(),
-                    },
-                    racoon_bet: RacoonBetAddresses {
-                        game: "".to_string(),
-                        juno_usdc_wynd_pair: "".to_string(),
-                    },
-                    juno_lsds: outpost_utils::juno_comp_prefs::JunoLsdAddresses {
-                        bone_juno: "".to_string(),
-                        wy_juno: "".to_string(),
-                        se_juno: "".to_string(),
-                        b_juno: "".to_string(),
-                        amp_juno: "".to_string(),
-                    },
-                },
+                authzpp: AuthzppAddresses::default(),
+                destination_projects: DestinationProjectAddresses::default(),
             },
         },
     )

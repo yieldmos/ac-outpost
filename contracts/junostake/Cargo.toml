@@ -1,7 +1,7 @@
 [package]
 name = "ymos-junostake-outpost"
-version = { workspace = true }
 authors = ["Marc <marc@yieldmos.com>"]
+version = { workspace = true }
 edition = { workspace = true }
 description = "Yieldmos Juno Staking Outpost"
 
