@@ -76,13 +76,15 @@ pub fn compound(
     ) = WithdrawRewardsTaxClient::new(&deps.api.addr_validate(&project_addresses.authzpp.withdraw_tax)?, &delegator)
         .simulate_with_contract_execute(deps.querier, tax_fee)?;
 
+    let total_rewards = sum_coins(&staking_denom, &delegator_rewards);
+
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
         &project_addresses,
         &env.block,
-        staking_denom.to_string(),
+        staking_denom,
         &delegator,
-        sum_coins(&staking_denom, &delegator_rewards),
+        total_rewards.clone(),
         comp_prefs,
         deps.querier,
     )?;
@@ -101,6 +103,7 @@ pub fn compound(
         .add_attribute("action", "outpost compound")
         .add_message(withdraw_msg)
         .add_attribute("subaction", "withdraw rewards")
+        .add_attribute("amount_automated", total_rewards.to_string())
         .add_message(exec_msg)
         .add_submessages(
             combined_msgs
@@ -455,7 +458,7 @@ pub fn prefs_to_msgs(
                             _ => None,
                         };
 
-                        if let (Some(swap_op), AssetInfo::Native(denom)) = (swap_op, asset.clone()) {
+                        if let (Some(swap_op), AssetInfo::Native(denom)) = (swap_op, asset) {
                             let (swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
                                 &querier,
                                 target_address,
@@ -499,7 +502,7 @@ pub fn prefs_to_msgs(
                                     },
                                     Attribute {
                                         key: "bonding_asset".to_string(),
-                                        value: denom.to_string(),
+                                        value: denom,
                                     },
                                 ],
                             });

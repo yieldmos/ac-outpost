@@ -91,7 +91,7 @@ impl Grantable for QueryMsg {
             expiration,
             grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
             grant_data: GrantSpecData {
-                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr.clone()),
+                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
                 max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
             },
         })?;
@@ -118,7 +118,7 @@ impl Grantable for QueryMsg {
             expiration,
             grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
             grant_data: GrantSpecData {
-                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr.clone()),
+                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
                 max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
             },
         })?;
@@ -155,7 +155,7 @@ pub fn gen_comp_pref_grants(
                     max_tokens: None,
                     authorization_type: StakeAuthorizationType::Delegate,
                     validators: Some(StakeAuthorizationPolicy::AllowList(StakeAuthorizationValidators {
-                        address: vec![validator_address.clone()],
+                        address: vec![validator_address],
                     })),
                 },
                 granter: granter.clone(),
@@ -257,7 +257,7 @@ pub fn gen_comp_pref_grants(
                     AssetInfo::Native(denom) => GrantRequirement::GrantSpec {
                         grant_type: AuthorizationType::SendAuthorization {
                             spend_limit: Some(vec![coin(u128::MAX, denom)]),
-                            allow_list: Some(vec![Addr::unchecked(address.clone())]),
+                            allow_list: Some(vec![Addr::unchecked(address)]),
                         },
                         granter: granter.clone(),
                         grantee: grantee.clone(),
@@ -424,7 +424,7 @@ pub fn gen_comp_pref_grants(
                 // bonding to the pool
                 GrantRequirement::GrantSpec {
                     grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                        contract_addr: Addr::unchecked(contract_address.clone()),
+                        contract_addr: Addr::unchecked(contract_address),
                         limit: ContractExecutionAuthorizationLimit::default(),
                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                             // might need a bond key as well

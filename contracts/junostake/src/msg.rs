@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Timestamp};
-use cw_grant_spec::grants::GrantRequirement;
+use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, JunoCompPrefs};
 use wyndex::asset::AssetInfo;
 
@@ -34,6 +34,9 @@ pub enum QueryMsg {
         expiration: Timestamp,
         comp_prefs: JunostakeCompoundPrefs,
     },
+
+    #[returns(Vec<RevokeRequirement>)]
+    RevokeSpec { comp_prefs: JunostakeCompoundPrefs },
 }
 
 #[cw_serde]

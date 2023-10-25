@@ -4,7 +4,7 @@ use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp};
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use semver::Version;
@@ -140,6 +140,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 grantee: env.contract.address.clone(),
                 granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
                 expiration,
+                grant_contract: env.contract.address,
+                grant_data: CompPrefsWithAddresses {
+                    comp_prefs,
+                    project_addresses,
+                },
+            })?)
+        }
+        QueryMsg::RevokeSpec { comp_prefs } => {
+            let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
+            to_binary(&QueryMsg::query_revokes(GrantStructure {
+                grantee: env.contract.address.clone(),
+                granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
+                expiration: Timestamp::default(),
                 grant_contract: env.contract.address,
                 grant_data: CompPrefsWithAddresses {
                     comp_prefs,

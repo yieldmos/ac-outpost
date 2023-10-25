@@ -141,7 +141,7 @@ dependencies = [
 [[package]]
 name = "authzpp-utils"
 version = "0.3.0"
-source = "git+https://github.com/kakucodes/authzpp#beb9512639984430bb45f5e038881fb47b70a7b7"
+source = "git+https://github.com/kakucodes/authzpp#58d733603225c8d4f9cc8f6302298166ae2b1524"
 dependencies = [
  "cosmos-sdk-proto",
  "cosmwasm-schema",
@@ -794,7 +794,7 @@ dependencies = [
 [[package]]
 name = "cw-grant-spec"
 version = "0.3.0"
-source = "git+https://github.com/kakucodes/authzpp#beb9512639984430bb45f5e038881fb47b70a7b7"
+source = "git+https://github.com/kakucodes/authzpp#58d733603225c8d4f9cc8f6302298166ae2b1524"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -4253,9 +4253,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.9"
+version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d68074620f57a0b21594d9735eb2e98ab38b17f80d3fcb189fca266771ca60d"
+checksum = "5419f34732d9eb6ee4c3578b7989078579b7f039cbbb9ca2c4da015749371e15"
 dependencies = [
  "bytes",
  "futures-core",
@@ -4761,7 +4761,7 @@ dependencies = [
 [[package]]
 name = "withdraw-rewards-tax-grant"
 version = "0.3.0"
-source = "git+https://github.com/kakucodes/authzpp#beb9512639984430bb45f5e038881fb47b70a7b7"
+source = "git+https://github.com/kakucodes/authzpp#58d733603225c8d4f9cc8f6302298166ae2b1524"
 dependencies = [
  "authzpp-utils",
  "cosmos-sdk-proto",
