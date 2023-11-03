@@ -2,8 +2,8 @@ use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, MessageInfo, QuerierWrapper, ReplyOn, Response, SubMsg,
-    Uint128,
+    to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper, ReplyOn, Response,
+    SubMsg, Uint128,
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
@@ -96,6 +96,12 @@ pub fn compound(
         acc
     });
 
+    let amount_automated_event =
+        Event::new("amount_automated").add_attributes(vec![total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
+            key: format!("amount_{}", i),
+            value: coin.to_string(),
+        }));
+
     // the final exec message that will be broadcast and contains all the sub msgs
     let exec_msg = create_exec_msg(&env.contract.address, combined_msgs.msgs)?;
 
@@ -103,7 +109,8 @@ pub fn compound(
         .add_attribute("action", "outpost compound")
         .add_message(withdraw_msg)
         .add_attribute("subaction", "withdraw rewards")
-        .add_attribute("amount_automated", total_rewards.to_string())
+        .add_event(amount_automated_event)
+        // .add_attribute("amount_automated", to_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
         .add_submessages(
             combined_msgs
