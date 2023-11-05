@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Api, Uint128};
 use wyndex::asset::AssetInfo;
 
 use crate::{
@@ -94,7 +94,7 @@ impl std::fmt::Display for StakingDao {
     }
 }
 impl StakingDao {
-    pub fn get_daos_addresses(&self, addresses: &DaoAddresses) -> DaoAddress {
+    pub fn get_daos_addresses(&self, addresses: &DaoAddrs) -> DaoAddr {
         match self {
             StakingDao::Neta => addresses.neta.clone(),
             StakingDao::Signal => addresses.signal.clone(),
@@ -125,13 +125,13 @@ pub enum JunoLsd {
     Eris,
 }
 impl JunoLsd {
-    pub fn get_mint_address(&self, addresses: &JunoLsdAddresses) -> String {
+    pub fn get_mint_address(&self, addresses: &JunoLsdAddrs) -> String {
         match self {
-            JunoLsd::Backbone => addresses.amp_juno.clone(),
-            JunoLsd::Wynd => addresses.wy_juno.clone(),
-            JunoLsd::StakeEasySe => addresses.se_juno.clone(),
-            JunoLsd::StakeEasyB => addresses.b_juno.clone(),
-            JunoLsd::Eris => addresses.amp_juno.clone(),
+            JunoLsd::Backbone => addresses.amp_juno.to_string(),
+            JunoLsd::Wynd => addresses.wy_juno.to_string(),
+            JunoLsd::StakeEasySe => addresses.se_juno.to_string(),
+            JunoLsd::StakeEasyB => addresses.b_juno.to_string(),
+            JunoLsd::Eris => addresses.amp_juno.to_string(),
         }
     }
 }
@@ -353,6 +353,31 @@ pub struct DestinationProjectAddresses {
     pub racoon_bet: RacoonBetAddresses,
     pub juno_lsds: JunoLsdAddresses,
 }
+#[cw_serde]
+pub struct DestinationProjectAddrs {
+    pub wynd: WyndAddrs,
+    pub gelotto: GelottoAddrs,
+    pub daos: DaoAddrs,
+    pub spark_ibc: SparkIbcAddrs,
+    pub balance_dao: Addr,
+    pub white_whale: WhiteWhaleSatelliteAddrs,
+    pub racoon_bet: RacoonBetAddrs,
+    pub juno_lsds: JunoLsdAddrs,
+}
+impl DestinationProjectAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DestinationProjectAddrs, OutpostError> {
+        Ok(DestinationProjectAddrs {
+            wynd: self.wynd.validate_addrs(api)?,
+            gelotto: self.gelotto.validate_addrs(api)?,
+            daos: self.daos.validate_addrs(api)?,
+            spark_ibc: self.spark_ibc.validate_addrs(api)?,
+            balance_dao: api.addr_validate(&self.balance_dao)?,
+            white_whale: self.white_whale.validate_addrs(api)?,
+            racoon_bet: self.racoon_bet.validate_addrs(api)?,
+            juno_lsds: self.juno_lsds.validate_addrs(api)?,
+        })
+    }
+}
 
 #[cw_serde]
 #[derive(Default)]
@@ -364,10 +389,36 @@ pub struct RacoonBetAddresses {
 }
 
 #[cw_serde]
+pub struct RacoonBetAddrs {
+    pub game: Addr,
+    pub juno_usdc_wynd_pair: Addr,
+}
+impl RacoonBetAddresses {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<RacoonBetAddrs, OutpostError> {
+        Ok(RacoonBetAddrs {
+            game: api.addr_validate(&self.game)?,
+            juno_usdc_wynd_pair: api.addr_validate(&self.juno_usdc_wynd_pair)?,
+        })
+    }
+}
+
+#[cw_serde]
 #[derive(Default)]
 pub struct SparkIbcAddresses {
     // juno1a6rna5tcl6p97rze6hnd5ug35kadqhudvr5f4mtr6s0yd5mruhss8gzrdy
     pub fund: String,
+}
+
+#[cw_serde]
+pub struct SparkIbcAddrs {
+    pub fund: Addr,
+}
+impl SparkIbcAddresses {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<SparkIbcAddrs, OutpostError> {
+        Ok(SparkIbcAddrs {
+            fund: api.addr_validate(&self.fund)?,
+        })
+    }
 }
 
 #[cw_serde]
@@ -383,6 +434,26 @@ pub struct JunoLsdAddresses {
     pub b_juno: String,
     //
     pub amp_juno: String,
+}
+
+#[cw_serde]
+pub struct JunoLsdAddrs {
+    pub bone_juno: Addr,
+    pub wy_juno: Addr,
+    pub se_juno: Addr,
+    pub b_juno: Addr,
+    pub amp_juno: Addr,
+}
+impl JunoLsdAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<JunoLsdAddrs, OutpostError> {
+        Ok(JunoLsdAddrs {
+            bone_juno: api.addr_validate(&self.bone_juno)?,
+            wy_juno: api.addr_validate(&self.wy_juno)?,
+            se_juno: api.addr_validate(&self.se_juno)?,
+            b_juno: api.addr_validate(&self.b_juno)?,
+            amp_juno: api.addr_validate(&self.amp_juno)?,
+        })
+    }
 }
 
 #[cw_serde]
@@ -407,6 +478,30 @@ pub struct WhiteWhaleSatelliteAddresses {
     /// The contract address for claiming the satellite market rewards
     // juno184ghwgprva7dlr2hwhzgvt6mem6zx78fygk0cpw7klssmzyf67tqdtwt3h
     pub rewards: String,
+}
+
+#[cw_serde]
+pub struct WhiteWhaleSatelliteAddrs {
+    pub amp_whale: String,
+    pub bone_whale: String,
+    pub juno_amp_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub juno_bone_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub terraswap_multihop_router: Addr,
+    pub market: Addr,
+    pub rewards: Addr,
+}
+impl WhiteWhaleSatelliteAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhiteWhaleSatelliteAddrs, OutpostError> {
+        Ok(WhiteWhaleSatelliteAddrs {
+            amp_whale: self.amp_whale.clone(),
+            bone_whale: self.bone_whale.clone(),
+            juno_amp_whale_path: self.juno_amp_whale_path.clone(),
+            juno_bone_whale_path: self.juno_bone_whale_path.clone(),
+            terraswap_multihop_router: api.addr_validate(&self.terraswap_multihop_router)?,
+            market: api.addr_validate(&self.market)?,
+            rewards: api.addr_validate(&self.rewards)?,
+        })
+    }
 }
 
 #[cw_serde]
@@ -445,6 +540,28 @@ pub struct DaoAddresses {
 }
 
 #[cw_serde]
+pub struct DaoAddrs {
+    pub neta: DaoAddr,
+    pub signal: DaoAddr,
+    pub posthuman: DaoAddr,
+    pub kleomedes: DaoAddr,
+    pub cannalabs: DaoAddr,
+    pub muse: DaoAddr,
+}
+impl DaoAddresses {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddrs, OutpostError> {
+        Ok(DaoAddrs {
+            neta: DaoAddress::validate_addrs(&self.neta, api)?,
+            signal: DaoAddress::validate_addrs(&self.signal, api)?,
+            posthuman: DaoAddress::validate_addrs(&self.posthuman, api)?,
+            kleomedes: DaoAddress::validate_addrs(&self.kleomedes, api)?,
+            cannalabs: DaoAddress::validate_addrs(&self.cannalabs, api)?,
+            muse: DaoAddress::validate_addrs(&self.muse, api)?,
+        })
+    }
+}
+
+#[cw_serde]
 #[derive(Default)]
 pub struct WyndAddresses {
     // juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9
@@ -453,6 +570,23 @@ pub struct WyndAddresses {
     pub multihop: String,
     // juno1a7lmc8e04hcs4y2275cultvg83u636ult4pmnwktr6l9nhrh2e8qzxfdwf
     pub juno_wynd_pair: String,
+}
+
+#[cw_serde]
+pub struct WyndAddrs {
+    pub cw20: Addr,
+    pub multihop: Addr,
+    pub juno_wynd_pair: Addr,
+}
+
+impl WyndAddresses {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<WyndAddrs, OutpostError> {
+        Ok(WyndAddrs {
+            cw20: api.addr_validate(&self.cw20)?,
+            multihop: api.addr_validate(&self.multihop)?,
+            juno_wynd_pair: api.addr_validate(&self.juno_wynd_pair)?,
+        })
+    }
 }
 
 #[cw_serde]
@@ -465,6 +599,32 @@ pub struct DaoAddress {
 }
 
 #[cw_serde]
+pub struct DaoAddr {
+    pub cw20: Addr,
+    pub staking: Addr,
+    pub juno_wyndex_pair: Option<Addr>,
+    pub wynd_wyndex_pair: Option<Addr>,
+}
+impl DaoAddress {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddr, OutpostError> {
+        Ok(DaoAddr {
+            cw20: api.addr_validate(&self.cw20)?,
+            staking: api.addr_validate(&self.staking)?,
+            juno_wyndex_pair: self
+                .juno_wyndex_pair
+                .clone()
+                .map(|addr| api.addr_validate(&addr))
+                .transpose()?,
+            wynd_wyndex_pair: self
+                .wynd_wyndex_pair
+                .clone()
+                .map(|addr| api.addr_validate(&addr))
+                .transpose()?,
+        })
+    }
+}
+
+#[cw_serde]
 #[derive(Default)]
 pub struct GelottoAddresses {
     pub pick3_contract: String,
@@ -472,12 +632,29 @@ pub struct GelottoAddresses {
     pub pick5_contract: String,
 }
 impl GelottoLottery {
-    pub fn get_lottery_address(&self, addresses: &GelottoAddresses) -> String {
+    pub fn get_lottery_address(&self, addrs: &GelottoAddrs) -> Addr {
         match self {
-            GelottoLottery::Pick3 => addresses.pick3_contract.clone(),
-            GelottoLottery::Pick4 => addresses.pick4_contract.clone(),
-            GelottoLottery::Pick5 => addresses.pick5_contract.clone(),
+            GelottoLottery::Pick3 => addrs.pick3_contract.clone(),
+            GelottoLottery::Pick4 => addrs.pick4_contract.clone(),
+            GelottoLottery::Pick5 => addrs.pick5_contract.clone(),
         }
+    }
+}
+
+#[cw_serde]
+pub struct GelottoAddrs {
+    pub pick3_contract: Addr,
+    pub pick4_contract: Addr,
+    pub pick5_contract: Addr,
+}
+
+impl GelottoAddresses {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<GelottoAddrs, OutpostError> {
+        Ok(GelottoAddrs {
+            pick3_contract: api.addr_validate(&self.pick3_contract)?,
+            pick4_contract: api.addr_validate(&self.pick4_contract)?,
+            pick5_contract: api.addr_validate(&self.pick5_contract)?,
+        })
     }
 }
 

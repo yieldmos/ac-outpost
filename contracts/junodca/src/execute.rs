@@ -2,12 +2,12 @@ use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper, ReplyOn, Response,
-    SubMsg, Uint128,
+    to_binary, to_json_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper,
+    ReplyOn, Response, SubMsg, Uint128,
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
-    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins},
+    helpers::{calc_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, TaxSplitResult},
     juno_comp_prefs::{
         GelottoExecute, JunoCompPrefs, JunoDestinationProject, JunoLsd, RacoonBetExec, RacoonBetGame, SparkIbcFund,
         WyndLPBondingPeriod, WyndStakingBondingPeriod,
@@ -15,8 +15,6 @@ use outpost_utils::{
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
 use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
-
-use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
 use wynd_helpers::{
     wynd_lp::{wynd_join_pool_msgs, WyndAssetLPMessages},
@@ -30,9 +28,9 @@ use wyndex::{
 };
 
 use crate::{
-    msg::ContractAddresses,
+    msg::{ContractAddrs, DcaPrefs},
     queries::query_juno_wynd_swap,
-    state::{ADMIN, AUTHORIZED_ADDRS},
+    state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS},
     ContractError,
 };
 
@@ -40,66 +38,72 @@ use crate::{
 pub struct DestProjectMsgs {
     pub msgs: Vec<CosmosProtoMsg>,
     pub sub_msgs: Vec<(u64, Vec<CosmosProtoMsg>, ReplyOn)>,
-    pub attributes: Vec<Attribute>,
+    pub events: Vec<Event>,
 }
 
 pub fn compound(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    project_addresses: ContractAddresses,
-    delegator_address: String,
-    comp_prefs: JunoCompPrefs,
+    project_addresses: ContractAddrs,
+    user_address: String,
+    comp_prefs: &DcaPrefs,
     tax_fee: Option<Decimal>,
 ) -> Result<Response, ContractError> {
+    let DcaPrefs {
+        compound_token,
+        compound_preferences,
+    } = comp_prefs;
+
     // validate that the preference quantites sum to 1
-    let _ = !prefs_sum_to_one(&comp_prefs)?;
+    let _ = !prefs_sum_to_one(compound_preferences)?;
 
     // check that the delegator address is valid
-    let delegator: Addr = deps.api.addr_validate(&delegator_address)?;
+    let user_addr: Addr = deps.api.addr_validate(&user_address)?;
 
     // validate that the user is authorized to compound
-    is_authorized_compounder(deps.as_ref(), &info.sender, &delegator, ADMIN, AUTHORIZED_ADDRS)?;
+    is_authorized_compounder(deps.as_ref(), &info.sender, &user_addr, ADMIN, AUTHORIZED_ADDRS)?;
 
-    // TODO: this value should likely just be stored in state on instantiation
-    // for the sake of gas savings
-    // get the denom of the staking token. this should be "ujuno"
-    let staking_denom = deps.querier.query_bonded_denom()?;
+    let project_addrs = PROJECT_ADDRS.load(deps.storage)?;
 
-    // prepare the withdraw rewards message and simulation from the authzpp grant
-    let (
-        SimulateExecuteResponse {
-            // the rewards that the delegator is due to recieve
-            delegator_rewards,
-            ..
-        },
-        // withdraw delegator rewards wasm message
-        withdraw_msg,
-    ) = WithdrawRewardsTaxClient::new(&deps.api.addr_validate(&project_addresses.authzpp.withdraw_tax)?, &delegator)
-        .simulate_with_contract_execute(deps.querier, tax_fee)?;
-
-    let total_rewards = sum_coins(&staking_denom, &delegator_rewards);
+    // calculate the total amount of rewards that will be compounded
+    let TaxSplitResult {
+        remaining_rewards,
+        tax_amount,
+        tax_store_msg,
+    } = calc_tax_split(
+        compound_token,
+        tax_fee.unwrap_or(Decimal::new(1_000_000_000_000_000u128.into())),
+        user_address,
+        project_addrs.take_rate_addr.to_string(),
+    );
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
-        &project_addresses,
+        &project_addrs,
         &env.block,
-        staking_denom,
-        &delegator,
-        total_rewards.clone(),
-        comp_prefs,
+        &user_addr,
+        comp_prefs.compound_token.clone(),
+        compound_preferences.clone(),
         deps.querier,
     )?;
 
-    let combined_msgs = all_msgs.iter().fold(DestProjectMsgs::default(), |mut acc, msg| {
-        acc.msgs.append(&mut msg.msgs.clone());
-        acc.sub_msgs.append(&mut msg.sub_msgs.clone());
-        acc.attributes.append(&mut msg.attributes.clone());
-        acc
-    });
+    let combined_msgs = all_msgs.iter().fold(
+        DestProjectMsgs {
+            msgs: vec![tax_store_msg],
+            sub_msgs: vec![],
+            events: vec![Event::new("dca_tax").add_attribute("amount", tax_amount.to_string())],
+        },
+        |mut acc, msg| {
+            acc.msgs.append(&mut msg.msgs.clone());
+            acc.sub_msgs.append(&mut msg.sub_msgs.clone());
+            acc.events.append(&mut msg.events.clone());
+            acc
+        },
+    );
 
     let amount_automated_event =
-        Event::new("amount_automated").add_attributes(vec![total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
+        Event::new("amount_automated").add_attributes([remaining_rewards].iter().enumerate().map(|(i, coin)| Attribute {
             key: format!("amount_{}", i),
             value: coin.to_string(),
         }));
@@ -109,8 +113,6 @@ pub fn compound(
 
     let resp = Response::default()
         .add_attribute("action", "outpost compound")
-        .add_message(withdraw_msg)
-        .add_attribute("subaction", "withdraw rewards")
         .add_event(amount_automated_event)
         // .add_attribute("amount_automated", to_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
@@ -136,7 +138,7 @@ pub fn compound(
                 })
                 .collect::<Vec<SubMsg>>(),
         )
-        .add_attributes(combined_msgs.attributes);
+        .add_events(combined_msgs.events);
 
     Ok(resp)
 }
@@ -144,14 +146,16 @@ pub fn compound(
 /// Converts the user's compound preferences into a list of
 /// CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
-    project_addresses: &ContractAddresses,
+    project_addrs: &ContractAddrs,
     block: &BlockInfo,
-    staking_denom: String,
+    // staking_denom: String,
     target_address: &Addr,
     total_rewards: cosmwasm_std::Coin,
     comp_prefs: JunoCompPrefs,
     querier: QuerierWrapper,
 ) -> Result<Vec<DestProjectMsgs>, ContractError> {
+    let dca_denom = total_rewards.denom.clone();
+
     // calculates the amount of ujuno that will be used for each target project accurately.
     // these amounts are paired with the associated destination action
     // for example (1000, JunoDestinationProject::JunoStaking { validator_address: "juno1..." })
@@ -165,11 +169,11 @@ pub fn prefs_to_msgs(
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<DestProjectMsgs, ContractError> {
                 let compounding_asset = Asset {
-                    info: AssetInfo::Native(staking_denom.clone()),
+                    info: AssetInfo::Native(dca_denom.clone()),
                     amount: comp_token_amount,
                 };
                 let compounding_coin = Coin {
-                    denom: staking_denom.clone(),
+                    denom: dca_denom.clone(),
                     amount: comp_token_amount.into(),
                 };
                 match destination {
@@ -183,19 +187,12 @@ pub fn prefs_to_msgs(
                             }),
                             delegator_address: target_address.to_string(),
                         })],
-                        attributes: vec![
-                            Attribute {
-                                key: "subaction".to_string(),
-                                value: "delegate juno".to_string(),
-                            },
-                            Attribute {
-                                key: "validator".to_string(),
-                                value: validator_address,
-                            },
-                        ],
+                        events: vec![Event::new("delegate")
+                            .add_attribute("validator", validator_address)
+                            .add_attribute("amount", comp_token_amount.to_string())],
                     }),
                     JunoDestinationProject::DaoStaking(dao) => {
-                        let dao_addresses = dao.get_daos_addresses(&project_addresses.destination_projects.daos);
+                        let dao_addresses = dao.get_daos_addresses(&project_addrs.destination_projects.daos);
 
                         let (swap_msgs, expected_dao_token_amount) = if let Some(pair_addr) = dao_addresses.juno_wyndex_pair
                         {
@@ -203,9 +200,9 @@ pub fn prefs_to_msgs(
                             let (swap_msg, swap_sim) = simulate_and_swap_wynd_pair(
                                 &querier,
                                 target_address,
-                                &pair_addr,
+                                pair_addr.as_ref(),
                                 compounding_asset,
-                                AssetInfo::Token(dao_addresses.cw20.clone()),
+                                AssetInfo::Token(dao_addresses.cw20.to_string()),
                             )?;
 
                             (vec![swap_msg], swap_sim.return_amount)
@@ -215,9 +212,9 @@ pub fn prefs_to_msgs(
                                 &querier,
                                 target_address,
                                 comp_token_amount,
-                                AssetInfo::Native(staking_denom.clone()),
-                                AssetInfo::Token(dao_addresses.cw20.clone()),
-                                project_addresses.destination_projects.wynd.multihop.clone(),
+                                AssetInfo::Native(dca_denom.clone()),
+                                AssetInfo::Token(dao_addresses.cw20.to_string()),
+                                project_addrs.destination_projects.wynd.multihop.to_string(),
                             )?
                         };
 
@@ -226,9 +223,9 @@ pub fn prefs_to_msgs(
                             dao_addresses.cw20.clone(),
                             &target_address,
                             &cw20::Cw20ExecuteMsg::Send {
-                                contract: dao_addresses.staking,
+                                contract: dao_addresses.staking.to_string(),
                                 amount: expected_dao_token_amount,
-                                msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
+                                msg: to_json_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
                             },
                             None,
                         )?);
@@ -236,26 +233,15 @@ pub fn prefs_to_msgs(
                         Ok(DestProjectMsgs {
                             msgs: [swap_msgs, vec![dao_stake_msg]].concat(),
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "dao stake".to_string(),
-                                },
-                                Attribute {
-                                    key: "type".to_string(),
-                                    value: dao.to_string(),
-                                },
-                                Attribute {
-                                    key: "amount".to_string(),
-                                    value: expected_dao_token_amount.into(),
-                                },
-                            ],
+                            events: vec![Event::new("dao_stake")
+                                .add_attribute("dao", dao.to_string())
+                                .add_attribute("amount", expected_dao_token_amount.to_string())],
                         })
                     }
 
                     JunoDestinationProject::WyndStaking { bonding_period } => {
-                        let cw20 = project_addresses.destination_projects.wynd.cw20.clone();
-                        let juno_wynd_pair = project_addresses.destination_projects.wynd.juno_wynd_pair.clone();
+                        let cw20 = project_addrs.destination_projects.wynd.cw20.to_string();
+                        let juno_wynd_pair = project_addrs.destination_projects.wynd.juno_wynd_pair.to_string();
 
                         Ok(DestProjectMsgs {
                             msgs: wynd_staking_msgs(
@@ -263,34 +249,27 @@ pub fn prefs_to_msgs(
                                 &juno_wynd_pair,
                                 target_address.clone(),
                                 comp_token_amount,
-                                staking_denom.clone(),
+                                dca_denom.clone(),
                                 bonding_period.clone(),
                                 query_juno_wynd_swap(&juno_wynd_pair, &querier, comp_token_amount)?,
                             )?,
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "wynd staking".to_string(),
-                                },
-                                Attribute {
-                                    key: "bonding_period".to_string(),
-                                    value: u64::from(bonding_period).to_string(),
-                                },
-                            ],
+                            events: vec![Event::new("wynd_stake")
+                                .add_attribute("bonding_period", u64::from(bonding_period).to_string())
+                                .add_attribute("amount", comp_token_amount.to_string())],
                         })
                     }
                     JunoDestinationProject::TokenSwap { target_denom } => Ok(DestProjectMsgs {
                         msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
                             target_address,
                             comp_token_amount,
-                            AssetInfo::Native(staking_denom.clone()),
+                            AssetInfo::Native(dca_denom.clone()),
                             target_denom,
-                            project_addresses.destination_projects.wynd.multihop.clone(),
+                            project_addrs.destination_projects.wynd.multihop.to_string(),
                         )
                         .map_err(ContractError::Std)?,
                         sub_msgs: vec![],
-                        attributes: vec![],
+                        events: vec![],
                     }),
                     JunoDestinationProject::WyndLp {
                         contract_address,
@@ -302,12 +281,12 @@ pub fn prefs_to_msgs(
 
                         Ok(DestProjectMsgs {
                             msgs: join_wynd_pool_msgs(
-                                project_addresses.destination_projects.wynd.multihop.to_string(),
+                                project_addrs.destination_projects.wynd.multihop.to_string(),
                                 &block.height,
                                 &querier,
                                 target_address.clone(),
                                 comp_token_amount,
-                                staking_denom.clone(),
+                                dca_denom.clone(),
                                 contract_address,
                                 bonding_period.clone(),
                                 pool_info.clone(),
@@ -320,16 +299,9 @@ pub fn prefs_to_msgs(
                                 )?,
                             )?,
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "wynd lp".to_string(),
-                                },
-                                Attribute {
-                                    key: "bonding_period".to_string(),
-                                    value: u64::from(bonding_period).to_string(),
-                                },
-                            ],
+                            events: vec![Event::new("wynd_lp")
+                                .add_attribute("bonding_period", u64::from(bonding_period).to_string())
+                                .add_attribute("amount", comp_token_amount.to_string())],
                         })
                     }
                     JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => {
@@ -339,43 +311,32 @@ pub fn prefs_to_msgs(
                             // if we dont have enough to buy a ticket, then we dont send any msgs
                             msgs: if tickets_to_buy.gt(&Uint128::zero()) {
                                 vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                    lottery.get_lottery_address(&project_addresses.destination_projects.gelotto.clone()),
+                                    lottery.get_lottery_address(&project_addrs.destination_projects.gelotto.clone()),
                                     target_address,
                                     &GelottoExecute::SenderBuySeed {
-                                        referrer: Some(Addr::unchecked(project_addresses.take_rate_addr.clone())),
+                                        referrer: Some(Addr::unchecked(project_addrs.take_rate_addr.clone())),
                                         count: u128::from(tickets_to_buy).clamp(0u128, u16::MAX as u128) as u16,
                                         seed: lucky_phrase,
                                     },
                                     Some(vec![Coin {
                                         amount: (tickets_to_buy * Uint128::from(25_000u128)).into(),
-                                        denom: staking_denom.clone(),
+                                        denom: dca_denom.clone(),
                                     }]),
                                 )?)]
                             } else {
                                 vec![]
                             },
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "gelotto lottery".to_string(),
-                                },
-                                Attribute {
-                                    key: "lottery".to_string(),
-                                    value: lottery.to_string(),
-                                },
-                                Attribute {
-                                    key: "tickets".to_string(),
-                                    value: tickets_to_buy.to_string(),
-                                },
-                            ],
+                            events: vec![Event::new("gelotto_lottery")
+                                .add_attribute("lottery", lottery.to_string())
+                                .add_attribute("tickets", tickets_to_buy)],
                         })
                     }
                     JunoDestinationProject::RacoonBet { game } => {
                         // can't use racoon bet unless the value of the play is at least $1 usdc
                         if simulate_wynd_pool_swap(
                             &querier,
-                            &project_addresses.destination_projects.racoon_bet.juno_usdc_wynd_pair.clone(),
+                            project_addrs.destination_projects.racoon_bet.juno_usdc_wynd_pair.as_ref(),
                             &compounding_asset,
                             "usdc".to_string(),
                         )?
@@ -385,16 +346,9 @@ pub fn prefs_to_msgs(
                             return Ok(DestProjectMsgs {
                                 msgs: vec![],
                                 sub_msgs: vec![],
-                                attributes: vec![
-                                    Attribute {
-                                        key: "subaction".to_string(),
-                                        value: "racoon bet".to_string(),
-                                    },
-                                    Attribute {
-                                        key: "type".to_string(),
-                                        value: "skipped".to_string(),
-                                    },
-                                ],
+                                events: vec![Event::new("racoon_bet")
+                                    .add_attribute("game", game.to_string())
+                                    .add_attribute("type", "skipped")],
                             });
                         }
 
@@ -407,84 +361,66 @@ pub fn prefs_to_msgs(
                                     empowered: Uint128::zero(),
                                     free_spins: Uint128::zero(),
                                 };
-                                let attrs = vec![
-                                    Attribute {
-                                        key: "subaction".to_string(),
-                                        value: "racoon bet".to_string(),
-                                    },
-                                    Attribute {
-                                        key: "game".to_string(),
-                                        value: game.to_string(),
-                                    },
-                                ];
+                                let attrs = vec![Attribute {
+                                    key: "game".to_string(),
+                                    value: game.to_string(),
+                                }];
                                 (msgs, attrs)
                             }
                             RacoonBetGame::HundredSidedDice { selected_value } => (
                                 RacoonBetGame::HundredSidedDice { selected_value },
-                                vec![
-                                    Attribute {
-                                        key: "subaction".to_string(),
-                                        value: "racoon bet".to_string(),
-                                    },
-                                    Attribute {
-                                        key: "game".to_string(),
-                                        value: game.to_string(),
-                                    },
-                                ],
+                                vec![Attribute {
+                                    key: "game".to_string(),
+                                    value: game.to_string(),
+                                }],
                             ),
                         };
 
                         Ok(DestProjectMsgs {
                             msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                project_addresses.destination_projects.racoon_bet.game.clone(),
+                                project_addrs.destination_projects.racoon_bet.game.clone(),
                                 target_address,
                                 &RacoonBetExec::PlaceBet { game },
                                 Some(vec![compounding_coin]),
                             )?)],
                             sub_msgs: vec![],
-                            attributes,
+                            events: vec![Event::new("racoon_bet").add_attributes(attributes)],
                         })
                     }
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
                         let swap_op = match asset.clone() {
                             AssetInfo::Native(denom)
-                                if denom.eq(&project_addresses.destination_projects.white_whale.amp_whale) =>
+                                if denom.eq(&project_addrs.destination_projects.white_whale.amp_whale) =>
                             {
-                                Some(project_addresses.destination_projects.white_whale.juno_amp_whale_path.clone())
+                                Some(project_addrs.destination_projects.white_whale.juno_amp_whale_path.clone())
                             }
                             AssetInfo::Native(denom)
-                                if denom.eq(&project_addresses.destination_projects.white_whale.amp_whale) =>
+                                if denom.eq(&project_addrs.destination_projects.white_whale.amp_whale) =>
                             {
-                                Some(
-                                    project_addresses
-                                        .destination_projects
-                                        .white_whale
-                                        .juno_bone_whale_path
-                                        .clone(),
-                                )
+                                Some(project_addrs.destination_projects.white_whale.juno_bone_whale_path.clone())
                             }
                             // if the asset isn't ampWHALE or bWhale then we can't do anything
                             _ => None,
                         };
 
-                        if let (Some(swap_op), AssetInfo::Native(denom)) = (swap_op, asset) {
+                        if let (Some(swap_op), AssetInfo::Native(denom)) = (swap_op, asset.clone()) {
                             let (swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
                                 &querier,
                                 target_address,
                                 comp_token_amount,
                                 swap_op,
-                                project_addresses
+                                project_addrs
                                     .destination_projects
                                     .white_whale
                                     .terraswap_multihop_router
-                                    .clone(),
+                                    .to_string(),
                             )?;
 
                             return Ok(DestProjectMsgs {
                                 msgs: [
                                     swap_msgs,
                                     vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                        project_addresses.destination_projects.white_whale.market.clone(),
+                                        project_addrs.destination_projects.white_whale.market.clone(),
                                         target_address,
                                         &white_whale::whale_lair::Bond {
                                             asset: white_whale::pool_network::asset::Asset {
@@ -504,40 +440,26 @@ pub fn prefs_to_msgs(
                                 ]
                                 .concat(),
                                 sub_msgs: vec![],
-                                attributes: vec![
-                                    Attribute {
-                                        key: "subaction".to_string(),
-                                        value: "white whale satellite".to_string(),
-                                    },
-                                    Attribute {
-                                        key: "bonding_asset".to_string(),
-                                        value: denom,
-                                    },
-                                ],
+                                events: vec![Event::new("white_whale_satellite")
+                                    .add_attribute("asset", denom)
+                                    .add_attribute("amount", sim.to_string())],
                             });
                         }
                         Ok(DestProjectMsgs {
                             msgs: vec![],
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "white whale satellite".to_string(),
-                                },
-                                Attribute {
-                                    key: "type".to_string(),
-                                    value: "skipped".to_string(),
-                                },
-                            ],
+                            events: vec![Event::new("white_whale_satellite")
+                                .add_attribute("asset", asset.to_string())
+                                .add_attribute("type", "skipped")],
                         })
                     }
                     JunoDestinationProject::BalanceDao {} => Ok(DestProjectMsgs {
                         msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                            project_addresses.destination_projects.balance_dao.clone(),
+                            project_addrs.destination_projects.balance_dao.clone(),
                             target_address,
                             &balance_token_swap::msg::ExecuteMsg::Swap {},
                             Some(vec![Coin {
-                                denom: staking_denom.clone(),
+                                denom: dca_denom.clone(),
                                 amount: comp_token_amount.into(),
                             }]),
                         )?)],
@@ -557,26 +479,17 @@ pub fn prefs_to_msgs(
                         //     ReplyOn::Error,
                         // )
                         ],
-                        attributes: vec![
-                            Attribute {
-                                key: "subaction".to_string(),
-                                value: "balance dao".to_string(),
-                            },
-                            Attribute {
-                                key: "type".to_string(),
-                                value: "mint balance".to_string(),
-                            },
-                        ],
+                        events: vec![Event::new("balance_dao_swap").add_attribute("amount", comp_token_amount.to_string())],
                     }),
                     JunoDestinationProject::MintLsd { lsd_type } => {
                         let funds = Some(vec![Coin {
-                            denom: staking_denom.clone(),
+                            denom: dca_denom.clone(),
                             amount: comp_token_amount.into(),
                         }]);
 
                         let mint_msg = match lsd_type {
                             JunoLsd::StakeEasyB => create_exec_contract_msg(
-                                project_addresses.destination_projects.juno_lsds.b_juno.clone(),
+                                project_addrs.destination_projects.juno_lsds.b_juno.clone(),
                                 target_address,
                                 &bjuno_token::msg::ExecuteMsg::Mint {
                                     recipient: target_address.to_string(),
@@ -585,7 +498,7 @@ pub fn prefs_to_msgs(
                                 funds,
                             )?,
                             JunoLsd::StakeEasySe => create_exec_contract_msg(
-                                project_addresses.destination_projects.juno_lsds.se_juno.clone(),
+                                project_addrs.destination_projects.juno_lsds.se_juno.clone(),
                                 target_address,
                                 &sejuno_token::msg::ExecuteMsg::Mint {
                                     recipient: target_address.to_string(),
@@ -597,14 +510,14 @@ pub fn prefs_to_msgs(
                             // not the type from the back bone contract but close enough
                             {
                                 create_exec_contract_msg(
-                                    project_addresses.destination_projects.juno_lsds.bone_juno.clone(),
+                                    project_addrs.destination_projects.juno_lsds.bone_juno.clone(),
                                     target_address,
                                     &bond_router::msg::ExecuteMsg::Bond {},
                                     funds,
                                 )?
                             }
                             JunoLsd::Wynd => create_exec_contract_msg(
-                                project_addresses.destination_projects.juno_lsds.wy_juno.clone(),
+                                project_addrs.destination_projects.juno_lsds.wy_juno.clone(),
                                 target_address,
                                 &bond_router::msg::ExecuteMsg::Bond {},
                                 funds,
@@ -613,7 +526,7 @@ pub fn prefs_to_msgs(
                             // not the type from the eris contract but close enough
                             {
                                 create_exec_contract_msg(
-                                    project_addresses.destination_projects.juno_lsds.amp_juno.clone(),
+                                    project_addrs.destination_projects.juno_lsds.amp_juno.clone(),
                                     target_address,
                                     &bond_router::msg::ExecuteMsg::Bond {},
                                     funds,
@@ -624,29 +537,22 @@ pub fn prefs_to_msgs(
                         Ok(DestProjectMsgs {
                             msgs: vec![CosmosProtoMsg::ExecuteContract(mint_msg)],
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "mint lsd".to_string(),
-                                },
-                                Attribute {
-                                    key: "type".to_string(),
-                                    value: lsd_type.to_string(),
-                                },
-                            ],
+                            events: vec![Event::new("mint_lsd")
+                                .add_attribute("type", lsd_type.to_string())
+                                .add_attribute("amount", comp_token_amount.to_string())],
                         })
                     }
                     JunoDestinationProject::SparkIbcCampaign { fund } => {
-                        let spark_addr = project_addresses.destination_projects.spark_ibc.fund.clone();
+                        let spark_addr = project_addrs.destination_projects.spark_ibc.fund.clone();
 
-                        if let AssetInfo::Native(usdc_denom) = project_addresses.usdc.clone() {
+                        if let AssetInfo::Native(usdc_denom) = project_addrs.usdc.clone() {
                             let (mut swaps, est_donation) = create_wyndex_swap_msg_with_simulation(
                                 &querier,
                                 target_address,
                                 comp_token_amount,
                                 compounding_asset.info,
-                                project_addresses.usdc.clone(),
-                                project_addresses.destination_projects.wynd.multihop.clone(),
+                                project_addrs.usdc.clone(),
+                                project_addrs.destination_projects.wynd.multihop.to_string(),
                             )?;
 
                             if est_donation.lt(&Uint128::from(1_000_000u128)) {
@@ -666,16 +572,7 @@ pub fn prefs_to_msgs(
                             Ok(DestProjectMsgs {
                                 msgs: swaps,
                                 sub_msgs: vec![],
-                                attributes: vec![
-                                    Attribute {
-                                        key: "subaction".to_string(),
-                                        value: "spark ibc".to_string(),
-                                    },
-                                    Attribute {
-                                        key: "amount".to_string(),
-                                        value: est_donation.to_string(),
-                                    },
-                                ],
+                                events: vec![Event::new("spark_ibc_fund").add_attribute("amount", est_donation.to_string())],
                             })
                         } else {
                             Err(ContractError::NotImplemented {})
@@ -689,9 +586,9 @@ pub fn prefs_to_msgs(
                             &querier,
                             target_address,
                             comp_token_amount,
-                            AssetInfo::Native(staking_denom.clone()),
+                            AssetInfo::Native(dca_denom.clone()),
                             target_asset.clone(),
-                            project_addresses.destination_projects.wynd.multihop.clone(),
+                            project_addrs.destination_projects.wynd.multihop.to_string(),
                         )
                         .map_err(ContractError::Std)?;
 
@@ -719,24 +616,10 @@ pub fn prefs_to_msgs(
                         Ok(DestProjectMsgs {
                             msgs: swap_msgs,
                             sub_msgs: vec![],
-                            attributes: vec![
-                                Attribute {
-                                    key: "subaction".to_string(),
-                                    value: "send tokens".to_string(),
-                                },
-                                Attribute {
-                                    key: "to_address".to_string(),
-                                    value: to_address,
-                                },
-                                Attribute {
-                                    key: "amount".to_string(),
-                                    value: sim.to_string(),
-                                },
-                                Attribute {
-                                    key: "denom".to_string(),
-                                    value: target_asset.to_string(),
-                                },
-                            ],
+                            events: vec![Event::new("send_tokens")
+                                .add_attribute("to_address", to_address)
+                                .add_attribute("amount", sim.to_string())
+                                .add_attribute("denom", target_asset.to_string())],
                         })
                     }
                     JunoDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
