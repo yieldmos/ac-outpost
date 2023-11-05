@@ -1504,6 +1504,7 @@ dependencies = [
  "tokio",
  "white-whale",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
+ "ymos-junodca-outpost",
  "ymos-junostake-outpost",
 ]
 

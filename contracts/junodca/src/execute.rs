@@ -2,8 +2,8 @@ use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    to_binary, to_json_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper,
-    ReplyOn, Response, SubMsg, Uint128,
+    to_json_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper, ReplyOn,
+    Response, SubMsg, Uint128,
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
@@ -45,7 +45,7 @@ pub fn compound(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    project_addresses: ContractAddrs,
+    _project_addresses: ContractAddrs,
     user_address: String,
     comp_prefs: &DcaPrefs,
     tax_fee: Option<Decimal>,
@@ -114,7 +114,6 @@ pub fn compound(
     let resp = Response::default()
         .add_attribute("action", "outpost compound")
         .add_event(amount_automated_event)
-        // .add_attribute("amount_automated", to_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
         .add_submessages(
             combined_msgs
@@ -667,7 +666,7 @@ pub fn neta_staking_msgs(
         &cw20::Cw20ExecuteMsg::Send {
             contract: neta_cw20_addr.into(),
             amount: expected_neta,
-            msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
+            msg: to_json_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
         },
         None,
     )?);
@@ -704,7 +703,7 @@ pub fn wynd_staking_msgs(
         &target_address,
         &cw20_vesting::ExecuteMsg::Delegate {
             amount: expected_wynd,
-            msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+            msg: to_json_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
                 unbonding_period: bonding_period.into(),
             })?,
         },
@@ -762,7 +761,7 @@ fn join_wynd_pool_msgs(
             &cw20::Cw20ExecuteMsg::Send {
                 contract: pool_info.staking_addr.to_string(),
                 amount: existing_lp_tokens.balance,
-                msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+                msg: to_json_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
                     unbonding_period: bonding_period.into(),
                 })?,
             },

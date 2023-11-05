@@ -1,11 +1,9 @@
 use cosmwasm_std::{Addr, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use outpost_utils::juno_comp_prefs::JunoCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg, JunodcaCompoundPrefs},
-    ContractError,
+    msg::InstantiateMsg,
 };
 
 pub struct OutpostContract(Addr);

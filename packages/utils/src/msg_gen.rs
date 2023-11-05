@@ -8,7 +8,7 @@ use cosmos_sdk_proto::prost::EncodeError;
 use cosmos_sdk_proto::traits::{Message, MessageExt};
 use cosmos_sdk_proto::Any;
 
-use cosmwasm_std::{to_binary, Addr, Binary, CosmosMsg, StdError};
+use cosmwasm_std::{to_json_binary, Addr, Binary, CosmosMsg, StdError};
 
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountOut,
@@ -65,7 +65,7 @@ where
     Ok(MsgExecuteContract {
         contract: contract_addr.into(),
         sender: sender.to_string(),
-        msg: to_binary(&msg)?.to_vec(),
+        msg: to_json_binary(&msg)?.to_vec(),
         funds: funds.unwrap_or_default(),
     })
 }

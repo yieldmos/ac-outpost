@@ -1,11 +1,11 @@
-use cosmwasm_std::{coin, Addr, Decimal, Deps, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{coin, Addr, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
     AuthorizationType, ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit, ContractExecutionSetting,
     GrantRequirement, RevokeRequirement, StakeAuthorizationPolicy, StakeAuthorizationType, StakeAuthorizationValidators,
 };
 
-use outpost_utils::juno_comp_prefs::{DaoAddress, JunoDestinationProject, JunoLsd, RacoonBetGame};
+use outpost_utils::juno_comp_prefs::{DaoAddr, DaoAddress, JunoDestinationProject, JunoLsd, RacoonBetGame};
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
 use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
@@ -74,7 +74,10 @@ pub fn query_juno_wynd_swap(
 impl Grantable for QueryMsg {
     type GrantSettings = CompPrefsWithAddresses;
 
-    fn query_grants(grant_structure: GrantStructure<Self::GrantSettings>) -> StdResult<Vec<GrantRequirement>> {
+    fn query_grants(
+        grant_structure: GrantStructure<Self::GrantSettings>,
+        current_timestamp: Timestamp,
+    ) -> StdResult<Vec<GrantRequirement>> {
         let GrantStructure {
             granter,
             expiration,
@@ -85,16 +88,19 @@ impl Grantable for QueryMsg {
             },
             ..
         } = grant_structure.clone();
-        let withdraw_tax_grants = withdraw_rewards_tax_grant::msg::QueryMsg::query_grants(GrantStructure {
-            granter,
-            grantee: outpost_contract,
-            expiration,
-            grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
-            grant_data: GrantSpecData {
-                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
-                max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
+        let withdraw_tax_grants = withdraw_rewards_tax_grant::msg::QueryMsg::query_grants(
+            GrantStructure {
+                granter,
+                grantee: outpost_contract,
+                expiration,
+                grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
+                grant_data: GrantSpecData {
+                    taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
+                    max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
+                },
             },
-        })?;
+            current_timestamp,
+        )?;
 
         Ok([withdraw_tax_grants, gen_comp_pref_grants(grant_structure)?].concat())
     }
@@ -163,7 +169,7 @@ pub fn gen_comp_pref_grants(
                 expiration,
             }],
             JunoDestinationProject::DaoStaking(dao) => {
-                let DaoAddress {
+                let DaoAddr {
                     juno_wyndex_pair, cw20, ..
                 } = dao.get_daos_addresses(&project_addresses.destination_projects.daos);
 

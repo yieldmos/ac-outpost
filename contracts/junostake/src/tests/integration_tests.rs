@@ -1,10 +1,6 @@
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
-use outpost_utils::juno_comp_prefs::{
-    DaoAddress, DaoAddresses, DestinationProjectAddresses, GelottoAddresses, RacoonBetAddresses, SparkIbcAddresses,
-    WhiteWhaleSatelliteAddresses, WyndAddresses,
-};
-use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
+use outpost_utils::juno_comp_prefs::DestinationProjectAddresses;
 
 use crate::{
     contract::{execute, instantiate, query},
@@ -40,6 +36,7 @@ fn instantiate_with_defaults() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
+                staking_denom: "ubtc".to_string(),
                 take_rate_addr: "".to_string(),
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses::default(),
@@ -119,6 +116,7 @@ fn validator_only_compounding() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
+                staking_denom: "ubtc".to_string(),
                 take_rate_addr: "".to_string(),
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses::default(),

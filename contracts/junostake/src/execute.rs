@@ -2,8 +2,8 @@ use std::iter;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin, staking::v1beta1::MsgDelegate};
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper, ReplyOn, Response,
-    SubMsg, Uint128,
+    to_json_binary, Addr, Attribute, BlockInfo, Decimal, DepsMut, Env, Event, MessageInfo, QuerierWrapper, ReplyOn,
+    Response, SubMsg, Uint128,
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
@@ -30,7 +30,7 @@ use wyndex::{
 };
 
 use crate::{
-    msg::ContractAddresses,
+    msg::ContractAddrs,
     queries::query_juno_wynd_swap,
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
@@ -47,7 +47,7 @@ pub fn compound(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    project_addresses: ContractAddresses,
+    project_addresses: ContractAddrs,
     delegator_address: String,
     comp_prefs: JunoCompPrefs,
     tax_fee: Option<Decimal>,
@@ -61,10 +61,8 @@ pub fn compound(
     // validate that the user is authorized to compound
     is_authorized_compounder(deps.as_ref(), &info.sender, &delegator, ADMIN, AUTHORIZED_ADDRS)?;
 
-    // TODO: this value should likely just be stored in state on instantiation
-    // for the sake of gas savings
     // get the denom of the staking token. this should be "ujuno"
-    let staking_denom = deps.querier.query_bonded_denom()?;
+    let staking_denom = project_addresses.staking_denom.clone();
 
     // prepare the withdraw rewards message and simulation from the authzpp grant
     let (
@@ -75,7 +73,7 @@ pub fn compound(
         },
         // withdraw delegator rewards wasm message
         withdraw_msg,
-    ) = WithdrawRewardsTaxClient::new(&deps.api.addr_validate(&project_addresses.authzpp.withdraw_tax)?, &delegator)
+    ) = WithdrawRewardsTaxClient::new(&project_addresses.authzpp.withdraw_tax, &delegator)
         .simulate_with_contract_execute(deps.querier, tax_fee)?;
 
     let total_rewards = sum_coins(&staking_denom, &delegator_rewards);
@@ -99,7 +97,7 @@ pub fn compound(
     });
 
     let amount_automated_event =
-        Event::new("amount_automated").add_attributes(vec![total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
+        Event::new("amount_automated").add_attributes([total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
             key: format!("amount_{}", i),
             value: coin.to_string(),
         }));
@@ -112,7 +110,7 @@ pub fn compound(
         .add_message(withdraw_msg)
         .add_attribute("subaction", "withdraw rewards")
         .add_event(amount_automated_event)
-        // .add_attribute("amount_automated", to_binary(&[total_rewards])?.to_string())
+        // .add_attribute("amount_automated", to_json_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
         .add_submessages(
             combined_msgs
@@ -144,7 +142,7 @@ pub fn compound(
 /// Converts the user's compound preferences into a list of
 /// CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
-    project_addresses: &ContractAddresses,
+    project_addresses: &ContractAddrs,
     block: &BlockInfo,
     staking_denom: String,
     target_address: &Addr,
@@ -203,9 +201,9 @@ pub fn prefs_to_msgs(
                             let (swap_msg, swap_sim) = simulate_and_swap_wynd_pair(
                                 &querier,
                                 target_address,
-                                &pair_addr,
+                                pair_addr.as_ref(),
                                 compounding_asset,
-                                AssetInfo::Token(dao_addresses.cw20.clone()),
+                                AssetInfo::Token(dao_addresses.cw20.to_string()),
                             )?;
 
                             (vec![swap_msg], swap_sim.return_amount)
@@ -216,8 +214,8 @@ pub fn prefs_to_msgs(
                                 target_address,
                                 comp_token_amount,
                                 AssetInfo::Native(staking_denom.clone()),
-                                AssetInfo::Token(dao_addresses.cw20.clone()),
-                                project_addresses.destination_projects.wynd.multihop.clone(),
+                                AssetInfo::Token(dao_addresses.cw20.to_string()),
+                                project_addresses.destination_projects.wynd.multihop.to_string(),
                             )?
                         };
 
@@ -226,9 +224,9 @@ pub fn prefs_to_msgs(
                             dao_addresses.cw20.clone(),
                             &target_address,
                             &cw20::Cw20ExecuteMsg::Send {
-                                contract: dao_addresses.staking,
+                                contract: dao_addresses.staking.to_string(),
                                 amount: expected_dao_token_amount,
-                                msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
+                                msg: to_json_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
                             },
                             None,
                         )?);
@@ -259,13 +257,13 @@ pub fn prefs_to_msgs(
 
                         Ok(DestProjectMsgs {
                             msgs: wynd_staking_msgs(
-                                &cw20,
-                                &juno_wynd_pair,
+                                cw20.as_ref(),
+                                juno_wynd_pair.as_ref(),
                                 target_address.clone(),
                                 comp_token_amount,
                                 staking_denom.clone(),
                                 bonding_period.clone(),
-                                query_juno_wynd_swap(&juno_wynd_pair, &querier, comp_token_amount)?,
+                                query_juno_wynd_swap(juno_wynd_pair.as_ref(), &querier, comp_token_amount)?,
                             )?,
                             sub_msgs: vec![],
                             attributes: vec![
@@ -286,7 +284,7 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             AssetInfo::Native(staking_denom.clone()),
                             target_denom,
-                            project_addresses.destination_projects.wynd.multihop.clone(),
+                            project_addresses.destination_projects.wynd.multihop.to_string(),
                         )
                         .map_err(ContractError::Std)?,
                         sub_msgs: vec![],
@@ -375,7 +373,7 @@ pub fn prefs_to_msgs(
                         // can't use racoon bet unless the value of the play is at least $1 usdc
                         if simulate_wynd_pool_swap(
                             &querier,
-                            &project_addresses.destination_projects.racoon_bet.juno_usdc_wynd_pair.clone(),
+                            project_addresses.destination_projects.racoon_bet.juno_usdc_wynd_pair.as_ref(),
                             &compounding_asset,
                             "usdc".to_string(),
                         )?
@@ -477,7 +475,7 @@ pub fn prefs_to_msgs(
                                     .destination_projects
                                     .white_whale
                                     .terraswap_multihop_router
-                                    .clone(),
+                                    .to_string(),
                             )?;
 
                             return Ok(DestProjectMsgs {
@@ -646,7 +644,7 @@ pub fn prefs_to_msgs(
                                 comp_token_amount,
                                 compounding_asset.info,
                                 project_addresses.usdc.clone(),
-                                project_addresses.destination_projects.wynd.multihop.clone(),
+                                project_addresses.destination_projects.wynd.multihop.to_string(),
                             )?;
 
                             if est_donation.lt(&Uint128::from(1_000_000u128)) {
@@ -691,7 +689,7 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             AssetInfo::Native(staking_denom.clone()),
                             target_asset.clone(),
-                            project_addresses.destination_projects.wynd.multihop.clone(),
+                            project_addresses.destination_projects.wynd.multihop.to_string(),
                         )
                         .map_err(ContractError::Std)?;
 
@@ -784,7 +782,7 @@ pub fn neta_staking_msgs(
         &cw20::Cw20ExecuteMsg::Send {
             contract: neta_cw20_addr.into(),
             amount: expected_neta,
-            msg: to_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
+            msg: to_json_binary(&cw20_stake::msg::ReceiveMsg::Stake {})?,
         },
         None,
     )?);
@@ -821,7 +819,7 @@ pub fn wynd_staking_msgs(
         &target_address,
         &cw20_vesting::ExecuteMsg::Delegate {
             amount: expected_wynd,
-            msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+            msg: to_json_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
                 unbonding_period: bonding_period.into(),
             })?,
         },
@@ -879,7 +877,7 @@ fn join_wynd_pool_msgs(
             &cw20::Cw20ExecuteMsg::Send {
                 contract: pool_info.staking_addr.to_string(),
                 amount: existing_lp_tokens.balance,
-                msg: to_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
+                msg: to_json_binary(&wynd_stake::msg::ReceiveDelegationMsg::Delegate {
                     unbonding_period: bonding_period.into(),
                 })?,
             },

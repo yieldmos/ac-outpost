@@ -19,6 +19,7 @@ pub enum DeploymentType {
 
 pub fn main() -> anyhow::Result<()> {
     let junostake_project_addresses = ymos_junostake_outpost::msg::ContractAddresses {
+        staking_denom: "ujuno".to_string(),
         // needs to be switchout for mainnet
         take_rate_addr: "juno1twfv52yxcyykx2lcvgl42svw46hsm5ddhq6u2f".to_string(),
         usdc: wyndex::asset::AssetInfo::Native(
@@ -226,6 +227,12 @@ pub fn main() -> anyhow::Result<()> {
             },
         },
     };
+    let junodca_project_addresses = ymos_junodca_outpost::msg::ContractAddresses {
+        take_rate_addr: junostake_project_addresses.take_rate_addr.clone(),
+        usdc: junostake_project_addresses.usdc.clone(),
+        authzpp: ymos_junodca_outpost::msg::AuthzppAddresses::default(),
+        destination_projects: junostake_project_addresses.destination_projects.clone(),
+    };
 
     let rt = Runtime::new().unwrap();
     dotenv::dotenv().ok();
@@ -244,11 +251,17 @@ pub fn main() -> anyhow::Result<()> {
         "ymos_junostake_address",
         juno_chain.clone(),
     );
+    let junodca = ymos_junodca_outpost::YmosJunodcaOutpost::new(
+        "ymos_junodca_address",
+        juno_chain.clone(),
+    );
 
     junostake.upload_if_needed()?;
+    junodca.upload_if_needed()?;
     println!("junostake code id: {}", junostake.code_id()?);
+    println!("junodca code id: {}", junodca.code_id()?);
 
-    // single spark points ledger on juno
+    // junostake contract upload
     if junostake.address().is_err() {
         junostake.instantiate(
             &ymos_junostake_outpost::msg::InstantiateMsg {
@@ -269,6 +282,27 @@ pub fn main() -> anyhow::Result<()> {
         }, junostake.code_id()?)?;
     }
     println!("junostake: {}", junostake.addr_str()?);
+
+    // junodca contract upload
+    if junodca.address().is_err() {
+        junodca.instantiate(
+            &ymos_junodca_outpost::msg::InstantiateMsg {
+                admin: Some(juno_chain.sender().to_string()),
+                project_addresses: junodca_project_addresses.clone(),
+            },
+            Some(&Addr::unchecked(juno_chain.sender().to_string())),
+            None,
+        )?;
+
+        // add yieldmos.juno as an authorized compounder
+        junodca
+        .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
+    } else {
+        junodca.migrate(&ymos_junodca_outpost::msg::MigrateMsg {        
+            project_addresses: Some( junodca_project_addresses.clone()),
+        }, junodca.code_id()?)?;
+    }
+    println!("junodca: {}", junodca.addr_str()?);
 
     
     Ok(())

@@ -1,8 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Timestamp};
+use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
-use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, JunoCompPrefs};
+use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
 use wyndex::asset::AssetInfo;
+
+use crate::ContractError;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -69,11 +71,12 @@ pub struct JunostakeCompoundPrefs {
 #[cw_serde]
 pub struct CompPrefsWithAddresses {
     pub comp_prefs: JunostakeCompoundPrefs,
-    pub project_addresses: ContractAddresses,
+    pub project_addresses: ContractAddrs,
 }
 
 #[cw_serde]
 pub struct ContractAddresses {
+    pub staking_denom: String,
     pub take_rate_addr: String,
     pub usdc: AssetInfo,
     pub authzpp: AuthzppAddresses,
@@ -81,8 +84,43 @@ pub struct ContractAddresses {
 }
 
 #[cw_serde]
+pub struct ContractAddrs {
+    pub staking_denom: String,
+    pub take_rate_addr: Addr,
+    pub usdc: AssetInfo,
+    pub authzpp: AuthzppAddrs,
+    pub destination_projects: DestinationProjectAddrs,
+}
+
+impl ContractAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<ContractAddrs, ContractError> {
+        Ok(ContractAddrs {
+            staking_denom: self.staking_denom.clone(),
+            take_rate_addr: api.addr_validate(&self.take_rate_addr)?,
+            usdc: self.usdc.clone(),
+            authzpp: self.authzpp.validate_addrs(api)?,
+            destination_projects: self.destination_projects.validate_addrs(api)?,
+        })
+    }
+}
+
+#[cw_serde]
 #[derive(Default)]
 pub struct AuthzppAddresses {
     pub withdraw_tax: String,
     // pub allowlist_send: String,
+}
+
+#[cw_serde]
+pub struct AuthzppAddrs {
+    pub withdraw_tax: Addr,
+    // pub allowlist_send: Addr,
+}
+impl AuthzppAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
+        Ok(AuthzppAddrs {
+            withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
+            // allowlist_send: api.addr_validate(&self.allowlist_send)?,
+        })
+    }
 }

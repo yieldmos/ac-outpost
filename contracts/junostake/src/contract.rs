@@ -4,7 +4,9 @@ use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp,
+};
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use semver::Version;
@@ -43,7 +45,7 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
 
     ADMIN.save(deps.storage, &admin_addr)?;
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
-    PROJECT_ADDRS.save(deps.storage, &project_addresses)?;
+    PROJECT_ADDRS.save(deps.storage, &project_addresses.validate_addrs(deps.api)?)?;
 
     Ok(Response::default())
 }
@@ -62,7 +64,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         project_addresses: Some(addresses),
     } = msg
     {
-        PROJECT_ADDRS.save(deps.storage, &addresses)?
+        PROJECT_ADDRS.save(deps.storage, &addresses.validate_addrs(deps.api)?)?
     }
 
     Ok(Response::default())
@@ -76,7 +78,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             if info.sender != ADMIN.load(deps.storage)? {
                 return Err(ContractError::Unauthorized {});
             }
-            PROJECT_ADDRS.save(deps.storage, &addresses)?;
+            PROJECT_ADDRS.save(deps.storage, &addresses.validate_addrs(deps.api)?)?;
 
             Ok(Response::default())
         }
@@ -132,24 +134,27 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 #[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Version {} => to_binary(&queries::query_version()),
-        QueryMsg::AuthorizedCompounders {} => to_binary(&queries::query_authorized_compounders(deps)),
+        QueryMsg::Version {} => to_json_binary(&queries::query_version()),
+        QueryMsg::AuthorizedCompounders {} => to_json_binary(&queries::query_authorized_compounders(deps)),
         QueryMsg::GrantSpec { comp_prefs, expiration } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
-            to_binary(&QueryMsg::query_grants(GrantStructure {
-                grantee: env.contract.address.clone(),
-                granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
-                expiration,
-                grant_contract: env.contract.address,
-                grant_data: CompPrefsWithAddresses {
-                    comp_prefs,
-                    project_addresses,
+            to_json_binary(&QueryMsg::query_grants(
+                GrantStructure {
+                    grantee: env.contract.address.clone(),
+                    granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
+                    expiration,
+                    grant_contract: env.contract.address,
+                    grant_data: CompPrefsWithAddresses {
+                        comp_prefs,
+                        project_addresses,
+                    },
                 },
-            })?)
+                env.block.time,
+            )?)
         }
         QueryMsg::RevokeSpec { comp_prefs } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
-            to_binary(&QueryMsg::query_revokes(GrantStructure {
+            to_json_binary(&QueryMsg::query_revokes(GrantStructure {
                 grantee: env.contract.address.clone(),
                 granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
                 expiration: Timestamp::default(),

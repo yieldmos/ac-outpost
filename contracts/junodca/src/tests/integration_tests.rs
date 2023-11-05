@@ -1,10 +1,6 @@
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
-use outpost_utils::juno_comp_prefs::{
-    DaoAddress, DaoAddresses, DestinationProjectAddresses, GelottoAddresses, RacoonBetAddresses, SparkIbcAddresses,
-    WhiteWhaleSatelliteAddresses, WyndAddresses,
-};
-use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
+use outpost_utils::juno_comp_prefs::DestinationProjectAddresses;
 
 use crate::{
     contract::{execute, instantiate, query},

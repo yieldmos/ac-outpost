@@ -62,7 +62,7 @@ pub enum ExecuteMsg {
     AddAuthorizedCompounder(String),
     RemoveAuthorizedCompounder(String),
     Compound(JunodcaCompoundPrefs),
-    UpdateProjectAddresses(ContractAddresses),
+    UpdateProjectAddresses(Box<ContractAddresses>),
 }
 
 #[cw_serde]
@@ -97,7 +97,7 @@ pub struct ContractAddresses {
 #[cw_serde]
 #[derive(Default)]
 pub struct AuthzppAddresses {
-    pub withdraw_tax: String,
+    // pub withdraw_tax: String,
     // pub allowlist_send: String,
 }
 
@@ -107,7 +107,7 @@ pub struct AuthzppAddrs {
     // pub allowlist_send: Addr,
 }
 impl AuthzppAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
+    pub fn validate_addrs(&self, _api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
         Ok(AuthzppAddrs {
             // withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
             // allowlist_send: api.addr_validate(&self.allowlist_send)?,
