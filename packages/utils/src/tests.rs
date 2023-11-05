@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin};
-use cosmwasm_std::{coin, BankMsg, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{coin, Decimal, Timestamp, Uint128};
 
 use crate::{
     helpers::{calc_tax_split, calculate_compound_amounts, CompoundingFrequency, TaxSplitResult},

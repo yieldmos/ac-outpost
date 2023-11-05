@@ -1,15 +1,13 @@
 use anybuf::Anybuf;
-// use cw_orch::prelude::interchain_channel_builder::InterchainChannelBuilder;
-// use cw_orch::starship::Starship;
 use cw_orch::{anyhow, daemon::DaemonBuilder, prelude::*};
 use outpost_utils::juno_comp_prefs::DaoAddress;
-// use spark_ibc_sender::state::{Config, SparkContractAddr};
 use tokio::runtime::Runtime;
 use white_whale::pool_network::{
     asset::AssetInfo,
-    router::{SwapOperation, SwapRoute},
+    router::SwapOperation,
 };
-use ymos_junostake_outpost::msg::ExecuteMsgFns;
+use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
+use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -275,11 +273,25 @@ pub fn main() -> anyhow::Result<()> {
         // add yieldmos.juno as an authorized compounder
         junostake
         .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
+
+        // setup the feeshare only on the first deploy
+        // this seems to sometimes need an increased gas multiplier in the .env to work
+        juno_chain
+            .commit_any::<cosmrs::Any>(
+                vec![feeshare_msg(
+                    junostake.address().unwrap().to_string(),
+                    juno_chain.sender().to_string(),
+                    juno_chain.sender().to_string(),
+                )],
+                None,
+            )
+            .unwrap();
     } else {
         junostake.migrate(&ymos_junostake_outpost::msg::MigrateMsg {
-        
             project_addresses: Some( junostake_project_addresses.clone()),
         }, junostake.code_id()?)?;
+
+        
     }
     println!("junostake: {}", junostake.addr_str()?);
 
@@ -294,6 +306,19 @@ pub fn main() -> anyhow::Result<()> {
             None,
         )?;
 
+        // setup the feeshare only on the first deploy
+        // this seems to sometimes need an increased gas multiplier in the .env to work
+        juno_chain
+            .commit_any::<cosmrs::Any>(
+                vec![feeshare_msg(
+                    junodca.address().unwrap().to_string(),
+                    juno_chain.sender().to_string(),
+                    juno_chain.sender().to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+
         // add yieldmos.juno as an authorized compounder
         junodca
         .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
@@ -302,8 +327,7 @@ pub fn main() -> anyhow::Result<()> {
             project_addresses: Some( junodca_project_addresses.clone()),
         }, junodca.code_id()?)?;
     }
-    println!("junodca: {}", junodca.addr_str()?);
-
+    println!("junodca: {}", junodca.addr_str()?);    
     
     Ok(())
 }

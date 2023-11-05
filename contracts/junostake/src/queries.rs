@@ -5,7 +5,7 @@ use cw_grant_spec::grants::{
     GrantRequirement, RevokeRequirement, StakeAuthorizationPolicy, StakeAuthorizationType, StakeAuthorizationValidators,
 };
 
-use outpost_utils::juno_comp_prefs::{DaoAddr, DaoAddress, JunoDestinationProject, JunoLsd, RacoonBetGame};
+use outpost_utils::juno_comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd, RacoonBetGame};
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
 use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
 use wyndex::{
