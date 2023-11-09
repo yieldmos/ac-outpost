@@ -115,7 +115,9 @@ impl Grantable for QueryMsg {
             expiration,
         }];
 
-        Ok([taxation_grants, gen_comp_pref_grants(grant_structure)?].concat())
+        Ok(dedupe_grant_reqs(
+            [taxation_grants, gen_comp_pref_grants(grant_structure)?].concat(),
+        ))
     }
 
     fn query_revokes(

@@ -19,7 +19,7 @@ pub fn main() -> anyhow::Result<()> {
     let junostake_project_addresses = ymos_junostake_outpost::msg::ContractAddresses {
         staking_denom: "ujuno".to_string(),
         // needs to be switchout for mainnet
-        take_rate_addr: "juno1twfv52yxcyykx2lcvgl42svw46hsm5ddhq6u2f".to_string(),
+        take_rate_addr: "juno1ewdttrv2ph7762egx4n2309h3m9r4z9pakz54p".to_string(),
         usdc: wyndex::asset::AssetInfo::Native(
             "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string(),
         ),
