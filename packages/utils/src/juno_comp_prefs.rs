@@ -214,12 +214,12 @@ impl std::fmt::Display for GelottoLottery {
 pub enum FundMsg {
     FundGeneral {
         donor_address_type: AddressType,
-        on_behalf_of: String,
+        on_behalf_of: Option<String>,
     },
     FundCampaign {
         campaign_name: String,
         donor_address_type: AddressType,
-        on_behalf_of: String,
+        on_behalf_of: Option<String>,
     },
 }
 
@@ -238,6 +238,7 @@ pub enum StakeEasyMsgs {
 pub enum AddressType {
     Private,
     Validator,
+    Organization,
 }
 
 #[cw_serde]
