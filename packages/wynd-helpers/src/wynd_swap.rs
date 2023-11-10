@@ -1,5 +1,5 @@
 use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
-use cosmwasm_std::{to_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use cosmwasm_std::{to_binary, to_json_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},
@@ -219,7 +219,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
     // the simulation and the actual swap msg
     let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
 
-    let simulated_swap: wyndex::pair::SimulationResponse;
+    let simulated_swap: wyndex_multi_hop::msg::SimulateSwapOperationsResponse;
 
     if let wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations { operations, .. } =
         swap_ops.clone()
@@ -259,7 +259,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
                 &cw20::Cw20ExecuteMsg::Send {
                     contract: multihop_address.to_string(),
                     amount: offer_amount,
-                    msg: to_binary(&swap_ops)?,
+                    msg: to_json_binary(&swap_ops)?,
                 },
                 None,
             )?;
@@ -267,7 +267,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
     }
     Ok((
         vec![CosmosProtoMsg::ExecuteContract(exec)],
-        simulated_swap.return_amount,
+        simulated_swap.amount,
     ))
 }
 

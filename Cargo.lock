@@ -108,7 +108,7 @@ checksum = "16e62a023e7c117e27523144c5d2459f4397fcc3cab0085af8e2224f643a0193"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -119,7 +119,7 @@ checksum = "a66537f1bb974b254c98ed142ff995236e81b9d0fe4db0575f46612cb15eb0f9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -141,7 +141,7 @@ dependencies = [
 [[package]]
 name = "authzpp-utils"
 version = "0.3.0"
-source = "git+https://github.com/kakucodes/authzpp#0f5afc75db8d0fd41212c692e55419aa4a29e37a"
+source = "git+https://github.com/kakucodes/authzpp#e3bc2c2db3cd9fd1595e86baa418c49efc6f73f2"
 dependencies = [
  "cosmos-sdk-proto 0.20.0",
  "cosmwasm-schema",
@@ -336,21 +336,6 @@ name = "bitflags"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
-
-[[package]]
-name = "bjuno-token"
-version = "0.13.2"
-source = "git+https://github.com/arufa-research/stakeeasy-juno-contracts#79f801624be278481b0611aa3ec6305f4b2ac47e"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.13.2",
- "cw-utils 0.13.2",
- "cw2 0.13.2",
- "cw20 0.13.2",
- "schemars",
- "serde",
- "thiserror",
-]
 
 [[package]]
 name = "block-buffer"
@@ -714,7 +699,7 @@ checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -808,7 +793,7 @@ dependencies = [
 [[package]]
 name = "cw-grant-spec"
 version = "0.3.0"
-source = "git+https://github.com/kakucodes/authzpp#0f5afc75db8d0fd41212c692e55419aa4a29e37a"
+source = "git+https://github.com/kakucodes/authzpp#e3bc2c2db3cd9fd1595e86baa418c49efc6f73f2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1044,16 +1029,6 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "0.13.2"
-source = "git+https://github.com/arufa-research/stakeeasy-juno-contracts#79f801624be278481b0611aa3ec6305f4b2ac47e"
-dependencies = [
- "cosmwasm-std",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw-storage-plus"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "648b1507290bbc03a8d88463d7cd9b04b1fa0155e5eef366c4fa052b9caaac7a"
@@ -1104,17 +1079,6 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
-]
-
-[[package]]
-name = "cw-utils"
-version = "0.13.2"
-source = "git+https://github.com/arufa-research/stakeeasy-juno-contracts#79f801624be278481b0611aa3ec6305f4b2ac47e"
-dependencies = [
- "cosmwasm-std",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -1176,17 +1140,6 @@ dependencies = [
 
 [[package]]
 name = "cw2"
-version = "0.13.2"
-source = "git+https://github.com/arufa-research/stakeeasy-juno-contracts#79f801624be278481b0611aa3ec6305f4b2ac47e"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.13.2",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw2"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04cf4639517490dd36b333bbd6c4fbd92e325fd0acf4683b41753bc5eb63bfc1"
@@ -1235,17 +1188,6 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
-]
-
-[[package]]
-name = "cw20"
-version = "0.13.2"
-source = "git+https://github.com/arufa-research/stakeeasy-juno-contracts#79f801624be278481b0611aa3ec6305f4b2ac47e"
-dependencies = [
- "cosmwasm-std",
- "cw-utils 0.13.2",
- "schemars",
- "serde",
 ]
 
 [[package]]
@@ -1800,9 +1742,9 @@ dependencies = [
 
 [[package]]
 name = "errno"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac3e13f66a2f95e32a39eaa81f6b95d42878ca0e1db0c7543723dfe12557e860"
+checksum = "7c18ee0ed65a5f1f81cac6b1d213b69c35fa47d4252ad41f1486dbd8226fe36e"
 dependencies = [
  "libc",
  "windows-sys",
@@ -1846,9 +1788,9 @@ dependencies = [
 
 [[package]]
 name = "fiat-crypto"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a481586acf778f1b1455424c343f71124b048ffa5f4fc3f8f6ae9dc432dcb3c7"
+checksum = "f69037fe1b785e84986b4f2cbcf647381876a00671d25ceef715d7812dd7e1dd"
 
 [[package]]
 name = "fixed-hash"
@@ -1972,7 +1914,7 @@ checksum = "53b153fd91e4b0147f4aced87be237c98248656bb01050b96bf3ee89220a8ddb"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -2018,9 +1960,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
+checksum = "fe9006bed769170c11f845cf00c7c1e9092aeb3f268e007c3e760ac68008070f"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -2559,9 +2501,9 @@ dependencies = [
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da2479e8c062e40bf0066ffa0bc823de0a9368974af99c9f6df941d2c231e03f"
+checksum = "969488b55f8ac402214f3f5fd243ebb7206cf82de60d3172994707a4bcc2b829"
 
 [[package]]
 name = "lock_api"
@@ -2778,7 +2720,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -3005,7 +2947,7 @@ checksum = "4359fd9c9171ec6e8c62926d6faaf553a8dc3f64e1507e76da7911b4f6a04405"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -3150,7 +3092,7 @@ dependencies = [
  "itertools 0.11.0",
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -3647,21 +3589,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sejuno-token"
-version = "0.13.2"
-source = "git+https://github.com/arufa-research/stakeeasy-juno-contracts#79f801624be278481b0611aa3ec6305f4b2ac47e"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.13.2",
- "cw-utils 0.13.2",
- "cw2 0.13.2",
- "cw20 0.13.2",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "semver"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3669,9 +3596,9 @@ checksum = "836fa6a3e1e547f9a2c4040802ec865b5d85f4014efe00555d7090a3dcaa1090"
 
 [[package]]
 name = "serde"
-version = "1.0.190"
+version = "1.0.192"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91d3c334ca1ee894a2c6f6ad698fe8c435b76d504b13d436f0685d648d6d96f7"
+checksum = "bca2a08484b285dcb282d0f67b26cadc0df8b19f8c12502c13d966bf9482f001"
 dependencies = [
  "serde_derive",
 ]
@@ -3705,13 +3632,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.190"
+version = "1.0.192"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67c5609f394e5c2bd7fc51efda478004ea80ef42fee983d5c67a65e34f32c0e3"
+checksum = "d6c7207fbec9faa48073f3e3074cbe553af6ea512d7c21ba46e434e70ea9fbc1"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -3744,7 +3671,7 @@ checksum = "3081f5ffbb02284dda55132aa26daecedd7372a42417bbbab6f14ab7d6bb9145"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -3968,9 +3895,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.38"
+version = "2.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e96b79aaa137db8f61e26363a0c9b47d8b4ec75da28b7d1d614c2303e232408b"
+checksum = "23e78b90f2fcf45d3e842032ce32e3f2d1545ba6636271dcbf24fa306d87be7a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4188,7 +4115,7 @@ checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -4282,7 +4209,7 @@ checksum = "630bdcf245f78637c13ec01ffae6187cca34625e8c63150d424b59e55af2675e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -4444,7 +4371,7 @@ checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -4621,7 +4548,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
  "wasm-bindgen-shared",
 ]
 
@@ -4655,7 +4582,7 @@ checksum = "c5353b8dab669f5e10f5bd76df26a9360c748f054f862ff5f3f8aae0c7fb3907"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -4848,7 +4775,7 @@ dependencies = [
 [[package]]
 name = "withdraw-rewards-tax-grant"
 version = "0.3.0"
-source = "git+https://github.com/kakucodes/authzpp#0f5afc75db8d0fd41212c692e55419aa4a29e37a"
+source = "git+https://github.com/kakucodes/authzpp#e3bc2c2db3cd9fd1595e86baa418c49efc6f73f2"
 dependencies = [
  "authzpp-utils",
  "cosmos-sdk-proto 0.20.0",
@@ -5080,7 +5007,6 @@ name = "ymos-junodca-outpost"
 version = "0.2.2"
 dependencies = [
  "balance-token-swap",
- "bjuno-token",
  "bond-router",
  "cosmos-sdk-proto 0.19.0",
  "cosmwasm-schema",
@@ -5096,7 +5022,6 @@ dependencies = [
  "cw20-vesting 1.6.0",
  "outpost-utils",
  "schemars",
- "sejuno-token",
  "semver",
  "serde",
  "terraswap-helpers",
@@ -5113,7 +5038,6 @@ name = "ymos-junostake-outpost"
 version = "0.2.2"
 dependencies = [
  "balance-token-swap",
- "bjuno-token",
  "bond-router",
  "cosmos-sdk-proto 0.19.0",
  "cosmwasm-schema",
@@ -5129,7 +5053,6 @@ dependencies = [
  "cw20-vesting 1.6.0",
  "outpost-utils",
  "schemars",
- "sejuno-token",
  "semver",
  "serde",
  "terraswap-helpers",
@@ -5232,5 +5155,5 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.38",
+ "syn 2.0.39",
 ]

@@ -55,12 +55,10 @@ withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", ver
 balance-token-swap = { git = "https://github.com/racoon-supply-rac/balance-dao", features = [
     "library",
 ] }
-bjuno-token = { git = "https://github.com/arufa-research/stakeeasy-juno-contracts", features = [
-    "library",
-] }
-sejuno-token = { git = "https://github.com/arufa-research/stakeeasy-juno-contracts", features = [
-    "library",
-] }
+# stake-easy = { git = "https://github.com/arufa-research/stakeeasy-juno-contracts", features = [
+#     "library",
+# ], package = "staking-contract" }
+
 bond-router = { git = "https://github.com/wynddao/wynd-lsd", features = [
     "library",
 ] }

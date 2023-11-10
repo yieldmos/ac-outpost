@@ -229,6 +229,12 @@ pub enum SparkIbcFund {
 }
 
 #[cw_serde]
+pub enum StakeEasyMsgs {
+    StakeForBjuno { referral: u64 },
+    Stake { referral: u64 },
+}
+
+#[cw_serde]
 pub enum AddressType {
     Private,
     Validator,

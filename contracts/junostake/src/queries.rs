@@ -293,7 +293,8 @@ pub fn gen_comp_pref_grants(
                     limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                     filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                         keys: vec![match lsd_type {
-                            JunoLsd::StakeEasySe | JunoLsd::StakeEasyB => "mint",
+                            JunoLsd::StakeEasySe => "stake",
+                            JunoLsd::StakeEasyB => "stake_for_bjuno",
                             JunoLsd::Wynd | JunoLsd::Backbone | JunoLsd::Eris => "bond",
                         }
                         .to_string()],

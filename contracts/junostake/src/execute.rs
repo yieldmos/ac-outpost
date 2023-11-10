@@ -10,7 +10,7 @@ use outpost_utils::{
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins},
     juno_comp_prefs::{
         GelottoExecute, JunoCompPrefs, JunoDestinationProject, JunoLsd, RacoonBetExec, RacoonBetGame, SparkIbcFund,
-        WyndLPBondingPeriod, WyndStakingBondingPeriod,
+        StakeEasyMsgs, WyndLPBondingPeriod, WyndStakingBondingPeriod,
     },
     msg_gen::{create_exec_contract_msg, create_exec_msg, CosmosProtoMsg},
 };
@@ -576,19 +576,13 @@ pub fn prefs_to_msgs(
                             JunoLsd::StakeEasyB => create_exec_contract_msg(
                                 project_addresses.destination_projects.juno_lsds.b_juno.clone(),
                                 target_address,
-                                &bjuno_token::msg::ExecuteMsg::Mint {
-                                    recipient: target_address.to_string(),
-                                    amount: comp_token_amount,
-                                },
+                                &StakeEasyMsgs::StakeForBjuno { referral: 0 },
                                 funds,
                             )?,
                             JunoLsd::StakeEasySe => create_exec_contract_msg(
                                 project_addresses.destination_projects.juno_lsds.se_juno.clone(),
                                 target_address,
-                                &sejuno_token::msg::ExecuteMsg::Mint {
-                                    recipient: target_address.to_string(),
-                                    amount: comp_token_amount,
-                                },
+                                &StakeEasyMsgs::Stake { referral: 0 },
                                 funds,
                             )?,
                             JunoLsd::Backbone =>

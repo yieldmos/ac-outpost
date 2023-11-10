@@ -55,8 +55,7 @@ wynd-stake = { workspace = true }
 wynd-helpers = { workspace = true }
 outpost-utils = { workspace = true }
 balance-token-swap = { workspace = true }
-bjuno-token = { workspace = true }
-sejuno-token = { workspace = true }
+# stake-easy = { workspace = true }
 bond-router = { workspace = true }
 cw-grant-spec = { workspace = true }
 cw-orch = { workspace = true, optional = true }
