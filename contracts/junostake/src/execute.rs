@@ -572,6 +572,27 @@ pub fn prefs_to_msgs(
                             amount: comp_token_amount.into(),
                         }]);
 
+                        if let JunoLsd::StakeEasyB | JunoLsd::StakeEasySe = lsd_type {
+                            if comp_token_amount.lt(&1_000_000u128.into()) {
+                                // if the amount is less than 1 juno then we don't mint
+                                return Ok(DestProjectMsgs {
+                                    msgs: vec![],
+                                    sub_msgs: vec![],
+
+                                    attributes: vec![
+                                        Attribute {
+                                            key: "subaction".to_string(),
+                                            value: "mint lsd skipped".to_string(),
+                                        },
+                                        Attribute {
+                                            key: "type".to_string(),
+                                            value: lsd_type.to_string(),
+                                        },
+                                    ],
+                                });
+                            }
+                        }
+
                         let mint_msg = match lsd_type {
                             JunoLsd::StakeEasyB => create_exec_contract_msg(
                                 project_addresses.destination_projects.juno_lsds.b_juno.clone(),
