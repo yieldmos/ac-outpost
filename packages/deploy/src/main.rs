@@ -254,46 +254,47 @@ pub fn main() -> anyhow::Result<()> {
         juno_chain.clone(),
     );
 
-    junostake.upload_if_needed()?;
     junodca.upload_if_needed()?;
-    println!("junostake code id: {}", junostake.code_id()?);
     println!("junodca code id: {}", junodca.code_id()?);
 
-    // junostake contract upload
-    if junostake.address().is_err() {
-        junostake.instantiate(
-            &ymos_junostake_outpost::msg::InstantiateMsg {
-                admin: Some(juno_chain.sender().to_string()),
-                project_addresses: junostake_project_addresses.clone(),
-            },
-            Some(&Addr::unchecked(juno_chain.sender().to_string())),
-            None,
-        )?;
+    // junostake.upload_if_needed()?;
+    // println!("junostake code id: {}", junostake.code_id()?);
 
-        // add yieldmos.juno as an authorized compounder
-        junostake
-        .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
+    // // junostake contract upload
+    // if junostake.address().is_err() {
+    //     junostake.instantiate(
+    //         &ymos_junostake_outpost::msg::InstantiateMsg {
+    //             admin: Some(juno_chain.sender().to_string()),
+    //             project_addresses: junostake_project_addresses.clone(),
+    //         },
+    //         Some(&Addr::unchecked(juno_chain.sender().to_string())),
+    //         None,
+    //     )?;
 
-        // setup the feeshare only on the first deploy
-        // this seems to sometimes need an increased gas multiplier in the .env to work
-        juno_chain
-            .commit_any::<cosmrs::Any>(
-                vec![feeshare_msg(
-                    junostake.address().unwrap().to_string(),
-                    juno_chain.sender().to_string(),
-                    juno_chain.sender().to_string(),
-                )],
-                None,
-            )
-            .unwrap();
-    } else {
-        junostake.migrate(&ymos_junostake_outpost::msg::MigrateMsg {
-            project_addresses: Some( junostake_project_addresses.clone()),
-        }, junostake.code_id()?)?;
+    //     // add yieldmos.juno as an authorized compounder
+    //     junostake
+    //     .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
+
+    //     // setup the feeshare only on the first deploy
+    //     // this seems to sometimes need an increased gas multiplier in the .env to work
+    //     juno_chain
+    //         .commit_any::<cosmrs::Any>(
+    //             vec![feeshare_msg(
+    //                 junostake.address().unwrap().to_string(),
+    //                 juno_chain.sender().to_string(),
+    //                 juno_chain.sender().to_string(),
+    //             )],
+    //             None,
+    //         )
+    //         .unwrap();
+    // } else {
+    //     junostake.migrate(&ymos_junostake_outpost::msg::MigrateMsg {
+    //         project_addresses: Some( junostake_project_addresses.clone()),
+    //     }, junostake.code_id()?)?;
 
         
-    }
-    println!("junostake: {}", junostake.addr_str()?);
+    // }
+    // println!("junostake: {}", junostake.addr_str()?);
 
     // junodca contract upload
     if junodca.address().is_err() {

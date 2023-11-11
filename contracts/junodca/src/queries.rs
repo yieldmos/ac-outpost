@@ -314,9 +314,8 @@ pub fn gen_comp_pref_grants(
                     .concat(),
                     JunoDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::GrantSpec {
                         grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                            contract_addr: Addr::unchecked(
-                                lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
-                            ),
+                            contract_addr: lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
+
                             limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                             filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                 keys: vec![match lsd_type {
@@ -342,13 +341,11 @@ pub fn gen_comp_pref_grants(
                             GrantRequirement::GrantSpec {
                                 grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
                                     ContractExecutionSetting {
-                                        contract_addr: Addr::unchecked(
-                                            project_addresses
-                                                .destination_projects
-                                                .white_whale
-                                                .terraswap_multihop_router
-                                                .clone(),
-                                        ),
+                                        contract_addr: project_addresses
+                                            .destination_projects
+                                            .white_whale
+                                            .terraswap_multihop_router
+                                            .clone(),
                                         limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
                                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                             keys: vec!["execute_swap_operations".to_string()],
@@ -363,9 +360,7 @@ pub fn gen_comp_pref_grants(
                             GrantRequirement::GrantSpec {
                                 grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
                                     ContractExecutionSetting {
-                                        contract_addr: Addr::unchecked(
-                                            project_addresses.destination_projects.white_whale.market.clone(),
-                                        ),
+                                        contract_addr: project_addresses.destination_projects.white_whale.market.clone(),
                                         limit: ContractExecutionAuthorizationLimit::single_fund_limit(denom),
                                         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                             keys: vec!["bond".to_string()],
@@ -418,7 +413,7 @@ pub fn gen_comp_pref_grants(
                             filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
                                 keys: vec![match game {
                                     RacoonBetGame::Slot { .. } => "slot",
-                                    RacoonBetGame::HundredSidedDice { .. } => "hundred_sided_dice",
+                                    RacoonBetGame::HundredSidedDice { .. } => "place_bet",
                                 }
                                 .to_string()],
                             },

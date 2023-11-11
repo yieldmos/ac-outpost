@@ -394,7 +394,7 @@ pub fn prefs_to_msgs(
                                 Some(project_addrs.destination_projects.white_whale.juno_amp_whale_path.clone())
                             }
                             AssetInfo::Native(denom)
-                                if denom.eq(&project_addrs.destination_projects.white_whale.amp_whale) =>
+                                if denom.eq(&project_addrs.destination_projects.white_whale.bone_whale) =>
                             {
                                 Some(project_addrs.destination_projects.white_whale.juno_bone_whale_path.clone())
                             }
@@ -403,7 +403,7 @@ pub fn prefs_to_msgs(
                         };
 
                         if let (Some(swap_op), AssetInfo::Native(denom)) = (swap_op, asset.clone()) {
-                            let (swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
+                            return match create_terraswap_swap_msg_with_simulation(
                                 &querier,
                                 target_address,
                                 comp_token_amount,
@@ -413,43 +413,52 @@ pub fn prefs_to_msgs(
                                     .white_whale
                                     .terraswap_multihop_router
                                     .to_string(),
-                            )?;
-
-                            return Ok(DestProjectMsgs {
-                                msgs: [
-                                    swap_msgs,
-                                    vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-                                        project_addrs.destination_projects.white_whale.market.clone(),
-                                        target_address,
-                                        &white_whale::whale_lair::Bond {
-                                            asset: white_whale::pool_network::asset::Asset {
-                                                amount: sim,
-                                                info: white_whale::pool_network::asset::AssetInfo::NativeToken {
-                                                    denom: denom.to_string(),
+                            ) {
+                                Ok((swap_msgs, sim)) => Ok(DestProjectMsgs {
+                                    msgs: [
+                                        swap_msgs,
+                                        vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                                            project_addrs.destination_projects.white_whale.market.clone(),
+                                            target_address,
+                                            &white_whale::whale_lair::Bond {
+                                                asset: white_whale::pool_network::asset::Asset {
+                                                    amount: sim,
+                                                    info: white_whale::pool_network::asset::AssetInfo::NativeToken {
+                                                        denom: denom.to_string(),
+                                                    },
                                                 },
+                                                timestamp: block.time,
+                                                weight: Uint128::from(1u128),
                                             },
-                                            timestamp: block.time,
-                                            weight: Uint128::from(1u128),
-                                        },
-                                        Some(vec![Coin {
-                                            denom: denom.to_string(),
-                                            amount: sim.into(),
-                                        }]),
-                                    )?)],
-                                ]
-                                .concat(),
-                                sub_msgs: vec![],
-                                events: vec![Event::new("white_whale_satellite")
-                                    .add_attribute("asset", denom)
-                                    .add_attribute("amount", sim.to_string())],
-                            });
+                                            Some(vec![Coin {
+                                                denom: denom.to_string(),
+                                                amount: sim.into(),
+                                            }]),
+                                        )?)],
+                                    ]
+                                    .concat(),
+                                    sub_msgs: vec![],
+                                    events: vec![Event::new("white_whale_satellite")
+                                        .add_attribute("asset", denom)
+                                        .add_attribute("amount", sim.to_string())],
+                                }),
+                                Err(e) => Ok(DestProjectMsgs {
+                                    msgs: vec![],
+                                    sub_msgs: vec![],
+                                    events: vec![Event::new("white_whale_satellite")
+                                        .add_attribute("asset", asset.to_string())
+                                        .add_attribute("type", "skipped")
+                                        .add_attribute("error", e.to_string())],
+                                }),
+                            };
                         }
                         Ok(DestProjectMsgs {
                             msgs: vec![],
                             sub_msgs: vec![],
                             events: vec![Event::new("white_whale_satellite")
                                 .add_attribute("asset", asset.to_string())
-                                .add_attribute("type", "skipped")],
+                                .add_attribute("type", "skipped")
+                                .add_attribute("error", "No swap path found")],
                         })
                     }
                     JunoDestinationProject::BalanceDao {} => Ok(DestProjectMsgs {

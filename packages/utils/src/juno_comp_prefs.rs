@@ -1,5 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Uint128};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use wyndex::asset::AssetInfo;
 
 use crate::{
@@ -125,13 +127,13 @@ pub enum JunoLsd {
     Eris,
 }
 impl JunoLsd {
-    pub fn get_mint_address(&self, addresses: &JunoLsdAddrs) -> String {
+    pub fn get_mint_address(&self, addresses: &JunoLsdAddrs) -> Addr {
         match self {
-            JunoLsd::Backbone => addresses.bone_juno.to_string(),
-            JunoLsd::Wynd => addresses.wy_juno.to_string(),
-            JunoLsd::StakeEasySe => addresses.se_juno.to_string(),
-            JunoLsd::StakeEasyB => addresses.b_juno.to_string(),
-            JunoLsd::Eris => addresses.amp_juno.to_string(),
+            JunoLsd::Backbone => addresses.bone_juno.clone(),
+            JunoLsd::Wynd => addresses.wy_juno.clone(),
+            JunoLsd::StakeEasySe => addresses.se_juno.clone(),
+            JunoLsd::StakeEasyB => addresses.b_juno.clone(),
+            JunoLsd::Eris => addresses.amp_juno.clone(),
         }
     }
 }
@@ -234,7 +236,7 @@ pub enum StakeEasyMsgs {
     Stake { referral: u64 },
 }
 
-#[cw_serde]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub enum AddressType {
     Private,
     Validator,
