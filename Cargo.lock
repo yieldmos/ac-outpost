@@ -2442,6 +2442,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "juno-helpers"
+version = "0.2.2"
+dependencies = [
+ "balance-token-swap",
+ "bond-router",
+ "cosmos-sdk-proto 0.19.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20 1.1.1",
+ "cw20-stake 2.1.0",
+ "cw20-vesting 1.6.0",
+ "outpost-utils",
+ "schemars",
+ "serde",
+ "thiserror",
+ "white-whale",
+ "wynd-helpers",
+ "wynd-stake",
+ "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
+ "wyndex-multi-hop",
+]
+
+[[package]]
 name = "k256"
 version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5020,6 +5043,7 @@ dependencies = [
  "cw20 1.1.1",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
+ "juno-helpers",
  "outpost-utils",
  "schemars",
  "semver",

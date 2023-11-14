@@ -513,6 +513,33 @@ impl WhiteWhaleSatelliteAddresses {
     }
 }
 
+impl WhiteWhaleSatelliteAddrs {
+    pub fn get_swap_operations(
+        &self,
+        desired_asset: AssetInfo,
+    ) -> Result<
+        (
+            Vec<white_whale::pool_network::router::SwapOperation>,
+            String,
+        ),
+        OutpostError,
+    > {
+        match desired_asset {
+            AssetInfo::Native(denom) if denom.eq(&self.amp_whale) => {
+                Ok((self.juno_amp_whale_path.clone(), denom))
+            }
+            AssetInfo::Native(denom) if denom.eq(&self.bone_whale) => {
+                Ok((self.juno_bone_whale_path.clone(), denom))
+            }
+            // if the asset isn't ampWHALE or bWhale then we can't do anything
+            _ => Err(OutpostError::InvalidAsset {
+                denom: desired_asset.to_string(),
+                project: "white whale".to_string(),
+            }),
+        }
+    }
+}
+
 #[cw_serde]
 #[derive(Default)]
 pub struct DaoAddresses {

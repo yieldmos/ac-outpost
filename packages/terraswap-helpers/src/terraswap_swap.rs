@@ -1,5 +1,5 @@
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
-use cosmwasm_std::{to_binary, Addr, QuerierWrapper, StdError, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, QuerierWrapper, StdError, Uint128};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use white_whale::pool_network::{
     asset::AssetInfo,
@@ -144,7 +144,7 @@ pub fn create_swap_msg(
                 &cw20::Cw20ExecuteMsg::Send {
                     contract: multihop_address.to_string(),
                     amount: offer_amount,
-                    msg: to_binary(&swap_ops)?,
+                    msg: to_json_binary(&swap_ops)?,
                 },
                 None,
             )?,

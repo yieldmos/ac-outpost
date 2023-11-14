@@ -1,6 +1,6 @@
 use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Deps, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, Event, ReplyOn, Timestamp, Uint128};
 use cw_storage_plus::Item;
 
 use crate::{
@@ -121,6 +121,38 @@ pub struct TaxSplitResult {
     pub remaining_rewards: Coin,
     pub tax_amount: Coin,
     pub tax_store_msg: CosmosProtoMsg,
+}
+
+#[derive(Default)]
+pub struct DestProjectMsgs {
+    pub msgs: Vec<CosmosProtoMsg>,
+    pub sub_msgs: Vec<(u64, Vec<CosmosProtoMsg>, ReplyOn)>,
+    pub events: Vec<Event>,
+}
+
+impl DestProjectMsgs {
+    pub fn prepend_msgs(&mut self, msgs: Vec<CosmosProtoMsg>) {
+        self.msgs = msgs.into_iter().chain(self.msgs.drain(..)).collect();
+    }
+    pub fn prepend_submsgs(&mut self, sub_msgs: Vec<(u64, Vec<CosmosProtoMsg>, ReplyOn)>) {
+        self.sub_msgs = sub_msgs
+            .into_iter()
+            .chain(self.sub_msgs.drain(..))
+            .collect();
+    }
+    pub fn prepend_events(&mut self, events: Vec<Event>) {
+        self.events = events.into_iter().chain(self.events.drain(..)).collect();
+    }
+
+    pub fn append_msgs(&mut self, msgs: Vec<CosmosProtoMsg>) {
+        self.msgs.extend(msgs);
+    }
+    pub fn append_submsgs(&mut self, sub_msgs: Vec<(u64, Vec<CosmosProtoMsg>, ReplyOn)>) {
+        self.sub_msgs.extend(sub_msgs);
+    }
+    pub fn append_events(&mut self, events: Vec<Event>) {
+        self.events.extend(events);
+    }
 }
 
 pub fn calc_tax_split(

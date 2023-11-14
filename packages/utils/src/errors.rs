@@ -33,4 +33,7 @@ pub enum OutpostError {
 
     #[error("Could not query pendingRewards")]
     QueryPendingRewardsFailure,
+
+    #[error("Invalid asset: {denom} for project: {project}")]
+    InvalidAsset { denom: String, project: String },
 }
