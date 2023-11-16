@@ -299,7 +299,7 @@ where
                 msgs: vec![],
                 sub_msgs: vec![],
                 events: vec![Event::new("mint_lsd")
-                    .add_attribute("type", format!("{} skipped", lsd.to_string()))
+                    .add_attribute("type", format!("{} skipped", lsd))
                     .add_attribute("amount", juno_to_bond.to_string())],
             });
         }

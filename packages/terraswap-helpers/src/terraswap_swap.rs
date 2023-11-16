@@ -1,6 +1,6 @@
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
 use cosmwasm_std::{to_json_binary, Addr, QuerierWrapper, StdError, Uint128};
-use cw_grant_spec::grants::{ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement};
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use white_whale::pool_network::{
     asset::AssetInfo,

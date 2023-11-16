@@ -28,7 +28,7 @@ pub struct GetRoute {
 /// Queries the swaprouter's state to get a valid route from `from_denom` to `to_denom`
 pub fn query_swap_in_routes(
     querier: &QuerierWrapper,
-    from_token: &String,
+    from_token: &str,
     // just for error reporting purposes
     to_denom: String,
     swap_router_address: String,
@@ -36,7 +36,7 @@ pub fn query_swap_in_routes(
     let route_response: GetRouteResponse = querier.query_wasm_smart(
         swap_router_address,
         &GetRoute {
-            input_denom: from_token.clone(),
+            input_denom: from_token.to_string(),
             output_denom: to_denom,
         },
     )?;
@@ -56,7 +56,7 @@ pub fn query_swap_in_routes(
 /// Queries the swaprouter's state to get a valid route from `from_denom` to `to_denom`
 pub fn query_swap_out_routes(
     querier: &QuerierWrapper,
-    from_token: &String,
+    from_token: &str,
     // just for error reporting purposes
     to_denom: String,
     swap_router_address: String,
@@ -64,7 +64,7 @@ pub fn query_swap_out_routes(
     let route_response: GetRouteResponse = querier.query_wasm_smart(
         swap_router_address,
         &GetRoute {
-            input_denom: from_token.clone(),
+            input_denom: from_token.to_string(),
             output_denom: to_denom,
         },
     )?;
@@ -84,7 +84,7 @@ pub fn query_swap_out_routes(
 
 pub fn simulate_exact_out_swap(
     querier: &QuerierWrapper,
-    delegator_address: &Addr,
+    _delegator_address: &Addr,
     from_denom: String,
     to_token: Coin,
     swap_router_address: String,
@@ -142,7 +142,7 @@ pub fn generate_exact_out_swap_msg_from_sim(
 /// Returns both the swap simulation and the queried swap route
 pub fn simulate_swap(
     querier: &QuerierWrapper,
-    delegator_address: &Addr,
+    _delegator_address: &Addr,
     from_token: Coin,
     // just for error reporting purposes
     to_denom: String,

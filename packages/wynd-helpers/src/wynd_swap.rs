@@ -241,11 +241,10 @@ pub fn create_wyndex_swap_msg_with_simulation(
         return Err(StdError::generic_err("Could not simulate swap operations"));
     }
 
-    let exec: MsgExecuteContract;
-    match offer_asset {
+    let exec: MsgExecuteContract = match offer_asset {
         AssetInfo::Native(offer_denom) => {
             // multihop swap message when going from a native token
-            exec = create_exec_contract_msg(
+            create_exec_contract_msg(
                 multihop_address,
                 sender,
                 &swap_ops,
@@ -253,11 +252,11 @@ pub fn create_wyndex_swap_msg_with_simulation(
                     amount: offer_amount.to_string(),
                     denom: offer_denom,
                 }]),
-            )?;
+            )?
         }
         AssetInfo::Token(ask_token_contract_address) => {
             // multihop swap message when going from a cw20 token
-            exec = create_exec_contract_msg(
+            create_exec_contract_msg(
                 ask_token_contract_address,
                 sender,
                 &cw20::Cw20ExecuteMsg::Send {
@@ -266,9 +265,9 @@ pub fn create_wyndex_swap_msg_with_simulation(
                     msg: to_json_binary(&swap_ops)?,
                 },
                 None,
-            )?;
+            )?
         }
-    }
+    };
     Ok((
         vec![CosmosProtoMsg::ExecuteContract(exec)],
         simulated_swap.amount,
