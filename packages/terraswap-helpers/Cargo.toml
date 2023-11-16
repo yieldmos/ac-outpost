@@ -15,3 +15,4 @@ cosmos-sdk-proto = { workspace = true }
 cw20 = { workspace = true }
 white-whale = { workspace = true }
 outpost-utils = { workspace = true }
+cw-grant-spec = { workspace = true }

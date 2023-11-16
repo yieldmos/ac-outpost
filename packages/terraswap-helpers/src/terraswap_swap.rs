@@ -1,5 +1,6 @@
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
 use cosmwasm_std::{to_json_binary, Addr, QuerierWrapper, StdError, Uint128};
+use cw_grant_spec::grants::{ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use white_whale::pool_network::{
     asset::AssetInfo,
@@ -183,4 +184,17 @@ pub fn create_terraswap_swap_msg_with_simulation(
     let exec = create_swap_msg(sender, offer_amount, swap_routes, multihop_address)?;
 
     Ok((exec, simulated_swap.amount))
+}
+
+pub fn terraswap_multihop_swap_grant(
+    base: GrantBase,
+    contract_addr: Addr,
+    offer_denom: &str,
+) -> Vec<GrantRequirement> {
+    vec![GrantRequirement::default_contract_exec_auth(
+        base,
+        contract_addr,
+        vec!["execute_swap_operations"],
+        Some(offer_denom),
+    )]
 }
