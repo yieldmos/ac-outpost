@@ -126,7 +126,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         }) => {
             let addresses = PROJECT_ADDRS.load(deps.storage)?;
 
-            let prefs = comp_prefs.first().ok_or(ContractError::InvalidCompoundPrefs)?;
+            let prefs = comp_prefs.first().ok_or(ContractError::InvalidDCACompoundPrefs)?;
             if prefs.compound_token.denom != "ujuno" || (comp_prefs.len() > 1) {
                 return Err(ContractError::InvalidDCACompoundPrefs);
             }
