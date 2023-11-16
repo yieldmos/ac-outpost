@@ -128,7 +128,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 
             let prefs = comp_prefs.first().ok_or(ContractError::InvalidCompoundPrefs)?;
             if prefs.compound_token.denom != "ujuno" || (comp_prefs.len() > 1) {
-                return Err(ContractError::InvalidCompoundPrefs);
+                return Err(ContractError::InvalidDCACompoundPrefs);
             }
 
             execute::compound(deps, env, info, addresses, user_address, prefs, tax_fee)

@@ -18,6 +18,9 @@ pub enum ContractError {
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
+    #[error("Invalid DCA Compound Preferences: Only JUNO DCA currently allowed")]
+    InvalidDCACompoundPrefs,
+
     #[error("Invalid Compound Preferences")]
     InvalidCompoundPrefs,
 
