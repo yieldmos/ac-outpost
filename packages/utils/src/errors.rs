@@ -1,5 +1,5 @@
 use cosmos_sdk_proto::prost;
-use cosmwasm_std::StdError;
+use cosmwasm_std::{Decimal, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,8 +13,14 @@ pub enum OutpostError {
     #[error("Outpost authorized admin could not be loaded")]
     AuthorizedAdminLoadFailure(),
 
-    #[error("Invalid prefs: Relative quantities must be non-zero and sum to 1")]
-    InvalidPrefQtys,
+    #[error("Invalid prefs: Relative quantities must sum to 1. {sum:?}")]
+    InvalidPrefQtys { sum: Decimal },
+
+    #[error("Prefs include a zero qty")]
+    ZeroPrefs,
+
+    #[error("Could not convert prefs to percentages")]
+    PrefsToPercentagesFailure(u128),
 
     #[error("Could not generate exec message")]
     GenerateExecFailure,

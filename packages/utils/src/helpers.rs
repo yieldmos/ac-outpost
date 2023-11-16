@@ -67,13 +67,15 @@ pub fn prefs_sum_to_one<D>(comp_prefs: &CompoundPrefs<D>) -> Result<bool, Outpos
             .try_fold(Decimal::zero(), |acc, x| {
                 match (acc, Decimal::from_atomics(x, 18)) {
                     (acc, Ok(x)) if x.gt(&Decimal::zero()) => Ok(acc + x),
-                    _ => Err(OutpostError::InvalidPrefQtys),
+                    _ => Err(OutpostError::ZeroPrefs),
                 }
             })?;
 
     match total_pref_amounts == Decimal::one() {
         true => Ok(true),
-        false => Err(OutpostError::InvalidPrefQtys),
+        false => Err(OutpostError::InvalidPrefQtys {
+            sum: total_pref_amounts,
+        }),
     }
 }
 
@@ -87,7 +89,8 @@ impl<D> TryFrom<CompoundPrefs<D>> for Vec<Decimal> {
             .relative
             .iter()
             .map(|DestinationAction { amount, .. }| {
-                Decimal::from_atomics(*amount, 18).map_err(|_| OutpostError::InvalidPrefQtys)
+                Decimal::from_atomics(*amount, 18)
+                    .map_err(|_| OutpostError::PrefsToPercentagesFailure(*amount))
             })
             .collect::<Result<Vec<Decimal>, OutpostError>>()
     }
