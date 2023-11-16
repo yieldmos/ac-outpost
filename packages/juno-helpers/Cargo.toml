@@ -23,3 +23,4 @@ wynd-helpers = { workspace = true }
 white-whale = { workspace = true }
 balance-token-swap = { workspace = true }
 bond-router = { workspace = true }
+cw-grant-spec = { workspace = true }

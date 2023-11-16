@@ -1,5 +1,9 @@
 use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
-use cosmwasm_std::{to_binary, to_json_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use cw_grant_spec::grants::{
+    AuthorizationType, ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit,
+    ContractExecutionSetting, GrantBase, GrantRequirement,
+};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},
@@ -61,7 +65,7 @@ pub fn wynd_pair_swap_msg(
                 &cw20::Cw20ExecuteMsg::Send {
                     contract: pair_contract_address.to_owned(),
                     amount: offer_asset.amount,
-                    msg: to_binary(&wyndex::pair::Cw20HookMsg::Swap {
+                    msg: to_json_binary(&wyndex::pair::Cw20HookMsg::Swap {
                         ask_asset_info: Some(ask_asset),
                         belief_price: None,
                         max_spread: None,
@@ -192,7 +196,7 @@ pub fn create_wyndex_swap_msg(
                 &cw20::Cw20ExecuteMsg::Send {
                     contract: multihop_address.to_string(),
                     amount: offer_amount,
-                    msg: to_binary(&swap_ops)?,
+                    msg: to_json_binary(&swap_ops)?,
                 },
                 None,
             )?,
@@ -315,4 +319,137 @@ pub fn create_wyndex_swaps_with_sims(
         asset: ask_asset,
         simulated_return_amount,
     })
+}
+
+/// Creates the grant requirement being able to do a swap on a specific wyndex pool
+pub fn wynd_pool_swap_grant(
+    GrantBase {
+        granter,
+        grantee,
+        expiration,
+    }: GrantBase,
+
+    pool_address: Addr,
+    offer_asset: AssetInfo,
+    limit: Option<ContractExecutionAuthorizationLimit>,
+) -> Vec<GrantRequirement> {
+    match offer_asset {
+        // cw20 token
+        AssetInfo::Token(cw20_addr) => vec![
+            // permission to call send on the cw20 token itself
+            GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: Addr::unchecked(cw20_addr),
+                        limit: limit
+                            .clone()
+                            .map(|v| match v {
+                                ContractExecutionAuthorizationLimit::MaxFundsLimit { .. } => {
+                                    ContractExecutionAuthorizationLimit::default()
+                                }
+                                ContractExecutionAuthorizationLimit::CombinedLimit {
+                                    calls_remaining: remaining,
+                                    ..
+                                } => {
+                                    ContractExecutionAuthorizationLimit::MaxCallsLimit { remaining }
+                                }
+                                max_calls => max_calls,
+                            })
+                            .unwrap_or_default(),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["send".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            },
+        ],
+        AssetInfo::Native(denom) => {
+            // native token so no cw20 grant needed
+            vec![GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: pool_address,
+                        limit: limit.unwrap_or(
+                            ContractExecutionAuthorizationLimit::single_fund_limit(denom),
+                        ),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["swap".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            }]
+        }
+    }
+}
+
+/// creates the grant requirement for being able to do a swap on the wyndex multihop router
+pub fn wynd_multihop_swap_grant(
+    GrantBase {
+        granter,
+        grantee,
+        expiration,
+    }: GrantBase,
+
+    router_addr: Addr,
+    offer_asset: AssetInfo,
+    limit: Option<ContractExecutionAuthorizationLimit>,
+) -> Vec<GrantRequirement> {
+    match offer_asset {
+        // cw20 token
+        AssetInfo::Token(cw20_addr) => vec![
+            // permission to call send on the cw20 token itself
+            GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: Addr::unchecked(cw20_addr),
+                        limit: limit
+                            .clone()
+                            .map(|v| match v {
+                                ContractExecutionAuthorizationLimit::MaxFundsLimit { .. } => {
+                                    ContractExecutionAuthorizationLimit::default()
+                                }
+                                ContractExecutionAuthorizationLimit::CombinedLimit {
+                                    calls_remaining: remaining,
+                                    ..
+                                } => {
+                                    ContractExecutionAuthorizationLimit::MaxCallsLimit { remaining }
+                                }
+                                max_calls => max_calls,
+                            })
+                            .unwrap_or_default(),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["send".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            },
+        ],
+        AssetInfo::Native(denom) => {
+            vec![GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: router_addr.clone(),
+                        limit: limit.unwrap_or(
+                            ContractExecutionAuthorizationLimit::single_fund_limit(denom),
+                        ),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["execute_swap_operations".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            }]
+        }
+    }
 }

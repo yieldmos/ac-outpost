@@ -2,12 +2,14 @@ use cosmwasm_std::{coin, Addr, Coin, Decimal, Deps, QuerierWrapper, StdResult, T
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
     AuthorizationType, ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit, ContractExecutionSetting,
-    GrantRequirement, RevokeRequirement, StakeAuthorizationPolicy, StakeAuthorizationType, StakeAuthorizationValidators,
+    GrantBase, GrantRequirement, RevokeRequirement, StakeAuthorizationPolicy, StakeAuthorizationType,
+    StakeAuthorizationValidators,
 };
 
+use juno_helpers::grants::{balance_dao_grant, gelotto_lottery_grant, native_staking_grant, wyndao_staking_grant};
 use outpost_utils::juno_comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd};
 
-use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
+use wynd_helpers::wynd_swap::{simulate_wynd_pool_swap, wynd_multihop_swap_grant, wynd_pool_swap_grant};
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
@@ -173,31 +175,29 @@ pub fn gen_comp_pref_grants(
             .relative
             .iter()
             .flat_map(|action| -> Vec<GrantRequirement> {
+                let base = GrantBase {
+                    granter: granter.clone(),
+                    grantee: grantee.clone(),
+                    expiration,
+                };
+
                 match action.destination.clone() {
                     JunoDestinationProject::Unallocated {} => vec![],
-                    JunoDestinationProject::JunoStaking { validator_address } => vec![GrantRequirement::GrantSpec {
-                        grant_type: AuthorizationType::StakeAuthorization {
-                            max_tokens: None,
-                            authorization_type: StakeAuthorizationType::Delegate,
-                            validators: Some(StakeAuthorizationPolicy::AllowList(StakeAuthorizationValidators {
-                                address: vec![validator_address],
-                            })),
-                        },
-                        granter: granter.clone(),
-                        grantee: grantee.clone(),
-                        expiration,
-                    }],
+                    JunoDestinationProject::JunoStaking { validator_address } => {
+                        native_staking_grant(base, None, Some(vec![validator_address]))
+                    }
+
                     JunoDestinationProject::DaoStaking(dao) => {
                         let DaoAddr {
                             juno_wyndex_pair, cw20, ..
                         } = dao.get_daos_addresses(&project_addresses.destination_projects.daos);
 
                         let (swap_address, required_key) =
-                    // use the pair if possible
-                    juno_wyndex_pair.map_or((
-                        project_addresses.destination_projects.wynd.multihop.to_string(),
-                         "execute_swap_operations".to_string(),
-                    ),|pair_add| (pair_add.to_string(), "swap".to_string()));
+                            // use the pair if possible
+                            juno_wyndex_pair.map_or((
+                                project_addresses.destination_projects.wynd.multihop.to_string(),
+                                "execute_swap_operations".to_string(),
+                            ),|pair_add| (pair_add.to_string(), "swap".to_string()));
 
                         vec![
                             // staking permission
@@ -232,53 +232,26 @@ pub fn gen_comp_pref_grants(
                             },
                         ]
                     }
-                    JunoDestinationProject::BalanceDao {} => vec![GrantRequirement::GrantSpec {
-                        grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                            contract_addr: project_addresses.destination_projects.balance_dao.clone(),
-                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                keys: vec!["swap".to_string()],
-                            },
-                        }]),
-                        granter: granter.clone(),
-                        grantee: grantee.clone(),
-                        expiration,
-                    }],
+                    JunoDestinationProject::BalanceDao {} => {
+                        balance_dao_grant(base, project_addresses.destination_projects.balance_dao.clone())
+                    }
                     JunoDestinationProject::GelottoLottery {
                         lottery,
                         lucky_phrase: _lucky_phrase,
-                    } => vec![GrantRequirement::GrantSpec {
-                        grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                            contract_addr: lottery.get_lottery_address(&project_addresses.destination_projects.gelotto),
-
-                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                keys: vec!["sender_buy_seed".to_string()],
-                            },
-                        }]),
-                        granter: granter.clone(),
-                        grantee: grantee.clone(),
-                        expiration,
-                    }],
+                    } => gelotto_lottery_grant(
+                        base,
+                        lottery.get_lottery_address(&project_addresses.destination_projects.gelotto),
+                    ),
                     JunoDestinationProject::SendTokens { denom, address } => [
                         // general multihop swap
                         match denom.clone() {
                             AssetInfo::Native(token_denom) if token_denom.eq("ujuno") => vec![],
-                            _ => vec![GrantRequirement::GrantSpec {
-                                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
-                                    ContractExecutionSetting {
-                                        contract_addr: project_addresses.destination_projects.wynd.multihop.clone(),
-
-                                        limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                            keys: vec!["execute_swap_operations".to_string()],
-                                        },
-                                    },
-                                ]),
-                                granter: granter.clone(),
-                                grantee: grantee.clone(),
-                                expiration,
-                            }],
+                            _ => wynd_multihop_swap_grant(
+                                base,
+                                project_addresses.destination_projects.wynd.multihop.clone(),
+                                AssetInfo::Native("ujuno".to_string()),
+                                Some(ContractExecutionAuthorizationLimit::single_fund_limit("ujuno")),
+                            ),
                         },
                         // send to the given user
                         vec![match denom {
@@ -355,151 +328,107 @@ pub fn gen_comp_pref_grants(
                                 expiration,
                             },
                             // bonding to the market
-                            GrantRequirement::GrantSpec {
-                                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
-                                    ContractExecutionSetting {
-                                        contract_addr: project_addresses.destination_projects.white_whale.market.clone(),
-                                        limit: ContractExecutionAuthorizationLimit::single_fund_limit(denom),
-                                        // filter: ContractExecutionAuthorizationFilter::AllowAllMessagesFilter
-                                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                            keys: vec!["bond".to_string()],
-                                        },
-                                    },
-                                ]),
-                                granter: granter.clone(),
-                                grantee: grantee.clone(),
-                                expiration,
-                            },
+                            GrantRequirement::default_contract_exec_auth(
+                                base,
+                                project_addresses.destination_projects.white_whale.market.clone(),
+                                vec!["bond"],
+                                Some(&denom),
+                            ), /*GrantRequirement::GrantSpec {
+                                   grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                                       ContractExecutionSetting {
+                                           contract_addr: project_addresses.destination_projects.white_whale.market.clone(),
+                                           limit: ContractExecutionAuthorizationLimit::single_fund_limit(denom),
+                                           // filter: ContractExecutionAuthorizationFilter::AllowAllMessagesFilter
+                                           filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                                               keys: vec!["bond".to_string()],
+                                           },
+                                       },
+                                   ]),
+                                   granter: granter.clone(),
+                                   grantee: grantee.clone(),
+                                   expiration,
+                               },*/
                         ]
                     }
                     JunoDestinationProject::WyndStaking {
                         bonding_period: _bonding_period,
                     } => vec![
                         // pair swap for JUNO to WYND
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: project_addresses.destination_projects.wynd.juno_wynd_pair.clone(),
-
-                                limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    keys: vec!["swap".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
+                        wynd_pool_swap_grant(
+                            base.clone(),
+                            project_addresses.destination_projects.wynd.juno_wynd_pair.clone(),
+                            AssetInfo::Native("ujuno".to_string()),
+                            Some(ContractExecutionAuthorizationLimit::single_fund_limit("ujuno")),
+                        ),
                         // send wynd to the staking contract and stake the tokens
                         // TODO: lock down the sending and the delegation further
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: project_addresses.destination_projects.wynd.cw20.clone(),
-                                limit: ContractExecutionAuthorizationLimit::default(),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    keys: vec!["send".to_string(), "delegate".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
-                    ],
-                    JunoDestinationProject::RacoonBet { .. } => vec![GrantRequirement::GrantSpec {
-                        grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                            contract_addr: project_addresses.destination_projects.racoon_bet.game.clone(),
-                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                keys: vec!["place_bet".to_string()],
-                            },
-                        }]),
-                        granter: granter.clone(),
-                        grantee: grantee.clone(),
-                        expiration,
-                    }],
+                        wyndao_staking_grant(base, project_addresses.destination_projects.wynd.cw20.clone()),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .collect(),
+                    JunoDestinationProject::RacoonBet { .. } => vec![GrantRequirement::default_contract_exec_auth(
+                        base,
+                        project_addresses.destination_projects.racoon_bet.game.clone(),
+                        vec!["place_bet"],
+                        Some("ujuno"),
+                    )],
                     JunoDestinationProject::TokenSwap {
                         target_denom: _target_denom,
-                    } => vec![
-                        // general multihop swap
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: project_addresses.destination_projects.wynd.multihop.clone(),
-                                limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    keys: vec!["execute_swap_operations".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
-                    ],
-                    JunoDestinationProject::WyndLp {
-                        contract_address,
-                        bonding_period: _bonding_period,
-                    } => vec![
-                        // general multihop swap
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: project_addresses.destination_projects.wynd.multihop.clone(),
-                                limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    keys: vec!["execute_swap_operations".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
-                        // bonding to the pool
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: Addr::unchecked(contract_address),
-                                limit: ContractExecutionAuthorizationLimit::default(),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    // might need a bond key as well
-                                    keys: vec!["send".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
+                    } => wynd_multihop_swap_grant(
+                        base,
+                        project_addresses.destination_projects.wynd.multihop.clone(),
+                        AssetInfo::Native("ujuno".to_string()),
+                        None,
+                    ),
+
+                    JunoDestinationProject::WyndLp { .. } => vec![
+                        // // general multihop swap
+                        // GrantRequirement::GrantSpec {
+                        //     grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
+                        //         contract_addr: project_addresses.destination_projects.wynd.multihop.clone(),
+                        //         limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
+                        //         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                        //             keys: vec!["execute_swap_operations".to_string()],
+                        //         },
+                        //     }]),
+                        //     granter: granter.clone(),
+                        //     grantee: grantee.clone(),
+                        //     expiration,
+                        // },
+                        // // bonding to the pool
+                        // GrantRequirement::GrantSpec {
+                        //     grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
+                        //         contract_addr: Addr::unchecked(contract_address),
+                        //         limit: ContractExecutionAuthorizationLimit::default(),
+                        //         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                        //             // might need a bond key as well
+                        //             keys: vec!["send".to_string()],
+                        //         },
+                        //     }]),
+                        //     granter: granter.clone(),
+                        //     grantee: grantee.clone(),
+                        //     expiration,
+                        // },
                     ],
                     JunoDestinationProject::SparkIbcCampaign { fund: _fund } => vec![
-                        // general multihop swap
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: project_addresses.destination_projects.wynd.multihop.clone(),
-                                limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    keys: vec!["execute_swap_operations".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
+                        wynd_multihop_swap_grant(
+                            base.clone(),
+                            project_addresses.destination_projects.wynd.multihop.clone(),
+                            AssetInfo::Native("ujuno".to_string()),
+                            Some(ContractExecutionAuthorizationLimit::single_fund_limit("ujuno")),
+                        ),
                         // funding campaign
-                        GrantRequirement::GrantSpec {
-                            grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                                contract_addr: project_addresses.destination_projects.spark_ibc.fund.clone(),
-
-                                limit: ContractExecutionAuthorizationLimit::single_fund_limit(
-                                    if let AssetInfo::Native(usdc) = project_addresses.usdc.clone() {
-                                        usdc
-                                    } else {
-                                        "".to_string()
-                                    },
-                                ),
-                                filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                    keys: vec!["fund".to_string()],
-                                },
-                            }]),
-                            granter: granter.clone(),
-                            grantee: grantee.clone(),
-                            expiration,
-                        },
-                    ],
+                        vec![GrantRequirement::default_contract_exec_auth(
+                            base,
+                            project_addresses.destination_projects.spark_ibc.fund.clone(),
+                            vec!["fund"],
+                            Some(&project_addresses.usdc.to_string()),
+                        )],
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .collect(),
                 }
             });
 
