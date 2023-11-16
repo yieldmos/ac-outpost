@@ -155,6 +155,9 @@ impl DestProjectMsgs {
     }
 }
 
+/// Calculates the tax split for a given token amount and tax rate and the
+/// send message to move the tax amount to the tax address. Note that
+/// the tax will be in addition to the base token amount
 pub fn calc_tax_split(
     token: &Coin,
     tax: Decimal,
@@ -162,7 +165,7 @@ pub fn calc_tax_split(
     tax_addr: String,
 ) -> TaxSplitResult {
     let tax_amount = token.amount.mul_ceil(tax);
-    let remaining_rewards = token.amount.saturating_sub(tax_amount);
+    let remaining_rewards = token.amount;
 
     let tax_store_msg = CosmosProtoMsg::Send(MsgSend {
         from_address: sender.to_string(),

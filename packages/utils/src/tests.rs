@@ -97,7 +97,7 @@ fn test_calc_tax_split() {
     assert_eq!(
         split,
         TaxSplitResult {
-            remaining_rewards: coin(99_000_000, "ubtc"),
+            remaining_rewards: coin(100_000_000, "ubtc"),
             tax_amount: coin(1_000_000, "ubtc"),
             tax_store_msg: CosmosProtoMsg::Send(MsgSend {
                 from_address: sender.clone(),
@@ -121,7 +121,7 @@ fn test_calc_tax_split() {
     assert_eq!(
         split,
         TaxSplitResult {
-            remaining_rewards: coin(4, "ubtc"),
+            remaining_rewards: coin(5, "ubtc"),
             tax_amount: coin(1, "ubtc"),
             tax_store_msg: CosmosProtoMsg::Send(MsgSend {
                 from_address: sender.clone(),
