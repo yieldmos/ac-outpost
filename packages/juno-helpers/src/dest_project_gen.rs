@@ -162,6 +162,10 @@ where
         )?
         .return_amount
         .lt(&1_000_000u128.into())
+        || (
+            // otherwise we can assume we're receiving usdc and we can check the amount
+            wyndex_usdc_pair_addr.is_none() && bet.amount.lt(&1_000_000u128.into())
+        )
     {
         return Ok(DestProjectMsgs {
             msgs: vec![],

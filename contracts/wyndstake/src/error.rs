@@ -9,9 +9,6 @@ pub enum ContractError {
     #[error("Outpost Utils Error: &{0}")]
     OutpostError(#[from] outpost_utils::errors::OutpostError),
 
-    #[error("Authzpp Withdraw Tax: &{0}")]
-    AuthzppWithdrawTax(#[from] withdraw_rewards_tax_grant::ContractError),
-
     #[error("Wynd Helper Error: &{0}")]
     WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
 
@@ -20,6 +17,15 @@ pub enum ContractError {
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
+
+    #[error("No DCA Compound Preferences found")]
+    NoDCACompoundPrefs,
+
+    #[error("Invalid DCA Compound Preferences: Only JUNO DCA currently allowed")]
+    InvalidDCACompoundPrefs,
+
+    #[error("Invalid Compound Preferences")]
+    InvalidCompoundPrefs,
 
     #[error("{0}")]
     CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),

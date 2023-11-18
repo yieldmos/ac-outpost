@@ -475,6 +475,8 @@ pub struct WhiteWhaleSatelliteAddresses {
 
     pub juno_amp_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
     pub juno_bone_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub usdc_amp_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub usdc_bone_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
 
     // The contract address for the multihop router
     // juno128lewlw6kv223uw4yzdffl8rnh3k9qs8vrf6kef28579w8ygccyq7m90n2
@@ -495,6 +497,8 @@ pub struct WhiteWhaleSatelliteAddrs {
     pub bone_whale: String,
     pub juno_amp_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
     pub juno_bone_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub usdc_amp_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
+    pub usdc_bone_whale_path: Vec<white_whale::pool_network::router::SwapOperation>,
     pub terraswap_multihop_router: Addr,
     pub market: Addr,
     pub rewards: Addr,
@@ -506,6 +510,8 @@ impl WhiteWhaleSatelliteAddresses {
             bone_whale: self.bone_whale.clone(),
             juno_amp_whale_path: self.juno_amp_whale_path.clone(),
             juno_bone_whale_path: self.juno_bone_whale_path.clone(),
+            usdc_amp_whale_path: self.usdc_amp_whale_path.clone(),
+            usdc_bone_whale_path: self.usdc_bone_whale_path.clone(),
             terraswap_multihop_router: api.addr_validate(&self.terraswap_multihop_router)?,
             market: api.addr_validate(&self.market)?,
             rewards: api.addr_validate(&self.rewards)?,
@@ -514,7 +520,7 @@ impl WhiteWhaleSatelliteAddresses {
 }
 
 impl WhiteWhaleSatelliteAddrs {
-    pub fn get_swap_operations(
+    pub fn get_juno_swap_operations(
         &self,
         desired_asset: AssetInfo,
     ) -> Result<
@@ -530,6 +536,30 @@ impl WhiteWhaleSatelliteAddrs {
             }
             AssetInfo::Native(denom) if denom.eq(&self.bone_whale) => {
                 Ok((self.juno_bone_whale_path.clone(), denom))
+            }
+            // if the asset isn't ampWHALE or bWhale then we can't do anything
+            _ => Err(OutpostError::InvalidAsset {
+                denom: desired_asset.to_string(),
+                project: "white whale".to_string(),
+            }),
+        }
+    }
+    pub fn get_usdc_swap_operations(
+        &self,
+        desired_asset: AssetInfo,
+    ) -> Result<
+        (
+            Vec<white_whale::pool_network::router::SwapOperation>,
+            String,
+        ),
+        OutpostError,
+    > {
+        match desired_asset {
+            AssetInfo::Native(denom) if denom.eq(&self.amp_whale) => {
+                Ok((self.usdc_amp_whale_path.clone(), denom))
+            }
+            AssetInfo::Native(denom) if denom.eq(&self.bone_whale) => {
+                Ok((self.usdc_bone_whale_path.clone(), denom))
             }
             // if the asset isn't ampWHALE or bWhale then we can't do anything
             _ => Err(OutpostError::InvalidAsset {
@@ -606,6 +636,8 @@ pub struct WyndAddresses {
     pub multihop: String,
     // juno1a7lmc8e04hcs4y2275cultvg83u636ult4pmnwktr6l9nhrh2e8qzxfdwf
     pub juno_wynd_pair: String,
+    // juno18zk9xqj9xjm0ry39jjam8qsysj7qh49xwt4qdfp9lgtrk08sd58s2n54ve
+    pub wynd_usdc_pair: String,
 }
 
 #[cw_serde]
@@ -613,6 +645,7 @@ pub struct WyndAddrs {
     pub cw20: Addr,
     pub multihop: Addr,
     pub juno_wynd_pair: Addr,
+    pub wynd_usdc_pair: Addr,
 }
 
 impl WyndAddresses {
@@ -621,6 +654,7 @@ impl WyndAddresses {
             cw20: api.addr_validate(&self.cw20)?,
             multihop: api.addr_validate(&self.multihop)?,
             juno_wynd_pair: api.addr_validate(&self.juno_wynd_pair)?,
+            wynd_usdc_pair: api.addr_validate(&self.wynd_usdc_pair)?,
         })
     }
 }

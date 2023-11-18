@@ -129,12 +129,9 @@ pub fn compound(
 /// CosmosProtoMsgs that will be broadcast on their behalf
 pub fn prefs_to_msgs(
     project_addrs: &ContractAddrs,
-    // block: &BlockInfo,
-    // staking_denom: String,
-    target_address: &Addr,
+    user_addr: &Addr,
     total_rewards: cosmwasm_std::Coin,
     comp_prefs: JunoCompPrefs,
-
     deps: Deps,
 ) -> Result<Vec<DestProjectMsgs>, ContractError> {
     let dca_denom = total_rewards.denom.clone();
@@ -159,7 +156,7 @@ pub fn prefs_to_msgs(
                 match destination {
                     JunoDestinationProject::JunoStaking { validator_address } => Ok(native_staking_msg(
                         &validator_address,
-                        target_address,
+                        user_addr,
                         &cosmwasm_std::Coin {
                             denom: dca_denom.clone(),
                             amount: comp_token_amount,
@@ -174,7 +171,7 @@ pub fn prefs_to_msgs(
                             // if there's a direct juno & staking denom pair, then we can swap directly
                             let (swap_msg, swap_sim) = simulate_and_swap_wynd_pair(
                                 &deps.querier,
-                                target_address,
+                                user_addr,
                                 pair_addr.as_ref(),
                                 compounding_asset,
                                 AssetInfo::Token(dao_addresses.cw20.to_string()),
@@ -185,7 +182,7 @@ pub fn prefs_to_msgs(
                             // otherwise we need to use the wyndex router to swap
                             create_wyndex_swap_msg_with_simulation(
                                 &deps.querier,
-                                target_address,
+                                user_addr,
                                 comp_token_amount,
                                 AssetInfo::Native(dca_denom.clone()),
                                 AssetInfo::Token(dao_addresses.cw20.to_string()),
@@ -195,7 +192,7 @@ pub fn prefs_to_msgs(
 
                         let mut stake_msgs = daodao_cw20_staking_msg(
                             dao.to_string(),
-                            target_address,
+                            user_addr,
                             &dao_addresses.cw20,
                             &dao_addresses.staking,
                             expected_dao_token_amount,
@@ -212,7 +209,7 @@ pub fn prefs_to_msgs(
 
                         // swap juno for wynd
                         let wynd_swap_msg = wynd_pair_swap_msg(
-                            target_address,
+                            user_addr,
                             Asset {
                                 info: AssetInfo::Native(dca_denom.clone()),
                                 amount: comp_token_amount,
@@ -222,7 +219,7 @@ pub fn prefs_to_msgs(
                         )?;
 
                         let mut staking_msg =
-                            wynd_staking_msgs(&cw20, &target_address.to_string(), comp_token_amount, bonding_period)?;
+                            wynd_staking_msgs(&cw20, &user_addr.to_string(), comp_token_amount, bonding_period)?;
 
                         staking_msg.prepend_msgs(vec![wynd_swap_msg]);
 
@@ -231,7 +228,7 @@ pub fn prefs_to_msgs(
 
                     JunoDestinationProject::TokenSwap { target_denom } => Ok(DestProjectMsgs {
                         msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
-                            target_address,
+                            user_addr,
                             comp_token_amount,
                             AssetInfo::Native(dca_denom.clone()),
                             target_denom,
@@ -250,7 +247,7 @@ pub fn prefs_to_msgs(
                         Ok(DestProjectMsgs::default())
                     }
                     JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => Ok(gelotto_lottery_msgs(
-                        target_address,
+                        user_addr,
                         project_addrs.take_rate_addr.clone(),
                         lottery,
                         &project_addrs.destination_projects.gelotto,
@@ -259,7 +256,7 @@ pub fn prefs_to_msgs(
                     )?),
                     JunoDestinationProject::RacoonBet { game } => Ok(racoon_bet_msgs(
                         &deps.querier,
-                        target_address,
+                        user_addr,
                         Some(&project_addrs.destination_projects.racoon_bet.juno_usdc_wynd_pair),
                         cosmwasm_std::Coin {
                             denom: dca_denom.clone(),
@@ -269,11 +266,11 @@ pub fn prefs_to_msgs(
                         &project_addrs.destination_projects.racoon_bet.game,
                     )?),
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
-                        let (swap_ops, denom) = project_addrs.destination_projects.white_whale.get_swap_operations(asset)?;
+                        let (swap_ops, denom) = project_addrs.destination_projects.white_whale.get_juno_swap_operations(asset)?;
 
                         let (swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
                             &deps.querier,
-                            target_address,
+                            user_addr,
                             comp_token_amount,
                             swap_ops,
                             project_addrs
@@ -284,7 +281,7 @@ pub fn prefs_to_msgs(
                         )?;
 
                         let mut bond_msgs = white_whale_satellite_msgs(
-                            target_address,
+                            user_addr,
                             cosmwasm_std::Coin { denom, amount: sim },
                             &project_addrs.destination_projects.white_whale.market.clone(),
                         )?;
@@ -294,13 +291,13 @@ pub fn prefs_to_msgs(
                         Ok(bond_msgs)
                     }
                     JunoDestinationProject::BalanceDao {} => Ok(balance_dao_msgs(
-                        target_address,
+                        user_addr,
                         &project_addrs.destination_projects.balance_dao,
                         comp_token_amount,
                     )?),
 
                     JunoDestinationProject::MintLsd { lsd_type } => Ok(mint_juno_lsd_msgs(
-                        target_address,
+                        user_addr,
                         lsd_type,
                         comp_token_amount,
                         project_addrs.destination_projects.juno_lsds.clone(),
@@ -310,7 +307,7 @@ pub fn prefs_to_msgs(
 
                         let (swaps, est_donation) = create_wyndex_swap_msg_with_simulation(
                             &deps.querier,
-                            target_address,
+                            user_addr,
                             comp_token_amount,
                             compounding_asset.info,
                             project_addrs.usdc.clone(),
@@ -318,7 +315,7 @@ pub fn prefs_to_msgs(
                         )?;
 
                         let mut spark_msgs = spark_ibc_msgs(
-                            target_address,
+                            user_addr,
                             &spark_addr,
                             cosmwasm_std::Coin {
                                 denom: project_addrs.usdc.to_string(),
@@ -337,7 +334,7 @@ pub fn prefs_to_msgs(
                     } => {
                         let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
                             &deps.querier,
-                            target_address,
+                            user_addr,
                             comp_token_amount,
                             AssetInfo::Native(dca_denom.clone()),
                             target_asset.clone(),
@@ -347,7 +344,7 @@ pub fn prefs_to_msgs(
 
                         // after the swap we can send the estimated funds to the target address
                         let mut send_msgs = send_tokens_msgs(
-                            target_address,
+                            user_addr,
                             &deps.api.addr_validate(&to_address)?,
                             Asset {
                                 info: target_asset,
@@ -361,6 +358,7 @@ pub fn prefs_to_msgs(
                     }
                     JunoDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
+            
             },
         )
         .collect::<Result<Vec<_>, ContractError>>()?;

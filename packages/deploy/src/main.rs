@@ -2,12 +2,9 @@ use anybuf::Anybuf;
 use cw_orch::{anyhow, daemon::DaemonBuilder, prelude::*};
 use outpost_utils::juno_comp_prefs::DaoAddress;
 use tokio::runtime::Runtime;
-use white_whale::pool_network::{
-    asset::AssetInfo,
-    router::SwapOperation,
-};
-use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
+use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
+use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -34,6 +31,7 @@ pub fn main() -> anyhow::Result<()> {
                     .to_string(),
                 juno_wynd_pair: "juno1a7lmc8e04hcs4y2275cultvg83u636ult4pmnwktr6l9nhrh2e8qzxfdwf"
                     .to_string(),
+                wynd_usdc_pair: "juno18zk9xqj9xjm0ry39jjam8qsysj7qh49xwt4qdfp9lgtrk08sd58s2n54ve".to_string()
             },
             gelotto: outpost_utils::juno_comp_prefs::GelottoAddresses {
                 pick3_contract: "juno1v466lyrhsflkt9anxt4wyx7mtw8w2uyk0qxkqskqfj90rmwhph7s0dxvga"
@@ -132,16 +130,78 @@ pub fn main() -> anyhow::Result<()> {
                 rewards: "juno184ghwgprva7dlr2hwhzgvt6mem6zx78fygk0cpw7klssmzyf67tqdtwt3h"
                     .to_string(),
                     
-                juno_amp_whale_path:  vec![
-                    // swap juno for usdc
-                    SwapOperation::TerraSwap {
-                        offer_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
-
-                        ask_asset_info: AssetInfo::NativeToken {
-                            denom:
-                            "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
-                        }
-                    },
+                    juno_amp_whale_path:  vec![
+                        // swap juno for usdc
+                        SwapOperation::TerraSwap {
+                            offer_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
+    
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                            }
+                        },
+                        // usdc to whale
+                        SwapOperation::TerraSwap {
+                            offer_asset_info:  AssetInfo::NativeToken {
+                                denom:
+                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                            },
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                            }
+                        },
+                        // whale to ampwhale
+                        SwapOperation::TerraSwap {
+                            offer_asset_info:  AssetInfo::NativeToken {
+                                denom:
+                                "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                            },
+                            ask_asset_info: AssetInfo::NativeToken {
+                                denom:
+                                "ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF".to_string()
+                            }
+                        },
+                    ],
+                    
+    
+                    juno_bone_whale_path: 
+                        vec![
+                            // swap juno for usdc
+                            SwapOperation::TerraSwap {
+                                offer_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
+    
+                                ask_asset_info: AssetInfo::NativeToken {
+                                    denom:
+                                    "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                                }
+                            },
+                            // usdc to whale
+                            SwapOperation::TerraSwap {
+                                offer_asset_info:  AssetInfo::NativeToken {
+                                    denom:
+                                    "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                                },
+                                ask_asset_info: AssetInfo::NativeToken {
+                                    denom:
+                                    "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                                }
+                            },
+                            // whale to ampwhale
+                            SwapOperation::TerraSwap {
+                                offer_asset_info:  AssetInfo::NativeToken {
+                                    denom:
+                                    "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                                },
+                                ask_asset_info: AssetInfo::NativeToken {
+                                    denom:
+                                    "ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF".to_string()
+                                }
+                            },
+                        ],
+                        usdc_amp_whale_path:  vec![
+                    
+                    
                     // usdc to whale
                     SwapOperation::TerraSwap {
                         offer_asset_info:  AssetInfo::NativeToken {
@@ -167,17 +227,9 @@ pub fn main() -> anyhow::Result<()> {
                 ],
                 
 
-                juno_bone_whale_path: 
+                usdc_bone_whale_path: 
                     vec![
-                        // swap juno for usdc
-                        SwapOperation::TerraSwap {
-                            offer_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
-
-                            ask_asset_info: AssetInfo::NativeToken {
-                                denom:
-                                "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
-                            }
-                        },
+                       
                         // usdc to whale
                         SwapOperation::TerraSwap {
                             offer_asset_info:  AssetInfo::NativeToken {
@@ -249,52 +301,52 @@ pub fn main() -> anyhow::Result<()> {
         "ymos_junostake_address",
         juno_chain.clone(),
     );
-    let junodca = ymos_junodca_outpost::YmosJunodcaOutpost::new(
-        "ymos_junodca_address",
-        juno_chain.clone(),
-    );
+    let junodca =
+        ymos_junodca_outpost::YmosJunodcaOutpost::new("ymos_junodca_address", juno_chain.clone());
 
     junodca.upload_if_needed()?;
     println!("junodca code id: {}", junodca.code_id()?);
 
-    // junostake.upload_if_needed()?;
-    // println!("junostake code id: {}", junostake.code_id()?);
+    junostake.upload_if_needed()?;
+    println!("junostake code id: {}", junostake.code_id()?);
 
-    // // junostake contract upload
-    // if junostake.address().is_err() {
-    //     junostake.instantiate(
-    //         &ymos_junostake_outpost::msg::InstantiateMsg {
-    //             admin: Some(juno_chain.sender().to_string()),
-    //             project_addresses: junostake_project_addresses.clone(),
-    //         },
-    //         Some(&Addr::unchecked(juno_chain.sender().to_string())),
-    //         None,
-    //     )?;
+    // junostake contract upload
+    if junostake.address().is_err() {
+        junostake.instantiate(
+            &ymos_junostake_outpost::msg::InstantiateMsg {
+                admin: Some(juno_chain.sender().to_string()),
+                project_addresses: junostake_project_addresses.clone(),
+            },
+            Some(&Addr::unchecked(juno_chain.sender().to_string())),
+            None,
+        )?;
 
-    //     // add yieldmos.juno as an authorized compounder
-    //     junostake
-    //     .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
+        // add yieldmos.juno as an authorized compounder
+        junostake
+            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .unwrap();
 
-    //     // setup the feeshare only on the first deploy
-    //     // this seems to sometimes need an increased gas multiplier in the .env to work
-    //     juno_chain
-    //         .commit_any::<cosmrs::Any>(
-    //             vec![feeshare_msg(
-    //                 junostake.address().unwrap().to_string(),
-    //                 juno_chain.sender().to_string(),
-    //                 juno_chain.sender().to_string(),
-    //             )],
-    //             None,
-    //         )
-    //         .unwrap();
-    // } else {
-    //     junostake.migrate(&ymos_junostake_outpost::msg::MigrateMsg {
-    //         project_addresses: Some( junostake_project_addresses.clone()),
-    //     }, junostake.code_id()?)?;
-
-        
-    // }
-    // println!("junostake: {}", junostake.addr_str()?);
+        // setup the feeshare only on the first deploy
+        // this seems to sometimes need an increased gas multiplier in the .env to work
+        juno_chain
+            .commit_any::<cosmrs::Any>(
+                vec![feeshare_msg(
+                    junostake.address().unwrap().to_string(),
+                    juno_chain.sender().to_string(),
+                    juno_chain.sender().to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+    } else {
+        junostake.migrate(
+            &ymos_junostake_outpost::msg::MigrateMsg {
+                project_addresses: Some(junostake_project_addresses.clone()),
+            },
+            junostake.code_id()?,
+        )?;
+    }
+    println!("junostake: {}", junostake.addr_str()?);
 
     // junodca contract upload
     if junodca.address().is_err() {
@@ -322,14 +374,18 @@ pub fn main() -> anyhow::Result<()> {
 
         // add yieldmos.juno as an authorized compounder
         junodca
-        .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string()).unwrap();
+            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .unwrap();
     } else {
-        junodca.migrate(&ymos_junodca_outpost::msg::MigrateMsg {        
-            project_addresses: Some( junodca_project_addresses.clone()),
-        }, junodca.code_id()?)?;
+        junodca.migrate(
+            &ymos_junodca_outpost::msg::MigrateMsg {
+                project_addresses: Some(junodca_project_addresses.clone()),
+            },
+            junodca.code_id()?,
+        )?;
     }
-    println!("junodca: {}", junodca.addr_str()?);    
-    
+    println!("junodca: {}", junodca.addr_str()?);
+
     Ok(())
 }
 

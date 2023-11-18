@@ -152,7 +152,7 @@ pub fn create_wyndex_swap_operations(
         operations,
         minimum_receive: None,
         receiver: None,
-        max_spread: Some(Decimal::percent(1)),
+        max_spread: Some(Decimal::percent(2)),
         referral_address: None,
         referral_commission: None,
     }
@@ -213,6 +213,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
     offer_asset: AssetInfo,
     ask_asset_info: AssetInfo,
     multihop_address: String,
+    swap_operations: Option<wyndex_multi_hop::msg::ExecuteMsg>,
 ) -> Result<(Vec<CosmosProtoMsg>, Uint128), StdError> {
     // no swap to do because the offer and ask tokens are the same
     if offer_asset.eq(&ask_asset_info) {
@@ -221,7 +222,10 @@ pub fn create_wyndex_swap_msg_with_simulation(
 
     // generate the operations for the multihop here that way we can use the same ops for
     // the simulation and the actual swap msg
-    let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
+    let swap_ops = swap_operations.unwrap_or(create_wyndex_swap_operations(
+        offer_asset.clone(),
+        ask_asset_info,
+    ));
 
     let simulated_swap: wyndex_multi_hop::msg::SimulateSwapOperationsResponse;
 
@@ -300,6 +304,7 @@ pub fn create_wyndex_swaps_with_sims(
                 info.into(),
                 ask_asset.clone(),
                 multihop_address.to_string(),
+                None,
             )
         })
         .collect::<Result<Vec<_>, StdError>>()?;

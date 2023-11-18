@@ -248,30 +248,22 @@ pub fn gen_comp_pref_grants(
                             AssetInfo::Token(contract_addr) => GrantRequirement::default_contract_exec_auth(
                                 base,
                                 Addr::unchecked(contract_addr),
-                                vec!["send"],
+                                vec!["transfer"],
                                 None,
                             ),
                         }],
                     ]
                     .concat(),
-                    JunoDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::GrantSpec {
-                        grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                            contract_addr: lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
-
-                            limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                            filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                                keys: vec![match lsd_type {
-                                    JunoLsd::StakeEasySe => "stake",
-                                    JunoLsd::StakeEasyB => "stake_for_bjuno",
-                                    JunoLsd::Wynd | JunoLsd::Backbone | JunoLsd::Eris => "bond",
-                                }
-                                .to_string()],
-                            },
-                        }]),
-                        granter: granter.clone(),
-                        grantee: grantee.clone(),
-                        expiration,
-                    }],
+                    JunoDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::default_contract_exec_auth(
+                        base,
+                        lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
+                        vec![match lsd_type {
+                            JunoLsd::StakeEasySe => "stake",
+                            JunoLsd::StakeEasyB => "stake_for_bjuno",
+                            JunoLsd::Wynd | JunoLsd::Backbone | JunoLsd::Eris => "bond",
+                        }],
+                        Some("ujuno"),
+                    )],
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
                         let denom = match asset {
                             AssetInfo::Native(denom) => denom,

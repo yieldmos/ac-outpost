@@ -186,15 +186,44 @@ pub fn create_terraswap_swap_msg_with_simulation(
     Ok((exec, simulated_swap.amount))
 }
 
+/// Generates the grant spec for doing a swap via the terraswap multihop for a native token
 pub fn terraswap_multihop_swap_grant(
     base: GrantBase,
-    contract_addr: Addr,
+    multihop_addr: Addr,
     offer_denom: &str,
 ) -> Vec<GrantRequirement> {
     vec![GrantRequirement::default_contract_exec_auth(
         base,
-        contract_addr,
+        multihop_addr,
         vec!["execute_swap_operations"],
         Some(offer_denom),
     )]
+}
+
+/// Generates the grant spec for doing a swap via the terraswap multihop for a cw20 token
+pub fn terraswap_cw20_multihop_swap_grant(
+    base: GrantBase,
+    cw20_addr: Addr,
+) -> Vec<GrantRequirement> {
+    vec![GrantRequirement::default_contract_exec_auth(
+        base,
+        cw20_addr,
+        vec!["send"],
+        None,
+    )]
+}
+
+pub fn terraswap_multihop_grant(
+    base: GrantBase,
+    multihop_addr: Addr,
+    offer_asset: AssetInfo,
+) -> Vec<GrantRequirement> {
+    match offer_asset {
+        AssetInfo::NativeToken { denom } => {
+            terraswap_multihop_swap_grant(base, multihop_addr, &denom)
+        }
+        AssetInfo::Token { contract_addr } => {
+            terraswap_cw20_multihop_swap_grant(base, Addr::unchecked(contract_addr))
+        }
+    }
 }

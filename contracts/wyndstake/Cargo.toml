@@ -1,9 +1,9 @@
 [package]
-name = "ymos-junostake-outpost"
+name = "ymos-wyndstake-outpost"
 authors = ["Marc <marc@yieldmos.com>"]
 version = { workspace = true }
 edition = { workspace = true }
-description = "Yieldmos Juno Staking Outpost"
+description = "Yieldmos Wynd Staking Outpost"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -35,7 +35,6 @@ interface = ["dep:cw-orch"]
 
 
 [dependencies]
-withdraw-rewards-tax-grant = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-storage = { workspace = true }
@@ -54,6 +53,7 @@ wyndex-multi-hop = { workspace = true }
 wynd-stake = { workspace = true }
 wynd-helpers = { workspace = true }
 outpost-utils = { workspace = true }
+juno-helpers = { workspace = true }
 balance-token-swap = { workspace = true }
 # stake-easy = { workspace = true }
 bond-router = { workspace = true }
@@ -61,7 +61,6 @@ cw-grant-spec = { workspace = true }
 cw-orch = { workspace = true, optional = true }
 terraswap-helpers = { workspace = true }
 white-whale = { workspace = true }
-juno-helpers = { workspace = true }
 
 
 [dev-dependencies]
