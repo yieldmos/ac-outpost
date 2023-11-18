@@ -5,6 +5,7 @@ use tokio::runtime::Runtime;
 use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
+use ymos_wyndstake_outpost::msg::ExecuteMsgFns as WyndstakeExecuteMsgFns;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -277,6 +278,12 @@ pub fn main() -> anyhow::Result<()> {
             },
         },
     };
+    let wyndstake_project_addresses = ymos_wyndstake_outpost::msg::ContractAddresses {
+        take_rate_addr:junostake_project_addresses.take_rate_addr.clone(),
+        usdc: junostake_project_addresses.usdc.clone(),
+        authzpp: ymos_wyndstake_outpost::msg::AuthzppAddresses::default(),
+        destination_projects: junostake_project_addresses.destination_projects.clone(),
+    };
     let junodca_project_addresses = ymos_junodca_outpost::msg::ContractAddresses {
         take_rate_addr: junostake_project_addresses.take_rate_addr.clone(),
         usdc: junostake_project_addresses.usdc.clone(),
@@ -298,17 +305,24 @@ pub fn main() -> anyhow::Result<()> {
     println!("connected to juno with sender: {}", juno_chain.sender());
 
     let junostake = ymos_junostake_outpost::YmosJunostakeOutpost::new(
-        "ymos_junostake_address",
+        "Yieldmos Junostake Outpost",
+        juno_chain.clone(),
+    );
+    let wyndstake = ymos_wyndstake_outpost::YmosWyndstakeOutpost::new(
+        "Yieldmos Wyndstake Outpost",
         juno_chain.clone(),
     );
     let junodca =
-        ymos_junodca_outpost::YmosJunodcaOutpost::new("ymos_junodca_address", juno_chain.clone());
+        ymos_junodca_outpost::YmosJunodcaOutpost::new("Yieldmos DCA Outpost", juno_chain.clone());
 
     junodca.upload_if_needed()?;
     println!("junodca code id: {}", junodca.code_id()?);
 
     junostake.upload_if_needed()?;
     println!("junostake code id: {}", junostake.code_id()?);
+
+    wyndstake.upload_if_needed()?;
+    println!("wyndstake code id: {}", wyndstake.code_id()?);
 
     // junostake contract upload
     if junostake.address().is_err() {
@@ -385,6 +399,45 @@ pub fn main() -> anyhow::Result<()> {
         )?;
     }
     println!("junodca: {}", junodca.addr_str()?);
+
+
+    // wyndstake contract upload
+    if wyndstake.address().is_err() {
+        wyndstake.instantiate(
+            &ymos_wyndstake_outpost::msg::InstantiateMsg {
+                admin: Some(juno_chain.sender().to_string()),
+                project_addresses: wyndstake_project_addresses.clone(),
+            },
+            Some(&Addr::unchecked(juno_chain.sender().to_string())),
+            None,
+        )?;
+
+        // add yieldmos.juno as an authorized compounder
+        wyndstake
+            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .unwrap();
+
+        // setup the feeshare only on the first deploy
+        // this seems to sometimes need an increased gas multiplier in the .env to work
+        juno_chain
+            .commit_any::<cosmrs::Any>(
+                vec![feeshare_msg(
+                    wyndstake.address().unwrap().to_string(),
+                    juno_chain.sender().to_string(),
+                    juno_chain.sender().to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+    } else {
+        wyndstake.migrate(
+            &ymos_wyndstake_outpost::msg::MigrateMsg {
+                project_addresses: Some(wyndstake_project_addresses.clone()),
+            },
+            wyndstake.code_id()?,
+        )?;
+    }
+    println!("wyndstake: {}", wyndstake.addr_str()?);
 
     Ok(())
 }

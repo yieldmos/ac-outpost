@@ -18,6 +18,9 @@ ymos-junostake-outpost = { path = "../../contracts/junostake", features = [
 ymos-junodca-outpost = { path = "../../contracts/junodca", features = [
     "interface",
 ] }
+ymos-wyndstake-outpost = { path = "../../contracts/wyndstake", features = [
+    "interface",
+] }
 white-whale = { workspace = true }
 wyndex = { workspace = true }
 outpost-utils = { workspace = true }

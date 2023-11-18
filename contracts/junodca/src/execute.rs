@@ -187,6 +187,7 @@ pub fn prefs_to_msgs(
                                 AssetInfo::Native(dca_denom.clone()),
                                 AssetInfo::Token(dao_addresses.cw20.to_string()),
                                 project_addrs.destination_projects.wynd.multihop.to_string(),
+                                None
                             )?
                         };
 
@@ -311,7 +312,7 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             compounding_asset.info,
                             project_addrs.usdc.clone(),
-                            project_addrs.destination_projects.wynd.multihop.to_string(),
+                            project_addrs.destination_projects.wynd.multihop.to_string(),None
                         )?;
 
                         let mut spark_msgs = spark_ibc_msgs(
@@ -338,7 +339,7 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             AssetInfo::Native(dca_denom.clone()),
                             target_asset.clone(),
-                            project_addrs.destination_projects.wynd.multihop.to_string(),
+                            project_addrs.destination_projects.wynd.multihop.to_string(),None
                         )
                         .map_err(ContractError::Std)?;
 
