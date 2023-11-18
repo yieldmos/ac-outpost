@@ -3,7 +3,7 @@ use std::iter;
 use cosmwasm_std::{Addr, Attribute, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Uint128};
 use outpost_utils::{
     comp_prefs::DestinationAction,
-    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs},
+    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs, RewardSplit},
     juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject},
     msg_gen::create_exec_msg,
 };
@@ -17,7 +17,7 @@ use wynd_helpers::wynd_swap::simulate_and_swap_wynd_pair;
 use wyndex::asset::{Asset, AssetInfo};
 
 use crate::{
-    helpers::{query_and_generate_wynd_reward_msgs, wynd_wyndex_multihop_swap, WyndClaimRewards},
+    helpers::{query_and_generate_wynd_reward_msgs, wynd_wyndex_multihop_swap, },
     msg::ContractAddrs,
     state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS},
     ContractError,
@@ -44,7 +44,7 @@ pub fn compound(
     let project_addrs = PROJECT_ADDRS.load(deps.storage)?;
 
     // calculate the total amount of rewards that will be compounded
-    let WyndClaimRewards {
+    let RewardSplit {
         user_rewards,
         tax_amount,
         claim_msgs,

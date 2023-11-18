@@ -7,6 +7,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ymos-junowwmarket-outpost = { path = "../../contracts/junowwmarket", features = [
+    "interface",
+] }
 # cw-orch = { git = "https://github.com/AbstractSDK/cw-orchestrator.git", branch = "feature/starship", features = [
 #     "interchain",
 #     "starship",

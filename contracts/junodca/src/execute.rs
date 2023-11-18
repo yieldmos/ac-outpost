@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageI
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
-        calc_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs,
+        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs,
         TaxSplitResult,
     },
     juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject},
@@ -54,8 +54,8 @@ pub fn compound(
     let TaxSplitResult {
         remaining_rewards,
         tax_amount,
-        tax_store_msg,
-    } = calc_tax_split(
+        claim_and_tax_msgs: tax_store_msg,
+    } = calc_additional_tax_split(
         compound_token,
         tax_fee.unwrap_or(Decimal::new(1_000_000_000_000_000u128.into())),
         user_address,
@@ -73,7 +73,7 @@ pub fn compound(
 
     let combined_msgs = all_msgs.iter().fold(
         DestProjectMsgs {
-            msgs: vec![tax_store_msg],
+            msgs: tax_store_msg,
             sub_msgs: vec![],
             events: vec![Event::new("dca_tax").add_attribute("amount", tax_amount.to_string())],
         },

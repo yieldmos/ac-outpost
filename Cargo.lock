@@ -1436,6 +1436,7 @@ dependencies = [
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "ymos-junodca-outpost",
  "ymos-junostake-outpost",
+ "ymos-junowwmarket-outpost",
  "ymos-wyndstake-outpost",
 ]
 
@@ -5002,6 +5003,39 @@ dependencies = [
 
 [[package]]
 name = "ymos-junostake-outpost"
+version = "0.2.2"
+dependencies = [
+ "balance-token-swap",
+ "bond-router",
+ "cosmos-sdk-proto 0.19.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-grant-spec",
+ "cw-multi-test",
+ "cw-orch",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.1",
+ "cw20 1.1.1",
+ "cw20-stake 2.1.0",
+ "cw20-vesting 1.6.0",
+ "juno-helpers",
+ "outpost-utils",
+ "schemars",
+ "semver",
+ "serde",
+ "terraswap-helpers",
+ "thiserror",
+ "white-whale",
+ "withdraw-rewards-tax-grant",
+ "wynd-helpers",
+ "wynd-stake",
+ "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
+ "wyndex-multi-hop",
+]
+
+[[package]]
+name = "ymos-junowwmarket-outpost"
 version = "0.2.2"
 dependencies = [
  "balance-token-swap",

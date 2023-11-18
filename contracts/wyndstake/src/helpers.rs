@@ -1,4 +1,7 @@
-use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
+use outpost_utils::{
+    helpers::RewardSplit,
+    msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -34,20 +37,13 @@ impl CwTemplateContract {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct WyndClaimRewards {
-    pub user_rewards: Uint128,
-    pub tax_amount: Uint128,
-    pub claim_msgs: Vec<CosmosProtoMsg>,
-}
-
 pub fn query_and_generate_wynd_reward_msgs(
     tax_percent: Decimal,
     delegator_addr: &Addr,
     tax_addr: &Addr,
     wynd_addr: &Addr,
     querier: &QuerierWrapper,
-) -> Result<WyndClaimRewards, ContractError> {
+) -> Result<RewardSplit, ContractError> {
     gen_wynd_claim_rewards_msg(
         tax_percent,
         delegator_addr,
@@ -68,7 +64,7 @@ pub fn gen_wynd_claim_rewards_msg(
     tax_addr: &Addr,
     wynd_addr: &Addr,
     RewardsResponse { rewards }: RewardsResponse,
-) -> Result<WyndClaimRewards, ContractError> {
+) -> Result<RewardSplit, ContractError> {
     let user_rewards = rewards * (Decimal::one() - tax_percent);
     let tax_amount = rewards - user_rewards;
 
@@ -90,7 +86,7 @@ pub fn gen_wynd_claim_rewards_msg(
         )?),
     ];
 
-    Ok(WyndClaimRewards {
+    Ok(RewardSplit {
         user_rewards,
         tax_amount,
         claim_msgs,

@@ -1,8 +1,11 @@
 use cosmwasm_std::{Addr, Decimal};
-use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
+use outpost_utils::{
+    helpers::RewardSplit,
+    msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
+};
 use wynd_stake::msg::RewardsResponse;
 
-use crate::helpers::{gen_wynd_claim_rewards_msg, WyndClaimRewards};
+use crate::helpers::gen_wynd_claim_rewards_msg;
 
 #[test]
 pub fn validate_wynd_rewards_split() {
@@ -21,7 +24,7 @@ pub fn validate_wynd_rewards_split() {
             }
         )
         .unwrap(),
-        WyndClaimRewards {
+        RewardSplit {
             user_rewards: 950_000u128.into(),
             tax_amount: 50_000u128.into(),
             claim_msgs: vec![

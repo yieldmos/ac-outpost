@@ -123,7 +123,7 @@ pub fn is_authorized_compounder(
 pub struct TaxSplitResult {
     pub remaining_rewards: Coin,
     pub tax_amount: Coin,
-    pub tax_store_msg: CosmosProtoMsg,
+    pub claim_and_tax_msgs: Vec<CosmosProtoMsg>,
 }
 
 #[derive(Default)]
@@ -161,7 +161,7 @@ impl DestProjectMsgs {
 /// Calculates the tax split for a given token amount and tax rate and the
 /// send message to move the tax amount to the tax address. Note that
 /// the tax will be in addition to the base token amount
-pub fn calc_tax_split(
+pub fn calc_additional_tax_split(
     token: &Coin,
     tax: Decimal,
     sender: String,
@@ -188,6 +188,46 @@ pub fn calc_tax_split(
             denom: token.denom.clone(),
             amount: tax_amount,
         },
-        tax_store_msg,
+        claim_and_tax_msgs: vec![tax_store_msg],
     }
+}
+
+/// Calculates the tax split for a given token amount and tax rate.
+/// Note that the tax will be taken out of the base token amount
+pub fn calc_tax_split(
+    token: &Coin,
+    tax: Decimal,
+    sender: String,
+    tax_addr: String,
+) -> TaxSplitResult {
+    let tax_amount = token.amount.mul_ceil(tax);
+    let remaining_rewards = token.amount.checked_sub(tax_amount).unwrap_or_default();
+
+    let tax_store_msg = CosmosProtoMsg::Send(MsgSend {
+        from_address: sender.to_string(),
+        to_address: tax_addr.to_string(),
+        amount: vec![cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
+            denom: token.denom.clone(),
+            amount: tax_amount.to_string(),
+        }],
+    });
+
+    TaxSplitResult {
+        remaining_rewards: Coin {
+            denom: token.denom.clone(),
+            amount: remaining_rewards,
+        },
+        tax_amount: Coin {
+            denom: token.denom.clone(),
+            amount: tax_amount,
+        },
+        claim_and_tax_msgs: vec![tax_store_msg],
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RewardSplit {
+    pub user_rewards: Uint128,
+    pub tax_amount: Uint128,
+    pub claim_msgs: Vec<CosmosProtoMsg>,
 }

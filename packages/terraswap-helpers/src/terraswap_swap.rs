@@ -3,7 +3,8 @@ use cosmwasm_std::{to_json_binary, Addr, QuerierWrapper, StdError, Uint128};
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use white_whale::pool_network::{
-    asset::AssetInfo,
+    asset::{Asset, AssetInfo},
+    pair::{ExecuteMsg as PairExecuteMsg, QueryMsg as PairQueryMsg, SimulationResponse},
     router::{ExecuteMsg, SimulateSwapOperationsResponse, SwapOperation},
 };
 
@@ -184,6 +185,92 @@ pub fn create_terraswap_swap_msg_with_simulation(
     let exec = create_swap_msg(sender, offer_amount, swap_routes, multihop_address)?;
 
     Ok((exec, simulated_swap.amount))
+}
+
+/// Queries a specific terraswap pool and returns the swap message as well as simulated swap amount
+pub fn create_terraswap_pool_swap_msg_with_simulation(
+    querier: &QuerierWrapper,
+    sender: &Addr,
+    offer_asset: Asset,
+    pool_address: &Addr,
+) -> Result<(CosmosProtoMsg, Uint128), StdError> {
+    // // no swap to do because the offer and ask tokens are the same
+    // if offer_asset.eq(&ask_asset_info) {
+    //     return Ok((vec![], offer_amount));
+    // }
+
+    // // generate the operations for the multihop here that way we can use the same ops for
+    // // the simulation and the actual swap msg
+    // let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
+
+    let simulated_swap: SimulationResponse = querier.query_wasm_smart(
+        pool_address.to_string(),
+        &PairQueryMsg::Simulation {
+            offer_asset: offer_asset.clone(),
+        },
+    )?;
+
+    let swap_msg = create_terraswap_pool_swap_msg(sender, offer_asset, pool_address)?;
+
+    Ok((swap_msg, simulated_swap.return_amount))
+}
+
+pub fn create_terraswap_pool_swap_msg(
+    sender: &Addr,
+    offer_asset: Asset,
+    pool_address: &Addr,
+) -> Result<CosmosProtoMsg, StdError> {
+    // // no swap to do because the offer and ask tokens are the same
+    // if offer_asset.eq(&ask_asset_info) {
+    //     return Ok((vec![], offer_amount));
+    // }
+
+    Ok(match offer_asset.clone() {
+        Asset {
+            info: AssetInfo::NativeToken { denom },
+            amount,
+        } =>
+        // swap the native asset
+        {
+            CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                pool_address,
+                sender,
+                &PairExecuteMsg::Swap {
+                    offer_asset,
+                    belief_price: None,
+                    max_spread: None,
+                    to: None,
+                },
+                Some(vec![Coin {
+                    denom,
+                    amount: amount.to_string(),
+                }]),
+            )?)
+        }
+
+        Asset {
+            info: AssetInfo::Token { contract_addr },
+            amount,
+        } =>
+        // call send on the cw20 contract and have it respond with a swap
+        {
+            CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                contract_addr,
+                sender,
+                &cw20::Cw20ExecuteMsg::Send {
+                    contract: pool_address.to_string(),
+                    amount,
+                    msg: to_json_binary(&PairExecuteMsg::Swap {
+                        offer_asset,
+                        belief_price: None,
+                        max_spread: None,
+                        to: None,
+                    })?,
+                },
+                None,
+            )?)
+        }
+    })
 }
 
 /// Generates the grant spec for doing a swap via the terraswap multihop for a native token

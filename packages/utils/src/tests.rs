@@ -4,7 +4,10 @@ use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin};
 use cosmwasm_std::{coin, Decimal, Timestamp, Uint128};
 
 use crate::{
-    helpers::{calc_tax_split, calculate_compound_amounts, CompoundingFrequency, TaxSplitResult},
+    helpers::{
+        calc_additional_tax_split, calc_tax_split, calculate_compound_amounts,
+        CompoundingFrequency, TaxSplitResult,
+    },
     msg_gen::CosmosProtoMsg,
 };
 
@@ -87,7 +90,7 @@ fn test_calc_tax_split() {
     let sender = "sender".to_string();
     let receiver = "receiver".to_string();
 
-    let split = calc_tax_split(
+    let split = calc_additional_tax_split(
         &coin(100_000_000, "ubtc"),
         tax_rate,
         sender.clone(),
@@ -99,14 +102,69 @@ fn test_calc_tax_split() {
         TaxSplitResult {
             remaining_rewards: coin(100_000_000, "ubtc"),
             tax_amount: coin(1_000_000, "ubtc"),
-            tax_store_msg: CosmosProtoMsg::Send(MsgSend {
+            claim_and_tax_msgs: vec![CosmosProtoMsg::Send(MsgSend {
                 from_address: sender.clone(),
                 to_address: receiver.clone(),
                 amount: vec![Coin {
                     denom: "ubtc".to_string(),
                     amount: expected.to_string(),
                 }],
-            }),
+            })],
+        }
+    );
+
+    // with tiny amounts the extra amount goes to the taxation addr
+    let split = calc_additional_tax_split(
+        &coin(5, "ubtc"),
+        Decimal::percent(10),
+        sender.clone(),
+        receiver.clone(),
+    );
+
+    assert_eq!(
+        split,
+        TaxSplitResult {
+            remaining_rewards: coin(5, "ubtc"),
+            tax_amount: coin(1, "ubtc"),
+            claim_and_tax_msgs: vec![CosmosProtoMsg::Send(MsgSend {
+                from_address: sender.clone(),
+                to_address: receiver,
+                amount: vec![Coin {
+                    denom: "ubtc".to_string(),
+                    amount: 1.to_string(),
+                }],
+            })],
+        }
+    );
+}
+
+#[test]
+fn test_tax_split() {
+    let tax_rate = Decimal::percent(1);
+    let expected = Uint128::from(1_000_000u128);
+    let sender = "sender".to_string();
+    let receiver = "receiver".to_string();
+
+    let split = calc_tax_split(
+        &coin(100_000_000, "ubtc"),
+        tax_rate,
+        sender.clone(),
+        receiver.clone(),
+    );
+
+    assert_eq!(
+        split,
+        TaxSplitResult {
+            remaining_rewards: coin(99_000_000, "ubtc"),
+            tax_amount: coin(1_000_000, "ubtc"),
+            claim_and_tax_msgs: vec![CosmosProtoMsg::Send(MsgSend {
+                from_address: sender.clone(),
+                to_address: receiver.clone(),
+                amount: vec![Coin {
+                    denom: "ubtc".to_string(),
+                    amount: expected.to_string(),
+                }],
+            })],
         }
     );
 
@@ -121,16 +179,16 @@ fn test_calc_tax_split() {
     assert_eq!(
         split,
         TaxSplitResult {
-            remaining_rewards: coin(5, "ubtc"),
+            remaining_rewards: coin(4, "ubtc"),
             tax_amount: coin(1, "ubtc"),
-            tax_store_msg: CosmosProtoMsg::Send(MsgSend {
+            claim_and_tax_msgs: vec![CosmosProtoMsg::Send(MsgSend {
                 from_address: sender.clone(),
                 to_address: receiver,
                 amount: vec![Coin {
                     denom: "ubtc".to_string(),
                     amount: 1.to_string(),
                 }],
-            }),
+            })],
         }
     );
 }

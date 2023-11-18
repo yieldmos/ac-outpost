@@ -1,18 +1,20 @@
 use crate::error::ContractError;
-use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, WyndstakeCompoundPrefs};
+use crate::msg::{
+    CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, JunoWhiteWhaleMarketCompoundPrefs, MigrateMsg, QueryMsg,
+};
 use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp,
+};
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
-use outpost_utils::helpers::CompoundingFrequency;
-
 use semver::Version;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ac-outpost-wyndstake";
+const CONTRACT_NAME: &str = "crates.io:ac-outpost-junowwmarket";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -30,7 +32,10 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: InstantiateMsg) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let InstantiateMsg { admin, project_addresses } = msg;
+    let InstantiateMsg {
+        admin,
+        project_addresses,
+    } = msg;
 
     let admin_addr = match admin {
         Some(admin) => deps
@@ -115,14 +120,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 
             Ok(Response::default())
         }
-        ExecuteMsg::Compound(WyndstakeCompoundPrefs {
-            user_address,
+        ExecuteMsg::Compound(JunoWhiteWhaleMarketCompoundPrefs {
+            delegator_address,
             comp_prefs,
             tax_fee,
         }) => {
             let addresses = PROJECT_ADDRS.load(deps.storage)?;
 
-            execute::compound(deps, env, info, addresses, user_address, &comp_prefs, tax_fee)
+            execute::compound(deps, env, info, addresses, delegator_address, comp_prefs, tax_fee)
         }
     }
 }
@@ -133,20 +138,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Version {} => to_json_binary(&queries::query_version()),
         QueryMsg::AuthorizedCompounders {} => to_json_binary(&queries::query_authorized_compounders(deps)),
-        QueryMsg::GrantSpec {
-            comp_prefs,
-            frequency,
-            expiration,
-        } => {
+        QueryMsg::GrantSpec { comp_prefs, expiration } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
             to_json_binary(&QueryMsg::query_grants(
                 GrantStructure {
                     grantee: env.contract.address.clone(),
-                    granter: deps.api.addr_validate(&comp_prefs.user_address)?,
+                    granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
                     expiration,
                     grant_contract: env.contract.address,
                     grant_data: CompPrefsWithAddresses {
-                        comp_frequency: frequency,
                         comp_prefs,
                         project_addresses,
                     },
@@ -158,11 +158,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
             to_json_binary(&QueryMsg::query_revokes(GrantStructure {
                 grantee: env.contract.address.clone(),
-                granter: deps.api.addr_validate(&comp_prefs.user_address)?,
+                granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
                 expiration: Timestamp::default(),
                 grant_contract: env.contract.address,
                 grant_data: CompPrefsWithAddresses {
-                    comp_frequency: CompoundingFrequency::default(),
                     comp_prefs,
                     project_addresses,
                 },

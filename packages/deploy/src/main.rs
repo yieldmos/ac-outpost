@@ -2,10 +2,11 @@ use anybuf::Anybuf;
 use cw_orch::{anyhow, daemon::DaemonBuilder, prelude::*};
 use outpost_utils::juno_comp_prefs::DaoAddress;
 use tokio::runtime::Runtime;
-use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
 use ymos_wyndstake_outpost::msg::ExecuteMsgFns as WyndstakeExecuteMsgFns;
+use ymos_junowwmarket_outpost::msg::{ExecuteMsgFns as JunowwmarketExecuteMsgFns, TerraswapRouteAddresses};
+use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -289,6 +290,49 @@ pub fn main() -> anyhow::Result<()> {
         usdc: junostake_project_addresses.usdc.clone(),
         authzpp: ymos_junodca_outpost::msg::AuthzppAddresses::default(),
         destination_projects: junostake_project_addresses.destination_projects.clone(),
+    };
+    let junowwmarket_project_addresses = ymos_junowwmarket_outpost::msg::ContractAddresses {
+        take_rate_addr: junostake_project_addresses.take_rate_addr.clone(),
+        usdc: junostake_project_addresses.usdc.clone(),
+        authzpp: ymos_junowwmarket_outpost::msg::AuthzppAddresses::default(),
+        destination_projects: junostake_project_addresses.destination_projects.clone(),
+        
+        terraswap_routes: TerraswapRouteAddresses { whale_usdc_pool: "juno1g7ctm7dynjsduf597d8nvt36kwvhfutmzrczdnm00tsz48uryvzqp7p32h".to_string(), 
+            whale_to_juno_route: vec![
+                //  whale to usdc
+                SwapOperation::TerraSwap {
+                    ask_asset_info:  AssetInfo::NativeToken {
+                        denom:
+                        "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                    },
+                    offer_asset_info: AssetInfo::NativeToken {
+                        denom:
+                        "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()
+                    }
+                },
+                // swap usdc for juno
+                SwapOperation::TerraSwap {
+                    ask_asset_info: AssetInfo::NativeToken { denom: "ujuno".to_string() },
+
+                    offer_asset_info: AssetInfo::NativeToken {
+                        denom:
+                        "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
+                    }
+                },
+                
+            ],
+             whale_ampwhale_pool: "juno1dwmrkyhed4szdxxk6l0c98hseancjtdet58n77tfhv2as8cdjdlq7vps00".to_string(), 
+             whale_bonewhale_pool: "juno160uh2xtegzvc7ekte5x377aud0y40hw75m9l92h7pkqk3l3eg9vqltel48".to_string(),
+            usdc_asset_info: WWAssetInfo::NativeToken { denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string() },
+            ampwhale_asset_info: WWAssetInfo::NativeToken { denom: "ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF"
+            .to_string() },
+            bonewhale_asset_info: WWAssetInfo::NativeToken { denom: "ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF"
+            .to_string() },
+            juno_asset_info: WWAssetInfo::NativeToken { denom: "ujuno".to_string() },
+            whale_asset: WWAssetInfo::NativeToken {
+                denom: "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C".to_string()},
+        },
+        
     };
 
     let rt = Runtime::new().unwrap();
