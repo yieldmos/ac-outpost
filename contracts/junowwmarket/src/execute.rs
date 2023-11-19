@@ -136,16 +136,12 @@ pub fn prefs_to_msgs(
     );
 
     let terraswap_multihop_addr = project_addrs.destination_projects.white_whale.terraswap_multihop_router.clone();
-    let juno_asset_info = white_whale::pool_network::asset::AssetInfo::NativeToken { denom: "ujuno".to_string() };
-
+   
     // generate the list of individual msgs to compound the user's rewards
     let compounding_msgs: Vec<DestProjectMsgs> = compound_token_amounts
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<DestProjectMsgs, ContractError> {
-                // let compounding_asset = Asset {
-                //     info: AssetInfo::Native("ujuno".to_string()),
-                //     amount: comp_token_amount,
-                // };
+                
 
                 match destination {
                     JunoDestinationProject::JunoStaking { validator_address } => {
@@ -403,17 +399,7 @@ pub fn prefs_to_msgs(
                         denom: target_asset,
                         address: to_address,
                     } => {
-                        // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
-                        //     &deps.querier,
-                        //     delegator_addr,
-                        //     comp_token_amount,
-                        //     AssetInfo::Native("ujuno".to_string()),
-                        //     target_asset.clone(),
-                        //     project_addrs.destination_projects.wynd.multihop.to_string(),
-                        //     None
-                        // )
-                        // .map_err(ContractError::Std)?;
-
+                        // swap uwhale for the target asset
                         let (swap_msg, sim) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
                             
                             delegator_addr,

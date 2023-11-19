@@ -14,6 +14,7 @@ use wyndex::{
     pair::SimulationResponse,
 };
 
+use crate::helpers::ww_market_rewards_split_grants;
 use crate::msg::{CompPrefsWithAddresses, JunoWhiteWhaleMarketCompoundPrefs, QueryMsg};
 use crate::{
     msg::{AuthorizedCompoundersResponse, VersionResponse},
@@ -77,33 +78,29 @@ impl Grantable for QueryMsg {
 
     fn query_grants(
         grant_structure: GrantStructure<Self::GrantSettings>,
-        current_timestamp: Timestamp,
+        _current_timestamp: Timestamp,
     ) -> StdResult<Vec<GrantRequirement>> {
         let GrantStructure {
             granter,
             expiration,
             grant_contract: outpost_contract,
-            grant_data: CompPrefsWithAddresses {
-                comp_prefs,
-                project_addresses,
-            },
+            grant_data:
+                CompPrefsWithAddresses {
+                    comp_prefs: _comp_prefs,
+                    project_addresses,
+                },
             ..
         } = grant_structure.clone();
-        let withdraw_tax_grants = withdraw_rewards_tax_grant::msg::QueryMsg::query_grants(
-            GrantStructure {
+        let split_ww_rewards_grants = ww_market_rewards_split_grants(
+            GrantBase {
                 granter,
                 grantee: outpost_contract,
                 expiration,
-                grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
-                grant_data: GrantSpecData {
-                    taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
-                    max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
-                },
             },
-            current_timestamp,
-        )?;
+            project_addresses,
+        );
 
-        Ok([withdraw_tax_grants, gen_comp_pref_grants(grant_structure)?].concat())
+        Ok([split_ww_rewards_grants, gen_comp_pref_grants(grant_structure)?].concat())
     }
 
     fn query_revokes(
@@ -113,31 +110,29 @@ impl Grantable for QueryMsg {
             granter,
             expiration,
             grant_contract: outpost_contract,
-            grant_data: CompPrefsWithAddresses {
-                comp_prefs,
-                project_addresses,
-            },
+            grant_data:
+                CompPrefsWithAddresses {
+                    comp_prefs: _comp_prefs,
+                    project_addresses,
+                },
             ..
         } = grant_structure.clone();
-        let withdraw_tax_grants = withdraw_rewards_tax_grant::msg::QueryMsg::query_revokes(GrantStructure {
-            granter,
-            grantee: outpost_contract,
-            expiration,
-            grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
-            grant_data: GrantSpecData {
-                taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
-                max_fee_percentage: comp_prefs.tax_fee.unwrap_or(Decimal::MAX),
-            },
-        })?;
 
-        Ok([
-            withdraw_tax_grants,
-            gen_comp_pref_grants(grant_structure)?
+        let split_ww_rewards_grants = ww_market_rewards_split_grants(
+            GrantBase {
+                granter,
+                grantee: outpost_contract,
+                expiration,
+            },
+            project_addresses,
+        );
+
+        Ok(
+            dedupe_grant_reqs([split_ww_rewards_grants, gen_comp_pref_grants(grant_structure)?].concat())
                 .into_iter()
                 .map(|grant| -> RevokeRequirement { grant.into() })
                 .collect(),
-        ]
-        .concat())
+        )
     }
 }
 
@@ -164,7 +159,25 @@ pub fn gen_comp_pref_grants(
         match action.destination.clone() {
             JunoDestinationProject::Unallocated {} => vec![],
             JunoDestinationProject::JunoStaking { validator_address } => {
-                native_staking_grant(base, None, Some(vec![validator_address]))
+                [
+                    vec![
+                        // terraswap swap to get the juno to hand off to wyndex
+                        project_addresses
+                            .terraswap_routes
+                            .gen_terraswap_whale_swap_grant(
+                                base.clone(),
+                                "ujuno".to_string(),
+                                project_addresses
+                                    .destination_projects
+                                    .white_whale
+                                    .terraswap_multihop_router
+                                    .clone(),
+                            )
+                            .unwrap(),
+                    ],
+                    native_staking_grant(base, None, Some(vec![validator_address])),
+                ]
+                .concat()
             }
 
             JunoDestinationProject::DaoStaking(dao) => {
@@ -180,6 +193,19 @@ pub fn gen_comp_pref_grants(
                     ),|pair_add| (pair_add.to_string(), "swap".to_string()));
 
                 vec![
+                    // terraswap swap to get the juno to hand off to wyndex
+                    project_addresses
+                        .terraswap_routes
+                        .gen_terraswap_whale_swap_grant(
+                            base.clone(),
+                            "ujuno".to_string(),
+                            project_addresses
+                                .destination_projects
+                                .white_whale
+                                .terraswap_multihop_router
+                                .clone(),
+                        )
+                        .unwrap(),
                     // staking permission
                     GrantRequirement::default_contract_exec_auth(base.clone(), cw20, vec!["send"], None),
                     // swap permission
@@ -192,25 +218,71 @@ pub fn gen_comp_pref_grants(
                 ]
             }
             JunoDestinationProject::BalanceDao {} => {
-                balance_dao_grant(base, project_addresses.destination_projects.balance_dao.clone())
+                [
+                    vec![
+                        // terraswap swap to get the juno to hand off balance
+                        project_addresses
+                            .terraswap_routes
+                            .gen_terraswap_whale_swap_grant(
+                                base.clone(),
+                                "ujuno".to_string(),
+                                project_addresses
+                                    .destination_projects
+                                    .white_whale
+                                    .terraswap_multihop_router
+                                    .clone(),
+                            )
+                            .unwrap(),
+                    ],
+                    balance_dao_grant(base, project_addresses.destination_projects.balance_dao.clone()),
+                ]
+                .concat()
             }
             JunoDestinationProject::GelottoLottery {
                 lottery,
                 lucky_phrase: _lucky_phrase,
-            } => gelotto_lottery_grant(
-                base,
-                lottery.get_lottery_address(&project_addresses.destination_projects.gelotto),
-            ),
+            } => [
+                vec![
+                    // terraswap swap to get the juno to hand offx
+                    project_addresses
+                        .terraswap_routes
+                        .gen_terraswap_whale_swap_grant(
+                            base.clone(),
+                            "ujuno".to_string(),
+                            project_addresses
+                                .destination_projects
+                                .white_whale
+                                .terraswap_multihop_router
+                                .clone(),
+                        )
+                        .unwrap(),
+                ],
+                gelotto_lottery_grant(
+                    base,
+                    lottery.get_lottery_address(&project_addresses.destination_projects.gelotto),
+                ),
+            ]
+            .concat(),
             JunoDestinationProject::SendTokens { denom, address } => [
                 // general multihop swap
                 match denom.clone() {
-                    AssetInfo::Native(token_denom) if token_denom.eq("ujuno") => vec![],
-                    _ => wynd_multihop_swap_grant(
-                        base.clone(),
-                        project_addresses.destination_projects.wynd.multihop.clone(),
-                        AssetInfo::Native("ujuno".to_string()),
-                        Some(ContractExecutionAuthorizationLimit::single_fund_limit("ujuno")),
-                    ),
+                    AssetInfo::Native(token_denom)
+                        if token_denom.eq(&project_addresses.terraswap_routes.whale_asset.to_string()) =>
+                    {
+                        vec![]
+                    }
+                    _ => vec![project_addresses
+                        .terraswap_routes
+                        .gen_terraswap_whale_swap_grant(
+                            base.clone(),
+                            denom.to_string(),
+                            project_addresses
+                                .destination_projects
+                                .white_whale
+                                .terraswap_multihop_router
+                                .clone(),
+                        )
+                        .unwrap()],
                 },
                 // send to the given user
                 vec![match denom {
@@ -234,48 +306,71 @@ pub fn gen_comp_pref_grants(
                 }],
             ]
             .concat(),
-            JunoDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::default_contract_exec_auth(
-                base,
-                lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
-                vec![match lsd_type {
-                    JunoLsd::StakeEasySe => "stake",
-                    JunoLsd::StakeEasyB => "stake_for_bjuno",
-                    JunoLsd::Wynd | JunoLsd::Backbone | JunoLsd::Eris => "bond",
-                }],
-                Some("ujuno"),
-            )],
-            JunoDestinationProject::WhiteWhaleSatellite { asset } => {
-                let denom = match asset {
-                    AssetInfo::Native(denom) => denom,
-                    AssetInfo::Token(token) => token,
-                };
-
-                vec![
-                    // general terraswap multihop swap
-                    terraswap_multihop_swap_grant(
+            JunoDestinationProject::MintLsd { lsd_type } => vec![
+                // terraswap swap to get the juno
+                project_addresses
+                    .terraswap_routes
+                    .gen_terraswap_whale_swap_grant(
                         base.clone(),
+                        "ujuno".to_string(),
                         project_addresses
                             .destination_projects
                             .white_whale
                             .terraswap_multihop_router
                             .clone(),
-                        "ujuno",
-                    ),
+                    )
+                    .unwrap(),
+                GrantRequirement::default_contract_exec_auth(
+                    base,
+                    lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
+                    vec![match lsd_type {
+                        JunoLsd::StakeEasySe => "stake",
+                        JunoLsd::StakeEasyB => "stake_for_bjuno",
+                        JunoLsd::Wynd | JunoLsd::Backbone | JunoLsd::Eris => "bond",
+                    }],
+                    Some("ujuno"),
+                ),
+            ],
+            JunoDestinationProject::WhiteWhaleSatellite { asset } => {
+                vec![
+                    // should wind up just being the pool permission
+                    project_addresses
+                        .terraswap_routes
+                        .gen_terraswap_whale_swap_grant(
+                            base.clone(),
+                            asset.to_string(),
+                            project_addresses
+                                .destination_projects
+                                .white_whale
+                                .terraswap_multihop_router
+                                .clone(),
+                        )
+                        .unwrap(),
                     // bonding to the market
-                    vec![GrantRequirement::default_contract_exec_auth(
+                    GrantRequirement::default_contract_exec_auth(
                         base,
                         project_addresses.destination_projects.white_whale.market.clone(),
                         vec!["bond"],
-                        Some(&denom),
-                    )],
+                        Some(&asset.to_string()),
+                    ),
                 ]
-                .into_iter()
-                .flatten()
-                .collect()
             }
             JunoDestinationProject::WyndStaking {
                 bonding_period: _bonding_period,
             } => vec![
+                // convert to juno
+                vec![project_addresses
+                    .terraswap_routes
+                    .gen_terraswap_whale_swap_grant(
+                        base.clone(),
+                        "ujuno".to_string(),
+                        project_addresses
+                            .destination_projects
+                            .white_whale
+                            .terraswap_multihop_router
+                            .clone(),
+                    )
+                    .unwrap()],
                 // pair swap for JUNO to WYND
                 wynd_pool_swap_grant(
                     base.clone(),
@@ -290,68 +385,63 @@ pub fn gen_comp_pref_grants(
             .into_iter()
             .flatten()
             .collect(),
-            JunoDestinationProject::RacoonBet { .. } => vec![GrantRequirement::default_contract_exec_auth(
-                base,
-                project_addresses.destination_projects.racoon_bet.game.clone(),
-                vec!["place_bet"],
-                Some("ujuno"),
-            )],
-            JunoDestinationProject::TokenSwap {
-                target_denom: _target_denom,
-            } => wynd_multihop_swap_grant(
-                base,
-                project_addresses.destination_projects.wynd.multihop.clone(),
-                AssetInfo::Native("ujuno".to_string()),
-                None,
-            ),
-
-            JunoDestinationProject::WyndLp { .. } => vec![
-                // // general multihop swap
-                // GrantRequirement::GrantSpec {
-                //     grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                //         contract_addr: project_addresses.destination_projects.wynd.multihop.clone(),
-                //         limit: ContractExecutionAuthorizationLimit::single_fund_limit("ujuno"),
-                //         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                //             keys: vec!["execute_swap_operations".to_string()],
-                //         },
-                //     }]),
-                //     granter: granter.clone(),
-                //     grantee: grantee.clone(),
-                //     expiration,
-                // },
-                // // bonding to the pool
-                // GrantRequirement::GrantSpec {
-                //     grant_type: AuthorizationType::ContractExecutionAuthorization(vec![ContractExecutionSetting {
-                //         contract_addr: Addr::unchecked(contract_address),
-                //         limit: ContractExecutionAuthorizationLimit::default(),
-                //         filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
-                //             // might need a bond key as well
-                //             keys: vec!["send".to_string()],
-                //         },
-                //     }]),
-                //     granter: granter.clone(),
-                //     grantee: grantee.clone(),
-                //     expiration,
-                // },
-            ],
-            JunoDestinationProject::SparkIbcCampaign { fund: _fund } => vec![
-                wynd_multihop_swap_grant(
-                    base.clone(),
-                    project_addresses.destination_projects.wynd.multihop.clone(),
-                    AssetInfo::Native("ujuno".to_string()),
-                    Some(ContractExecutionAuthorizationLimit::single_fund_limit("ujuno")),
+            JunoDestinationProject::RacoonBet { .. } => vec![
+                project_addresses
+                    .terraswap_routes
+                    .gen_terraswap_whale_swap_grant(
+                        base.clone(),
+                        project_addresses.terraswap_routes.usdc_asset.to_string(),
+                        project_addresses
+                            .destination_projects
+                            .white_whale
+                            .terraswap_multihop_router
+                            .clone(),
+                    )
+                    .unwrap(),
+                GrantRequirement::default_contract_exec_auth(
+                    base,
+                    project_addresses.destination_projects.racoon_bet.game.clone(),
+                    vec!["place_bet"],
+                    Some(project_addresses.usdc.to_string().as_str()),
                 ),
+            ],
+            JunoDestinationProject::TokenSwap { target_denom } => {
+                vec![project_addresses
+                    .terraswap_routes
+                    .gen_terraswap_whale_swap_grant(
+                        base.clone(),
+                        target_denom.to_string(),
+                        project_addresses
+                            .destination_projects
+                            .white_whale
+                            .terraswap_multihop_router
+                            .clone(),
+                    )
+                    .unwrap()]
+            }
+
+            JunoDestinationProject::WyndLp { .. } => vec![],
+            JunoDestinationProject::SparkIbcCampaign { fund: _fund } => vec![
+                project_addresses
+                    .terraswap_routes
+                    .gen_terraswap_whale_swap_grant(
+                        base.clone(),
+                        project_addresses.usdc.to_string(),
+                        project_addresses
+                            .destination_projects
+                            .white_whale
+                            .terraswap_multihop_router
+                            .clone(),
+                    )
+                    .unwrap(),
                 // funding campaign
-                vec![GrantRequirement::default_contract_exec_auth(
+                GrantRequirement::default_contract_exec_auth(
                     base,
                     project_addresses.destination_projects.spark_ibc.fund.clone(),
                     vec!["fund"],
                     Some(&project_addresses.usdc.to_string()),
-                )],
-            ]
-            .into_iter()
-            .flatten()
-            .collect(),
+                ),
+            ],
         }
     });
 

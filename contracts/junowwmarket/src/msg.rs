@@ -111,12 +111,18 @@ pub struct TerraswapRouteAddresses {
     pub whale_usdc_pool: String,
     pub whale_ampwhale_pool: String,
     pub whale_bonewhale_pool: String,
+    pub whale_rac_pool: String,
+
     pub whale_to_juno_route: Vec<SwapOperation>,
-    pub usdc_asset_info: WWAssetInfo,
-    pub ampwhale_asset_info: WWAssetInfo,
-    pub bonewhale_asset_info: WWAssetInfo,
-    pub juno_asset_info: WWAssetInfo,
+    pub whale_to_atom_route: Vec<SwapOperation>,
+
+    pub usdc_asset: WWAssetInfo,
+    pub ampwhale_asset: WWAssetInfo,
+    pub bonewhale_asset: WWAssetInfo,
+    pub juno_asset: WWAssetInfo,
     pub whale_asset: WWAssetInfo,
+    pub rac_asset: WWAssetInfo,
+    pub atom_asset: WWAssetInfo,
 }
 
 impl Default for TerraswapRouteAddresses {
@@ -125,12 +131,17 @@ impl Default for TerraswapRouteAddresses {
             whale_usdc_pool: "".to_string(),
             whale_ampwhale_pool: "".to_string(),
             whale_bonewhale_pool: "".to_string(),
+            whale_rac_pool: "".to_string(),
             whale_to_juno_route: vec![],
-            usdc_asset_info: WWAssetInfo::NativeToken { denom: "".to_string() },
-            ampwhale_asset_info: WWAssetInfo::NativeToken { denom: "".to_string() },
-            bonewhale_asset_info: WWAssetInfo::NativeToken { denom: "".to_string() },
-            juno_asset_info: WWAssetInfo::NativeToken { denom: "".to_string() },
+            whale_to_atom_route: vec![],
+
+            usdc_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
+            ampwhale_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
+            bonewhale_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
+            juno_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
             whale_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
+            rac_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
+            atom_asset: WWAssetInfo::NativeToken { denom: "".to_string() },
         }
     }
 }
@@ -140,12 +151,16 @@ pub struct TerraswapRouteAddrs {
     pub whale_usdc_pool: Addr,
     pub whale_ampwhale_pool: Addr,
     pub whale_bonewhale_pool: Addr,
+    pub whale_rac_pool: Addr,
     pub whale_to_juno_route: Vec<SwapOperation>,
-    pub usdc_asset_info: WWAssetInfo,
-    pub ampwhale_asset_info: WWAssetInfo,
-    pub bonewhale_asset_info: WWAssetInfo,
-    pub juno_asset_info: WWAssetInfo,
+    pub whale_to_atom_route: Vec<SwapOperation>,
+    pub ampwhale_asset: WWAssetInfo,
+    pub bonewhale_asset: WWAssetInfo,
+    pub juno_asset: WWAssetInfo,
+    pub usdc_asset: WWAssetInfo,
     pub whale_asset: WWAssetInfo,
+    pub rac_asset: WWAssetInfo,
+    pub atom_asset: WWAssetInfo,
 }
 impl TerraswapRouteAddresses {
     pub fn validate_addrs(&self, api: &dyn Api) -> Result<TerraswapRouteAddrs, ContractError> {
@@ -153,12 +168,16 @@ impl TerraswapRouteAddresses {
             whale_usdc_pool: api.addr_validate(&self.whale_usdc_pool)?,
             whale_ampwhale_pool: api.addr_validate(&self.whale_ampwhale_pool)?,
             whale_bonewhale_pool: api.addr_validate(&self.whale_bonewhale_pool)?,
+            whale_rac_pool: api.addr_validate(&self.whale_bonewhale_pool)?,
             whale_to_juno_route: self.whale_to_juno_route.clone(),
-            usdc_asset_info: self.usdc_asset_info.clone(),
-            ampwhale_asset_info: self.ampwhale_asset_info.clone(),
-            bonewhale_asset_info: self.bonewhale_asset_info.clone(),
-            juno_asset_info: self.juno_asset_info.clone(),
+            whale_to_atom_route: self.whale_to_atom_route.clone(),
+            usdc_asset: self.usdc_asset.clone(),
+            ampwhale_asset: self.ampwhale_asset.clone(),
+            bonewhale_asset: self.bonewhale_asset.clone(),
+            juno_asset: self.juno_asset.clone(),
             whale_asset: self.whale_asset.clone(),
+            rac_asset: self.rac_asset.clone(),
+            atom_asset: self.atom_asset.clone(),
         })
     }
 }
@@ -172,13 +191,13 @@ pub struct AuthzppAddresses {
 
 #[cw_serde]
 pub struct AuthzppAddrs {
-    pub withdraw_tax: Addr,
+    // pub withdraw_tax: Addr,
     // pub allowlist_send: Addr,
 }
 impl AuthzppAddresses {
     pub fn validate_addrs(&self, api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
         Ok(AuthzppAddrs {
-            withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
+            // withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
             // allowlist_send: api.addr_validate(&self.allowlist_send)?,
         })
     }

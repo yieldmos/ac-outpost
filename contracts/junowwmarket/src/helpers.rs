@@ -1,4 +1,6 @@
 use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
+use cw20::Denom;
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use outpost_utils::{
     helpers::TaxSplitResult,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
@@ -6,7 +8,9 @@ use outpost_utils::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{to_json_binary, Addr, Coin, CosmosMsg, Decimal, QuerierWrapper, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{
+    coin, coins, to_json_binary, Addr, Coin, CosmosMsg, Decimal, QuerierWrapper, StdResult, Uint128, WasmMsg,
+};
 use terraswap_helpers::terraswap_swap::{
     create_swap_msg, create_terraswap_pool_swap_msg, create_terraswap_pool_swap_msg_with_simulation,
     create_terraswap_swap_msg_with_simulation,
@@ -15,11 +19,14 @@ use white_whale::{
     fee_distributor::ClaimableEpochsResponse,
     fee_distributor::ExecuteMsg as FeeDistributorExecuteMsg,
     fee_distributor::QueryMsg as FeeDistributorQueryMsg,
-    pool_network::asset::{Asset, AssetInfo},
+    pool_network::{
+        asset::{Asset, AssetInfo},
+        router::SwapOperation,
+    },
 };
 
 use crate::{
-    msg::{ExecuteMsg, TerraswapRouteAddrs},
+    msg::{ContractAddrs, ExecuteMsg, TerraswapRouteAddrs},
     ContractError,
 };
 
@@ -84,7 +91,46 @@ pub fn query_and_generate_ww_market_reward_msgs(
     })
 }
 
+pub fn ww_market_rewards_split_grants(base: GrantBase, project_addresses: ContractAddrs) -> Vec<GrantRequirement> {
+    vec![
+        GrantRequirement::default_contract_exec_auth(
+            base.clone(),
+            project_addresses.destination_projects.white_whale.rewards,
+            vec!["claim"],
+            None,
+        ),
+        GrantRequirement::GrantSpec {
+            grant_type: cw_grant_spec::grants::AuthorizationType::SendAuthorization {
+                spend_limit: Some(coins(u128::MAX, project_addresses.terraswap_routes.whale_asset.to_string())),
+                allow_list: Some(vec![project_addresses.take_rate_addr]),
+            },
+            granter: base.granter,
+            grantee: base.grantee,
+            expiration: base.expiration,
+        },
+    ]
+}
+
 impl TerraswapRouteAddrs {
+    pub fn get_whale_pool_addr(&self, ask_asset: &str) -> Option<Addr> {
+        match ask_asset {
+            _ if self.usdc_asset.to_string().eq(ask_asset) => Some(self.whale_usdc_pool.clone()),
+            _ if self.ampwhale_asset.to_string().eq(ask_asset) => Some(self.whale_ampwhale_pool.clone()),
+            _ if self.bonewhale_asset.to_string().eq(ask_asset) => Some(self.whale_bonewhale_pool.clone()),
+            _ if self.rac_asset.to_string().eq(ask_asset) => Some(self.whale_rac_pool.clone()),
+
+            _ => None,
+        }
+    }
+
+    pub fn get_whale_swap_routes(&self, ask_asset: &str) -> Option<Vec<SwapOperation>> {
+        match ask_asset {
+            _ if self.juno_asset.to_string().eq(ask_asset) => Some(self.whale_to_juno_route.clone()),
+            _ if self.atom_asset.to_string().eq(ask_asset) => Some(self.whale_to_atom_route.clone()),
+
+            _ => None,
+        }
+    }
     pub fn gen_whale_swap_with_sim(
         &self,
         sender: &Addr,
@@ -93,81 +139,60 @@ impl TerraswapRouteAddrs {
         multihop_addr: &Addr,
         querier: &QuerierWrapper,
     ) -> Result<(CosmosProtoMsg, Asset), ContractError> {
+        // TODO: if we returned an array of cosmos proto msgs instead we could retun an empty array when swapping from whale to whale
+        if self.whale_asset.to_string().eq(ask_denom) {
+            return Err(ContractError::TerraswapNoSwapPath {
+                from: "uwhale".to_string(),
+                to: "uwhale".to_string(),
+            });
+        }
+
         let offer_asset = Asset {
             info: self.whale_asset.clone(),
             amount: offer_amount,
         };
-        Ok(match ask_denom {
-            // we have pools for the first few assets
-            denom if self.usdc_asset_info.to_string().eq(denom) => {
-                let (swap_msg, amount) =
-                    create_terraswap_pool_swap_msg_with_simulation(querier, sender, offer_asset, &self.whale_usdc_pool)?;
 
-                (
-                    swap_msg,
-                    Asset {
-                        info: self.usdc_asset_info.clone(),
-                        amount,
+        if let Some(pool_addr) = self.get_whale_pool_addr(ask_denom) {
+            // Ok(create_terraswap_pool_swap_msg(sender, offer_asset, &pool_addr)?)
+            let (swap_msg, amount) =
+                create_terraswap_pool_swap_msg_with_simulation(querier, sender, offer_asset, &pool_addr)?;
+
+            Ok((
+                swap_msg,
+                Asset {
+                    // TODO: messy as heck we should change ask_denom to just be an actual terraswap asset
+                    info: AssetInfo::NativeToken {
+                        denom: ask_denom.to_string(),
                     },
-                )
-            }
-            denom if self.ampwhale_asset_info.to_string().eq(denom) => {
-                let (swap_msg, amount) =
-                    create_terraswap_pool_swap_msg_with_simulation(querier, sender, offer_asset, &self.whale_ampwhale_pool)?;
+                    amount,
+                },
+            ))
+        } else if let Some(swap_ops) = self.get_whale_swap_routes(ask_denom) {
+            let (swap_msgs, amount) = create_terraswap_swap_msg_with_simulation(
+                querier,
+                sender,
+                offer_amount,
+                swap_ops,
+                multihop_addr.to_string(),
+            )?;
 
-                (
-                    swap_msg,
-                    Asset {
-                        info: self.ampwhale_asset_info.clone(),
-                        amount,
+            Ok((
+                swap_msgs.first().unwrap().clone(),
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: ask_denom.to_string(),
                     },
-                )
-            }
-            denom if self.bonewhale_asset_info.to_string().eq(denom) => {
-                let (swap_msg, amount) = create_terraswap_pool_swap_msg_with_simulation(
-                    querier,
-                    sender,
-                    offer_asset,
-                    &self.whale_bonewhale_pool,
-                )?;
-
-                (
-                    swap_msg,
-                    Asset {
-                        info: self.bonewhale_asset_info.clone(),
-                        amount,
-                    },
-                )
-            }
-
-            // juno should be a common target but we dont have a pool for it and it requires a multi-hop
-            denom if denom.eq("ujuno") => {
-                let (swap_msgs, amount) = create_terraswap_swap_msg_with_simulation(
-                    querier,
-                    sender,
-                    offer_amount,
-                    self.whale_to_juno_route.clone(),
-                    multihop_addr.to_string(),
-                )?;
-
-                (
-                    swap_msgs.first().unwrap().clone(),
-                    Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "ujuno".to_string(),
-                        },
-                        amount,
-                    },
-                )
-            }
-
-            // if the ask denom is outside of these four we should bail since we have no dynamic pathfinding
-            _ => Err(ContractError::TerraswapNoSwapPath {
+                    amount,
+                },
+            ))
+        } else {
+            Err(ContractError::TerraswapNoSwapPath {
                 from: self.whale_asset.to_string(),
                 to: ask_denom.to_string(),
-            })?,
-        })
+            })
+        }
     }
+
     pub fn gen_whale_swap(
         &self,
         sender: &Addr,
@@ -175,39 +200,60 @@ impl TerraswapRouteAddrs {
         ask_denom: &str,
         multihop_addr: &Addr,
     ) -> Result<CosmosProtoMsg, ContractError> {
+        // TODO: if we returned an array of cosmos proto msgs instead we could retun an empty array when swapping from whale to whale
+        if self.whale_asset.to_string().eq(ask_denom) {
+            return Err(ContractError::TerraswapNoSwapPath {
+                from: "uwhale".to_string(),
+                to: "uwhale".to_string(),
+            });
+        }
+
         let offer_asset = Asset {
             info: self.whale_asset.clone(),
             amount: offer_amount,
         };
-        Ok(match ask_denom {
-            // we have pools for the first few assets
-            denom if self.usdc_asset_info.to_string().eq(denom) => {
-                create_terraswap_pool_swap_msg(sender, offer_asset, &self.whale_usdc_pool)?
-            }
-            denom if self.ampwhale_asset_info.to_string().eq(denom) => {
-                create_terraswap_pool_swap_msg(sender, offer_asset, &self.whale_ampwhale_pool)?
-            }
-            denom if self.bonewhale_asset_info.to_string().eq(denom) => {
-                create_terraswap_pool_swap_msg(sender, offer_asset, &self.whale_bonewhale_pool)?
-            }
 
-            // juno should be a common target but we dont have a pool for it and it requires a multi-hop
-            denom if denom.eq("ujuno") => create_swap_msg(
-                sender,
-                offer_amount,
-                self.whale_to_juno_route.clone(),
-                multihop_addr.to_string(),
-            )?
-            .first()
-            .unwrap()
-            .clone(),
-
-            // if the ask denom is outside of these four we should bail since we have no dynamic pathfinding
-            _ => Err(ContractError::TerraswapNoSwapPath {
+        if let Some(pool_addr) = self.get_whale_pool_addr(ask_denom) {
+            Ok(create_terraswap_pool_swap_msg(sender, offer_asset, &pool_addr)?)
+        } else if let Some(swap_ops) = self.get_whale_swap_routes(ask_denom) {
+            Ok(create_swap_msg(sender, offer_amount, swap_ops, multihop_addr.to_string())?
+                .first()
+                .unwrap()
+                .clone())
+        } else {
+            Err(ContractError::TerraswapNoSwapPath {
                 from: self.whale_asset.to_string(),
                 to: ask_denom.to_string(),
-            })?,
-        })
+            })
+        }
+    }
+
+    pub fn gen_terraswap_whale_swap_grant(
+        &self,
+        base: GrantBase,
+        ask_denom: String,
+        multihop_addr: Addr,
+    ) -> Result<GrantRequirement, ContractError> {
+        if let Some(pool_addr) = self.get_whale_pool_addr(&ask_denom) {
+            Ok(GrantRequirement::default_contract_exec_auth(
+                base,
+                pool_addr,
+                vec!["swap"],
+                Some(self.whale_asset.to_string().as_str()),
+            ))
+        } else if self.get_whale_swap_routes(&ask_denom).is_some() {
+            Ok(GrantRequirement::default_contract_exec_auth(
+                base,
+                multihop_addr,
+                vec!["execute_swap_operations"],
+                Some(self.whale_asset.to_string().as_str()),
+            ))
+        } else {
+            Err(ContractError::TerraswapNoSwapPath {
+                from: self.whale_asset.to_string(),
+                to: ask_denom.to_string(),
+            })
+        }
     }
 }
 
