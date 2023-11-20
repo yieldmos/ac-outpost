@@ -55,8 +55,6 @@ pub fn compound(
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
         &project_addresses,
-        // &env.block,
-        // staking_denom,
         &delegator,
         remaining_rewards.clone(),
         comp_prefs,
