@@ -401,9 +401,6 @@ pub fn main() -> anyhow::Result<()> {
     junowwmarket.upload_if_needed()?;
     println!("junowwmarket code id: {}", junowwmarket.code_id()?);
 
-  
- 
-
     // junostake contract upload
     if junostake.address().is_err() {
         junostake.instantiate(
