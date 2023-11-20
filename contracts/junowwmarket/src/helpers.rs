@@ -2,7 +2,7 @@ use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
 use cw20::Denom;
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use outpost_utils::{
-    helpers::TaxSplitResult,
+    helpers::{calc_tax_split, TaxSplitResult},
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
 use schemars::JsonSchema;
@@ -18,12 +18,14 @@ use terraswap_helpers::terraswap_swap::{
 use white_whale::{
     fee_distributor::ClaimableEpochsResponse,
     fee_distributor::ExecuteMsg as FeeDistributorExecuteMsg,
-    fee_distributor::QueryMsg as FeeDistributorQueryMsg,
+    fee_distributor::{Epoch, QueryMsg as FeeDistributorQueryMsg},
     pool_network::{
         asset::{Asset, AssetInfo},
         router::SwapOperation,
     },
+    whale_lair::{self, BondingWeightResponse},
 };
+use withdraw_rewards_tax_grant::helpers::sum_coins;
 
 use crate::{
     msg::{ContractAddrs, ExecuteMsg, TerraswapRouteAddrs},
@@ -51,44 +53,86 @@ impl CwTemplateContract {
     }
 }
 
-pub fn query_and_generate_ww_market_reward_msgs(
-    tax_percent: Decimal,
-    user_addr: &Addr,
-    tax_addr: &Addr,
-    ww_market_addr: &Addr,
+pub fn query_pending_ww_market_rewards(
     querier: &QuerierWrapper,
-) -> Result<TaxSplitResult, ContractError> {
+    user_addr: &Addr,
+    ww_market_reward_distributer_addr: &Addr,
+    ww_market_lair_addr: &Addr,
+) -> Result<Vec<Coin>, ContractError> {
+    // get the list of claimable epochs
     let rewards: ClaimableEpochsResponse = querier.query_wasm_smart(
-        ww_market_addr,
+        ww_market_reward_distributer_addr,
         &to_json_binary(&FeeDistributorQueryMsg::Claimable {
             address: user_addr.to_string(),
         })?,
     )?;
 
-    let claim_and_tax_msgs = vec![
-        CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            ww_market_addr.to_string(),
-            &user_addr.clone(),
-            &FeeDistributorExecuteMsg::Claim {},
-            None,
-        )?),
-        CosmosProtoMsg::Send(MsgSend {
-            from_address: user_addr.to_string(),
-            to_address: tax_addr.to_string(),
-            amount: vec![
-            //     cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
-            //     denom: token.denom.clone(),
-            //     amount: tax_amount.to_string(),
-            // }
-            ],
-        }),
-    ];
+    // get the total rewards
+    rewards.epochs.into_iter().try_fold(
+        vec![],
+        |all_epoch_rewards,
+         Epoch {
+             available, global_index, ..
+         }|
+         -> Result<Vec<Coin>, ContractError> {
+            // get the user's allowed percentage of the rewards for each individual epoch
+            let BondingWeightResponse { share, .. }: BondingWeightResponse = querier.query_wasm_smart(
+                ww_market_lair_addr,
+                &whale_lair::QueryMsg::Weight {
+                    address: user_addr.to_string(),
+                    timestamp: Some(global_index.timestamp),
+                    global_index: Some(global_index),
+                },
+            )?;
 
-    Ok(TaxSplitResult {
-        remaining_rewards: todo!(),
-        tax_amount: todo!(),
-        claim_and_tax_msgs,
-    })
+            // multiply the rewards by the user's share
+            let epoch_rewards: Vec<Coin> = available
+                .iter()
+                .map(|reward| {
+                    let amount = reward.amount * share;
+                    coin(amount.u128(), reward.info.to_string())
+                })
+                .collect();
+
+            // todo sum tokens
+            Ok(sum_coins(all_epoch_rewards, epoch_rewards))
+        },
+    )
+}
+
+pub fn query_and_generate_ww_market_reward_msgs(
+    tax_percent: Decimal,
+    user_addr: &Addr,
+    tax_addr: &Addr,
+    ww_rewards_addr: &Addr,
+    ww_lair_addr: &Addr,
+    whale_denom: &str,
+    querier: &QuerierWrapper,
+) -> Result<TaxSplitResult, ContractError> {
+    // query the pending ww sat market rewards
+    let pending_rewards = query_pending_ww_market_rewards(querier, user_addr, ww_rewards_addr, ww_lair_addr)?;
+
+    // grab just the whale rewards (these should be the only rewards returned but
+    // the ww team has said they would like to add more rewards in the future)
+    let whale_rewards = if let Some(whale_reward) = pending_rewards.iter().find(|coin| coin.denom.eq(whale_denom)) {
+        whale_reward
+    } else {
+        return Err(ContractError::NoWhaleRewards);
+    };
+
+    // calculate the tax split
+    let mut tax_split = calc_tax_split(whale_rewards, tax_percent, user_addr, tax_addr);
+
+    // add the claim msg to the result so that it can be executed
+    // at the beginning of the compounding
+    tax_split.prepend_msg(CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+        ww_rewards_addr.to_string(),
+        &user_addr.clone(),
+        &FeeDistributorExecuteMsg::Claim {},
+        None,
+    )?));
+
+    Ok(tax_split)
 }
 
 pub fn ww_market_rewards_split_grants(base: GrantBase, project_addresses: ContractAddrs) -> Vec<GrantRequirement> {

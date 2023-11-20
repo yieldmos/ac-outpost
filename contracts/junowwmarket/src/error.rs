@@ -21,6 +21,9 @@ pub enum ContractError {
     #[error("Could not convert asset to coin: token addr- {0}")]
     AssetIsNotCoinable(String),
 
+    #[error("No WHALE rewards found")]
+    NoWhaleRewards,
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 

@@ -126,6 +126,12 @@ pub struct TaxSplitResult {
     pub claim_and_tax_msgs: Vec<CosmosProtoMsg>,
 }
 
+impl TaxSplitResult {
+    pub fn prepend_msg(&mut self, msg: CosmosProtoMsg) {
+        self.claim_and_tax_msgs.insert(0, msg);
+    }
+}
+
 #[derive(Default)]
 pub struct DestProjectMsgs {
     pub msgs: Vec<CosmosProtoMsg>,
@@ -197,8 +203,8 @@ pub fn calc_additional_tax_split(
 pub fn calc_tax_split(
     token: &Coin,
     tax: Decimal,
-    sender: String,
-    tax_addr: String,
+    sender: &Addr,
+    tax_addr: &Addr,
 ) -> TaxSplitResult {
     let tax_amount = token.amount.mul_ceil(tax);
     let remaining_rewards = token.amount.checked_sub(tax_amount).unwrap_or_default();

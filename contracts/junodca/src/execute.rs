@@ -57,7 +57,7 @@ pub fn compound(
         claim_and_tax_msgs: tax_store_msg,
     } = calc_additional_tax_split(
         compound_token,
-        tax_fee.unwrap_or(Decimal::new(1_000_000_000_000_000u128.into())),
+        tax_fee.unwrap_or(Decimal::percent(1)),
         user_address,
         project_addrs.take_rate_addr.to_string(),
     );

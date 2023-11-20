@@ -40,18 +40,17 @@ pub fn compound(
     // validate that the user is authorized to compound
     is_authorized_compounder(deps.as_ref(), &info.sender, &delegator, ADMIN, AUTHORIZED_ADDRS)?;
 
-
    let TaxSplitResult {
-    remaining_rewards,
-    tax_amount,
-    claim_and_tax_msgs,
-} = query_and_generate_ww_market_reward_msgs(
-    tax_fee.unwrap_or(Decimal::percent(5)), 
-    &delegator, &project_addresses.take_rate_addr.clone(), 
-    &project_addresses.destination_projects.white_whale.rewards.clone(), 
-    &deps.querier)?;
-
-    
+        remaining_rewards,
+        tax_amount,
+        claim_and_tax_msgs,
+    } = query_and_generate_ww_market_reward_msgs(
+        tax_fee.unwrap_or(Decimal::percent(5)), 
+        &delegator, &project_addresses.take_rate_addr.clone(), 
+        &project_addresses.destination_projects.white_whale.rewards.clone(), 
+        &project_addresses.destination_projects.white_whale.market.clone(),
+        &project_addresses.terraswap_routes.whale_asset.to_string(),
+        &deps.querier)?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(

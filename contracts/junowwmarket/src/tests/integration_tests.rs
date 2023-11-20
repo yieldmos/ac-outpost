@@ -36,13 +36,11 @@ fn instantiate_with_defaults() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
-                staking_denom: "ubtc".to_string(),
                 take_rate_addr: "".to_string(),
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses::default(),
                 destination_projects: DestinationProjectAddresses::default(),
                 terraswap_routes: todo!(),
-                whale_asset: todo!(),
             },
         },
     )
@@ -118,13 +116,11 @@ fn validator_only_compounding() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
-                staking_denom: "ubtc".to_string(),
                 take_rate_addr: "".to_string(),
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses::default(),
                 destination_projects: DestinationProjectAddresses::default(),
                 terraswap_routes: todo!(),
-                whale_asset: todo!(),
             },
         },
     )
