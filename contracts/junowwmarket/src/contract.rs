@@ -138,7 +138,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Version {} => to_json_binary(&queries::query_version()),
         QueryMsg::AuthorizedCompounders {} => to_json_binary(&queries::query_authorized_compounders(deps)),
-        QueryMsg::GrantSpec { comp_prefs, expiration } => {
+        QueryMsg::GrantSpec {
+            comp_prefs, expiration, ..
+        } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
             to_json_binary(&QueryMsg::query_grants(
                 GrantStructure {

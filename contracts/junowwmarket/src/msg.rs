@@ -1,7 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
-use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
+use outpost_utils::{
+    helpers::CompoundingFrequency,
+    juno_comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs},
+};
 use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
 use wyndex::asset::AssetInfo;
 
@@ -36,6 +39,7 @@ pub enum QueryMsg {
     GrantSpec {
         expiration: Timestamp,
         comp_prefs: JunoWhiteWhaleMarketCompoundPrefs,
+        frequency: CompoundingFrequency,
     },
 
     #[returns(Vec<RevokeRequirement>)]
