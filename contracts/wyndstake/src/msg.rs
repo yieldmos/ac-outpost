@@ -73,12 +73,6 @@ pub struct WyndstakeCompoundPrefs {
 }
 
 #[cw_serde]
-pub struct DcaPrefs {
-    pub compound_token: Coin,
-    pub compound_preferences: JunoCompPrefs,
-}
-
-#[cw_serde]
 pub struct CompPrefsWithAddresses {
     pub comp_prefs: WyndstakeCompoundPrefs,
     pub project_addresses: ContractAddrs,

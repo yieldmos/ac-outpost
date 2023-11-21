@@ -69,7 +69,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub struct JunoWhiteWhaleMarketCompoundPrefs {
     pub comp_prefs: JunoCompPrefs,
-    pub delegator_address: String,
+    pub user_address: String,
     pub tax_fee: Option<Decimal>,
 }
 

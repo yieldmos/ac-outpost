@@ -121,13 +121,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
             Ok(Response::default())
         }
         ExecuteMsg::Compound(JunoWhiteWhaleMarketCompoundPrefs {
-            delegator_address,
+            user_address,
             comp_prefs,
             tax_fee,
         }) => {
             let addresses = PROJECT_ADDRS.load(deps.storage)?;
 
-            execute::compound(deps, env, info, addresses, delegator_address, comp_prefs, tax_fee)
+            execute::compound(deps, env, info, addresses, user_address, comp_prefs, tax_fee)
         }
     }
 }
@@ -145,7 +145,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&QueryMsg::query_grants(
                 GrantStructure {
                     grantee: env.contract.address.clone(),
-                    granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
+                    granter: deps.api.addr_validate(&comp_prefs.user_address)?,
                     expiration,
                     grant_contract: env.contract.address,
                     grant_data: CompPrefsWithAddresses {
@@ -160,7 +160,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
             to_json_binary(&QueryMsg::query_revokes(GrantStructure {
                 grantee: env.contract.address.clone(),
-                granter: deps.api.addr_validate(&comp_prefs.delegator_address)?,
+                granter: deps.api.addr_validate(&comp_prefs.user_address)?,
                 expiration: Timestamp::default(),
                 grant_contract: env.contract.address,
                 grant_data: CompPrefsWithAddresses {

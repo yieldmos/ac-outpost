@@ -57,7 +57,7 @@ impl OutpostContract {
             self.0.clone(),
             &ExecuteMsg::Compound(JunostakeCompoundPrefs {
                 comp_prefs,
-                delegator_address,
+                user_address: delegator_address,
                 tax_fee: None,
             }),
             &[],
