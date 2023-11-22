@@ -41,17 +41,19 @@ pub fn query_and_generate_wynd_reward_msgs(
     tax_percent: Decimal,
     delegator_addr: &Addr,
     tax_addr: &Addr,
-    wynd_addr: &Addr,
+    wynd_staking_addr: &Addr,
+    wynd_cw20_addr: &Addr,
     querier: &QuerierWrapper,
 ) -> Result<RewardSplit, ContractError> {
     gen_wynd_claim_rewards_msg(
         tax_percent,
         delegator_addr,
         tax_addr,
-        wynd_addr,
+        wynd_staking_addr,
+        wynd_cw20_addr,
         querier
             .query_wasm_smart(
-                wynd_addr,
+                wynd_staking_addr,
                 &wynd_stake::msg::QueryMsg::WithdrawableRewards {
                     owner: delegator_addr.to_string(),
                 },
@@ -64,7 +66,8 @@ pub fn gen_wynd_claim_rewards_msg(
     tax_percent: Decimal,
     delegator_addr: &Addr,
     tax_addr: &Addr,
-    wynd_addr: &Addr,
+    wynd_staking_addr: &Addr,
+    wynd_cw20_addr: &Addr,
     WithdrawableRewardsResponse { rewards }: WithdrawableRewardsResponse,
 ) -> Result<RewardSplit, ContractError> {
     let user_rewards = rewards * (Decimal::one() - tax_percent);
@@ -72,13 +75,13 @@ pub fn gen_wynd_claim_rewards_msg(
 
     let claim_msgs: Vec<CosmosProtoMsg> = vec![
         CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            wynd_addr.to_string(),
+            wynd_staking_addr.to_string(),
             &delegator_addr,
             &wynd_stake::msg::ExecuteMsg::WithdrawRewards { owner: None, receiver: None },
             None,
         )?),
         CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            wynd_addr,
+            wynd_cw20_addr,
             delegator_addr,
             &cw20::Cw20ExecuteMsg::Transfer {
                 recipient: tax_addr.to_string(),

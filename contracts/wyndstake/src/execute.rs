@@ -53,6 +53,7 @@ pub fn compound(
         &user_addr,
         &project_addrs.take_rate_addr,
         &project_addrs.wynd_stake_addr,
+        &project_addrs.destination_projects.wynd.cw20,
         &deps.querier,
     )?;
 
