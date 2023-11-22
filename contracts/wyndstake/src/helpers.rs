@@ -49,12 +49,14 @@ pub fn query_and_generate_wynd_reward_msgs(
         delegator_addr,
         tax_addr,
         wynd_addr,
-        querier.query_wasm_smart(
-            wynd_addr,
-            &to_json_binary(&Rewards {
-                address: delegator_addr.to_string(),
-            })?,
-        )?,
+        querier
+            .query_wasm_smart(
+                wynd_addr,
+                &to_json_binary(&Rewards {
+                    address: delegator_addr.to_string(),
+                })?,
+            )
+            .map_err(|e| ContractError::QueryWyndRewardsFailure(e.to_string()))?,
     )
 }
 

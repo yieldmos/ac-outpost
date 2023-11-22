@@ -3,7 +3,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
-    #[error("{0}")]
+    #[error("StdError: {0}")]
     Std(#[from] StdError),
 
     #[error("Outpost Utils Error: &{0}")]
@@ -17,6 +17,9 @@ pub enum ContractError {
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
+
+    #[error("Failed to query Wynd Rewards. Err: {0}")]
+    QueryWyndRewardsFailure(String),
 
     #[error("No DCA Compound Preferences found")]
     NoDCACompoundPrefs,

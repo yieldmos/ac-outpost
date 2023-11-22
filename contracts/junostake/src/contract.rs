@@ -125,7 +125,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         }) => {
             let addresses = PROJECT_ADDRS.load(deps.storage)?;
 
-            execute::compound(deps, env, info, addresses, delegator_address, comp_prefs, tax_fee)
+            execute::compound(deps, env, info, addresses, user_address, comp_prefs, tax_fee)
         }
     }
 }
