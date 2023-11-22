@@ -100,7 +100,9 @@ impl Grantable for QueryMsg {
             project_addresses,
         );
 
-        Ok([split_ww_rewards_grants, gen_comp_pref_grants(grant_structure)?].concat())
+        Ok(dedupe_grant_reqs(
+            [split_ww_rewards_grants, gen_comp_pref_grants(grant_structure)?].concat(),
+        ))
     }
 
     fn query_revokes(
