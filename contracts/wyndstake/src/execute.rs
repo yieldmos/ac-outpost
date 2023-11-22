@@ -52,7 +52,7 @@ pub fn compound(
         tax_fee.unwrap_or(Decimal::percent(5)),
         &user_addr,
         &project_addrs.take_rate_addr,
-        &project_addrs.destination_projects.wynd.cw20,
+        &project_addrs.wynd_stake_addr,
         &deps.querier,
     )?;
 

@@ -3,7 +3,7 @@ use outpost_utils::{
     helpers::RewardSplit,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
-use wynd_stake::msg::RewardsResponse;
+use wynd_stake::msg::{RewardsResponse, WithdrawableRewardsResponse};
 
 use crate::helpers::gen_wynd_claim_rewards_msg;
 
@@ -19,7 +19,7 @@ pub fn validate_wynd_rewards_split() {
             &delegator_addr,
             &tax_addr,
             &wynd_addr,
-            RewardsResponse {
+            WithdrawableRewardsResponse {
                 rewards: 1_000_000u128.into()
             }
         )

@@ -284,6 +284,7 @@ pub fn main() -> anyhow::Result<()> {
         usdc: junostake_project_addresses.usdc.clone(),
         authzpp: ymos_wyndstake_outpost::msg::AuthzppAddresses::default(),
         destination_projects: junostake_project_addresses.destination_projects.clone(),
+        wynd_stake_addr: "juno1sy9mlw47w44f94zea7g98y5ff4cvtc8rfv75jgwphlet83wlf4ssa050mv".to_string()
     };
     let junodca_project_addresses = ymos_junodca_outpost::msg::ContractAddresses {
         take_rate_addr: junostake_project_addresses.take_rate_addr.clone(),

@@ -24,6 +24,12 @@ pub enum ContractError {
     #[error("No WHALE rewards found")]
     NoWhaleRewards,
 
+    #[error("Error querying market epochs: {0}")]
+    QueryMarketEpochsError(String),
+
+    #[error("Error querying lair bonding rate: {0}")]
+    QueryLairBondingRateError(String),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 

@@ -60,12 +60,14 @@ pub fn query_pending_ww_market_rewards(
     ww_market_lair_addr: &Addr,
 ) -> Result<Vec<Coin>, ContractError> {
     // get the list of claimable epochs
-    let rewards: ClaimableEpochsResponse = querier.query_wasm_smart(
-        ww_market_reward_distributer_addr,
-        &to_json_binary(&FeeDistributorQueryMsg::Claimable {
-            address: user_addr.to_string(),
-        })?,
-    )?;
+    let rewards: ClaimableEpochsResponse = querier
+        .query_wasm_smart(
+            ww_market_reward_distributer_addr,
+            &FeeDistributorQueryMsg::Claimable {
+                address: user_addr.to_string(),
+            },
+        )
+        .map_err(|e| ContractError::QueryMarketEpochsError(e.to_string()))?;
 
     // get the total rewards
     rewards.epochs.into_iter().try_fold(
@@ -76,14 +78,16 @@ pub fn query_pending_ww_market_rewards(
          }|
          -> Result<Vec<Coin>, ContractError> {
             // get the user's allowed percentage of the rewards for each individual epoch
-            let BondingWeightResponse { share, .. }: BondingWeightResponse = querier.query_wasm_smart(
-                ww_market_lair_addr,
-                &whale_lair::QueryMsg::Weight {
-                    address: user_addr.to_string(),
-                    timestamp: Some(global_index.timestamp),
-                    global_index: Some(global_index),
-                },
-            )?;
+            let BondingWeightResponse { share, .. }: BondingWeightResponse = querier
+                .query_wasm_smart(
+                    ww_market_lair_addr,
+                    &whale_lair::QueryMsg::Weight {
+                        address: user_addr.to_string(),
+                        timestamp: Some(global_index.timestamp),
+                        global_index: Some(global_index),
+                    },
+                )
+                .map_err(|e| ContractError::QueryLairBondingRateError(e.to_string()))?;
 
             // multiply the rewards by the user's share
             let epoch_rewards: Vec<Coin> = available

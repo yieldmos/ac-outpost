@@ -85,6 +85,7 @@ pub struct ContractAddresses {
     pub usdc: AssetInfo,
     pub authzpp: AuthzppAddresses,
     pub destination_projects: DestinationProjectAddresses,
+    pub wynd_stake_addr: String,
 }
 
 #[cw_serde]
@@ -114,6 +115,7 @@ pub struct ContractAddrs {
     pub usdc: AssetInfo,
     pub authzpp: AuthzppAddrs,
     pub destination_projects: DestinationProjectAddrs,
+    pub wynd_stake_addr: Addr,
 }
 
 impl ContractAddresses {
@@ -123,6 +125,7 @@ impl ContractAddresses {
             usdc: self.usdc.clone(),
             authzpp: self.authzpp.validate_addrs(api)?,
             destination_projects: self.destination_projects.validate_addrs(api)?,
+            wynd_stake_addr: api.addr_validate(&self.wynd_stake_addr)?,
         })
     }
 }

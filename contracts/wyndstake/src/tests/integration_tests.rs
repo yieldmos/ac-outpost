@@ -40,6 +40,7 @@ fn instantiate_with_defaults() {
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses::default(),
                 destination_projects: DestinationProjectAddresses::default(),
+                wynd_stake_addr: "".to_string(),
             },
         },
     )
@@ -116,6 +117,7 @@ fn validator_only_compounding() {
                 usdc: wyndex::asset::AssetInfo::Native("".to_string()),
                 authzpp: AuthzppAddresses::default(),
                 destination_projects: DestinationProjectAddresses::default(),
+                wynd_stake_addr: "".to_string(),
             },
         },
     )

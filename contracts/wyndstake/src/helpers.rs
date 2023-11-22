@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Decimal, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
 
 use wynd_helpers::wynd_swap::create_wyndex_swap_msg_with_simulation;
-use wynd_stake::msg::{QueryMsg::Rewards, RewardsResponse};
+use wynd_stake::msg::{QueryMsg::Rewards, RewardsResponse, WithdrawableRewardsResponse};
 use wyndex::asset::AssetInfo;
 use wyndex_multi_hop::msg::SwapOperation;
 
@@ -52,9 +52,9 @@ pub fn query_and_generate_wynd_reward_msgs(
         querier
             .query_wasm_smart(
                 wynd_addr,
-                &to_json_binary(&Rewards {
-                    address: delegator_addr.to_string(),
-                })?,
+                &wynd_stake::msg::QueryMsg::WithdrawableRewards {
+                    owner: delegator_addr.to_string(),
+                },
             )
             .map_err(|e| ContractError::QueryWyndRewardsFailure(e.to_string()))?,
     )
@@ -65,7 +65,7 @@ pub fn gen_wynd_claim_rewards_msg(
     delegator_addr: &Addr,
     tax_addr: &Addr,
     wynd_addr: &Addr,
-    RewardsResponse { rewards }: RewardsResponse,
+    WithdrawableRewardsResponse { rewards }: WithdrawableRewardsResponse,
 ) -> Result<RewardSplit, ContractError> {
     let user_rewards = rewards * (Decimal::one() - tax_percent);
     let tax_amount = rewards - user_rewards;
