@@ -82,16 +82,28 @@ impl Grantable for QueryMsg {
             ..
         } = grant_structure.clone();
 
-        let taxation_grants = vec![GrantRequirement::default_contract_exec_auth(
-            GrantBase {
-                granter: granter.clone(),
-                grantee: outpost_contract.clone(),
-                expiration,
-            },
-            project_addresses.destination_projects.wynd.cw20.clone(),
-            vec!["transfer", "withdraw_rewards"],
-            None,
-        )];
+        let taxation_grants = vec![
+            GrantRequirement::default_contract_exec_auth(
+                GrantBase {
+                    granter: granter.clone(),
+                    grantee: outpost_contract.clone(),
+                    expiration,
+                },
+                project_addresses.destination_projects.wynd.cw20.clone(),
+                vec!["transfer"],
+                None,
+            ),
+            GrantRequirement::default_contract_exec_auth(
+                GrantBase {
+                    granter: granter.clone(),
+                    grantee: outpost_contract.clone(),
+                    expiration,
+                },
+                project_addresses.wynd_stake_addr.clone(),
+                vec!["withdraw_rewards"],
+                None,
+            ),
+        ];
 
         Ok(dedupe_grant_reqs([taxation_grants, gen_comp_pref_grants(grant_structure)?].concat()))
     }
