@@ -173,6 +173,14 @@ pub fn calc_additional_tax_split(
     sender: String,
     tax_addr: String,
 ) -> TaxSplitResult {
+    if tax.is_zero() {
+        return TaxSplitResult {
+            remaining_rewards: token.clone(),
+            tax_amount: Coin::new(0, token.denom.clone()),
+            claim_and_tax_msgs: vec![],
+        };
+    }
+
     let tax_amount = token.amount.mul_ceil(tax);
     let remaining_rewards = token.amount;
 
@@ -206,6 +214,14 @@ pub fn calc_tax_split(
     sender: &Addr,
     tax_addr: &Addr,
 ) -> TaxSplitResult {
+    if tax.is_zero() {
+        return TaxSplitResult {
+            remaining_rewards: token.clone(),
+            tax_amount: Coin::new(0, token.denom.clone()),
+            claim_and_tax_msgs: vec![],
+        };
+    }
+
     let tax_amount = token.amount.mul_ceil(tax);
     let remaining_rewards = token.amount.checked_sub(tax_amount).unwrap_or_default();
 

@@ -191,6 +191,22 @@ fn test_tax_split() {
             })],
         }
     );
+
+    // test the split with a 0 tax rate
+    let split = calc_tax_split(
+        &coin(100_000_000, "ubtc"),
+        Decimal::percent(0),
+        &sender.clone(),
+        &receiver.clone(),
+    );
+    assert_eq!(
+        split,
+        TaxSplitResult {
+            remaining_rewards: coin(100_000_000, "ubtc"),
+            tax_amount: coin(0, "ubtc"),
+            claim_and_tax_msgs: vec![],
+        }
+    )
 }
 
 #[test]
