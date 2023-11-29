@@ -70,6 +70,18 @@ pub fn gen_wynd_claim_rewards_msg(
     wynd_cw20_addr: &Addr,
     WithdrawableRewardsResponse { rewards }: WithdrawableRewardsResponse,
 ) -> Result<RewardSplit, ContractError> {
+    if tax_percent.is_zero() {
+        return Ok(RewardSplit {
+            user_rewards: rewards,
+            tax_amount: Uint128::zero(),
+            claim_msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                wynd_staking_addr.to_string(),
+                &delegator_addr,
+                &wynd_stake::msg::ExecuteMsg::WithdrawRewards { owner: None, receiver: None },
+                None,
+            )?)],
+        });
+    }
     let user_rewards = rewards * (Decimal::one() - tax_percent);
     let tax_amount = rewards - user_rewards;
 
