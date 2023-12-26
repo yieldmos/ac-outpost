@@ -44,8 +44,6 @@ schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 semver = { workspace = true }
-# outpost-utils = { workspace = true }
-# juno-helpers = { workspace = true }
 cw-orch = { workspace = true, optional = true }
 
 

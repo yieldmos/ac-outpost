@@ -43,7 +43,7 @@ wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0
 outpost-utils = { path = "./packages/utils" }
 wynd-helpers = { path = "./packages/wynd-helpers" }
 terraswap-helpers = { path = "./packages/terraswap-helpers" }
-juno-helpers = { path = "./packages/juno-helpers" }
+grant-helpers = { path = "./packages/grant-helpers" }
 # wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0" }
 osmosis-std = "0.15.3"
 

@@ -1,4 +1,4 @@
-### Yieldmos Outpost Ju Helpers
+### Yieldmos Outpost Helpers
 
 This is a set of helper functions to be used by the outpost contracts when interacting with the Juno Network. This should increase ergonomics arounds juno destination projects.
 
