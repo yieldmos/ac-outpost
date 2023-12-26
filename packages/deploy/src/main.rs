@@ -1,12 +1,14 @@
 use anybuf::Anybuf;
-use cw_orch::{anyhow, daemon::DaemonBuilder, prelude::*};
-use outpost_utils::juno_comp_prefs::DaoAddress;
+use cosmwasm_std::Uint64;
+use cw_orch::{anyhow, daemon::{DaemonBuilder, ChainInfo, ChainKind, networks::juno::JUNO_NETWORK}, prelude::*};
+use outpost_utils::juno_comp_prefs::{DaoAddress, self};
 use tokio::runtime::Runtime;
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
 use ymos_wyndstake_outpost::msg::ExecuteMsgFns as WyndstakeExecuteMsgFns;
 use ymos_junowwmarket_outpost::msg::{ExecuteMsgFns as JunowwmarketExecuteMsgFns, TerraswapRouteAddresses};
 use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
+use ymos_comp_prefs::{msg::{ExecuteMsgFns as CompPrefExecuteMsgFns, QueryMsgFns as CompPrefQueryMsgFns}, YmosCompPrefsContract};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
@@ -14,11 +16,14 @@ pub enum DeploymentType {
     Dev,
 }
 
+const YMOS_CONDUCTOR: &str = "juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn";
+const YMOS_FEE_SHARE_COLLECTOR: &str = "juno1ewdttrv2ph7762egx4n2309h3m9r4z9pakz54p";
+
 pub fn main() -> anyhow::Result<()> {
     let junostake_project_addresses = ymos_junostake_outpost::msg::ContractAddresses {
         staking_denom: "ujuno".to_string(),
         // needs to be switchout for mainnet
-        take_rate_addr: "juno1ewdttrv2ph7762egx4n2309h3m9r4z9pakz54p".to_string(),
+        take_rate_addr: YMOS_FEE_SHARE_COLLECTOR.to_string(),
         usdc: wyndex::asset::AssetInfo::Native(
             "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string(),
         ),
@@ -367,7 +372,19 @@ pub fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let juno = networks::JUNO_1;
+    let juno: ChainInfo = ChainInfo {
+        kind: ChainKind::Mainnet,
+        chain_id: "juno-1",
+        gas_denom: "ujuno",
+        gas_price: 0.0750,
+        grpc_urls: &[
+            // "https://grpc-juno-ia.cosmosia.notional.ventures",
+            "http://juno-grpc.polkachu.com:12690",
+        ],
+        network_info: JUNO_NETWORK,
+        lcd_url: None,
+        fcd_url: None,
+    };
 
     let juno_chain = DaemonBuilder::default()
         .handle(rt.handle())
@@ -375,6 +392,11 @@ pub fn main() -> anyhow::Result<()> {
         .build()?;
 
     println!("connected to juno with sender: {}", juno_chain.sender());
+
+    let juno_comp_prefs = YmosCompPrefsContract::new(
+        "Yieldmos Juno Compounding Preferences",
+        juno_chain.clone(),
+    );
 
     let junostake = ymos_junostake_outpost::YmosJunostakeOutpost::new(
         "Yieldmos Junostake Outpost",
@@ -390,6 +412,8 @@ pub fn main() -> anyhow::Result<()> {
         let junowwmarket =
         ymos_junowwmarket_outpost::YmosJunowwmarketOutpost::new("Yieldmos Juno White Whale Market Outpost", juno_chain.clone());
 
+    juno_comp_prefs.upload_if_needed()?;
+
     junodca.upload_if_needed()?;
     println!("junodca code id: {}", junodca.code_id()?);
 
@@ -401,6 +425,55 @@ pub fn main() -> anyhow::Result<()> {
 
     junowwmarket.upload_if_needed()?;
     println!("junowwmarket code id: {}", junowwmarket.code_id()?);
+
+    
+
+    // juno_comp_prefs contract upload
+    if juno_comp_prefs.address().is_err() {
+        juno_comp_prefs.instantiate(
+            &ymos_comp_prefs::msg::InstantiateMsg {
+                admin: None,
+                chain_id:"juno-1".to_string(),
+                days_to_prune: 180u16,
+            },
+            Some(&Addr::unchecked(juno_chain.sender().to_string())),
+            None,
+        )?;
+
+        // dca
+        juno_comp_prefs
+            .add_allowed_strategy_id(Uint64::from(60100u64))?;
+        // juno staking
+            juno_comp_prefs
+            .add_allowed_strategy_id(Uint64::from(60101u64))?;
+        // wynd stake
+        juno_comp_prefs
+            .add_allowed_strategy_id(Uint64::from(60102u64))?;
+        // white whale sat market 
+        juno_comp_prefs
+            .add_allowed_strategy_id(Uint64::from(60103u64))?;
+
+        // setup the feeshare only on the first deploy
+        // this seems to sometimes need an increased gas multiplier in the .env to work
+        juno_chain
+            .commit_any::<cosmrs::Any>(
+                vec![feeshare_msg(
+                    juno_comp_prefs.address().unwrap().to_string(),
+                    juno_chain.sender().to_string(),
+                    juno_chain.sender().to_string(),
+                )],
+                None,
+            )
+            .unwrap();
+    } else {
+        juno_comp_prefs.migrate(
+            &ymos_comp_prefs::msg::MigrateMsg {
+               
+            },
+            junostake.code_id()?,
+        )?;
+    }
+    println!("juno_comp_prefs: {}", juno_comp_prefs.addr_str()?);
 
     // junostake contract upload
     if junostake.address().is_err() {
@@ -415,7 +488,7 @@ pub fn main() -> anyhow::Result<()> {
 
         // add yieldmos.juno as an authorized compounder
         junostake
-            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .add_authorized_compounder(YMOS_CONDUCTOR.to_string())
             .unwrap();
 
         // setup the feeshare only on the first deploy
@@ -466,7 +539,7 @@ pub fn main() -> anyhow::Result<()> {
 
         // add yieldmos.juno as an authorized compounder
         junodca
-            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .add_authorized_compounder(YMOS_CONDUCTOR.to_string())
             .unwrap();
     } else {
         junodca.migrate(
@@ -492,7 +565,7 @@ pub fn main() -> anyhow::Result<()> {
 
         // add yieldmos.juno as an authorized compounder
         wyndstake
-            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .add_authorized_compounder(YMOS_CONDUCTOR.to_string())
             .unwrap();
 
         // setup the feeshare only on the first deploy
@@ -531,7 +604,7 @@ pub fn main() -> anyhow::Result<()> {
 
         // add yieldmos.juno as an authorized compounder
         junowwmarket
-            .add_authorized_compounder("juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn".to_string())
+            .add_authorized_compounder(YMOS_CONDUCTOR.to_string())
             .unwrap();
 
         // setup the feeshare only on the first deploy
