@@ -156,9 +156,13 @@ pub fn prefs_to_msgs(
 
                     JunoDestinationProject::DaoStaking(dao) => {
                         if let StakingDao::Kleomedes = dao {
-                            return vec![DestProjectMsgs::default().append_events(vec![Event::new("dao_stake")
+                            let mut noop_resp = DestProjectMsgs::default();
+
+                            noop_resp.events.push(Event::new("dao_stake")
                                 .add_attribute("dao", dao.to_string())
-                                .add_attribute("status", "disabled")])];
+                                .add_attribute("status", "disabled"));
+
+                            return Ok(noop_resp);
                         }
                         
                         let dao_addresses = dao.get_daos_addresses(&project_addrs.destination_projects.daos);

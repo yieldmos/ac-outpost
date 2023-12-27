@@ -6,7 +6,7 @@ use juno_helpers::dest_project_gen::{
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs, TaxSplitResult},
-    juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject},
+    juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao},
     msg_gen::create_exec_msg,
 };
 use std::iter;
@@ -164,9 +164,13 @@ pub fn prefs_to_msgs(
 
                     JunoDestinationProject::DaoStaking(dao) => {
                         if let StakingDao::Kleomedes = dao {
-                            return vec![DestProjectMsgs::default().append_events(vec![Event::new("dao_stake")
+                            let mut noop_resp = DestProjectMsgs::default();
+
+                            noop_resp.events.push(Event::new("dao_stake")
                                 .add_attribute("dao", dao.to_string())
-                                .add_attribute("status", "disabled")])];
+                                .add_attribute("status", "disabled"));
+
+                            return Ok(noop_resp);
                         }
 
 
