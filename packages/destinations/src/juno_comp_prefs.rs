@@ -1,13 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Uint128};
+use cosmwasm_std::{Addr, Api};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use wyndex::asset::AssetInfo;
+use outpost_utils::comp_prefs::CompoundPrefs;
+use crate::errors::DestinationError;
+use crate::sail_comp_prefs::{FundMsg, RacoonBetGame};
 
-use crate::{
-    comp_prefs::{CompoundPrefs, DestinationAction},
-    errors::OutpostError,
-};
 
 pub type JunoCompPrefs = CompoundPrefs<JunoDestinationProject>;
 
@@ -17,7 +15,7 @@ pub enum JunoDestinationProject {
     JunoStaking { validator_address: String },
     /// Send tokens to a specific address
     SendTokens { denom: AssetInfo, address: String },
-    /// Swapping to an abitrary token via Wyndex
+    /// Swapping to an arbitrary token via Wyndex
     /// https://app.wynddao.com/swap
     TokenSwap { target_denom: AssetInfo },
     /// Staking to WyndDAO
@@ -151,50 +149,6 @@ impl std::fmt::Display for JunoLsd {
 }
 
 #[cw_serde]
-pub enum RacoonBetGame {
-    HundredSidedDice {
-        /// 1-100
-        /// The odds of winning, the lower the odds the higher the prize
-        selected_value: u8,
-    },
-    Slot {
-        /// 1-100 based on user input. Represents the number of slot plays to do. Each spin must be worth at least 1 USD
-        spins: u32,
-        /// the token amount (of the token being wagered) to use for each spin. the total amount wagered must be at least 1 USD
-        spin_value: Uint128,
-        /// Should pass 0 for the outpost usage to leave empowered spins for the users to enjoy manually
-        empowered: Uint128,
-        /// Should pass 0 for the outpost usage to leave free spins for the users to enjoy manually
-        free_spins: Uint128,
-    },
-}
-
-impl std::fmt::Display for RacoonBetGame {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            RacoonBetGame::HundredSidedDice { selected_value } => {
-                write!(f, "racoon dice, value: {}", selected_value)
-            }
-            RacoonBetGame::Slot {
-                spins,
-                spin_value,
-                empowered,
-                free_spins,
-            } => write!(
-                f,
-                "racoon slots, spins: {}, spin_value: {}, empowered: {}, free_spins: {}",
-                spins, spin_value, empowered, free_spins
-            ),
-        }
-    }
-}
-
-#[cw_serde]
-pub enum RacoonBetExec {
-    PlaceBet { game: RacoonBetGame },
-}
-
-#[cw_serde]
 pub enum GelottoLottery {
     Pick3,
     Pick4,
@@ -211,36 +165,10 @@ impl std::fmt::Display for GelottoLottery {
     }
 }
 
-/// Polyfilled FundMsg from SparkIBC
-#[cw_serde]
-pub enum FundMsg {
-    FundGeneral {
-        donor_address_type: AddressType,
-        on_behalf_of: Option<String>,
-    },
-    FundCampaign {
-        campaign_name: String,
-        donor_address_type: AddressType,
-        on_behalf_of: Option<String>,
-    },
-}
-
-#[cw_serde]
-pub enum SparkIbcFund {
-    Fund(FundMsg),
-}
-
 #[cw_serde]
 pub enum StakeEasyMsgs {
     StakeForBjuno { referral: u64 },
     Stake { referral: u64 },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-pub enum AddressType {
-    Private,
-    Validator,
-    Organization,
 }
 
 #[cw_serde]
@@ -284,7 +212,7 @@ impl From<WyndLPBondingPeriod> for u64 {
 }
 // implement try_from for u64 to WyndLPBondingPeriod
 impl TryFrom<u64> for WyndLPBondingPeriod {
-    type Error = OutpostError;
+    type Error = DestinationError;
 
     fn try_from(v: u64) -> Result<Self, Self::Error> {
         match v {
@@ -292,62 +220,13 @@ impl TryFrom<u64> for WyndLPBondingPeriod {
             1209600 => Ok(WyndLPBondingPeriod::FourteenDays),
             2419200 => Ok(WyndLPBondingPeriod::TwentyEightDays),
             3628800 => Ok(WyndLPBondingPeriod::FourtyTwoDays),
-            _ => Err(OutpostError::InvalidBondingPeriod(v.to_string())),
+            _ => Err(DestinationError::InvalidBondingPeriod(v.to_string())),
         }
     }
 }
 
-#[cw_serde]
-/// compound prefs for a specific pool
-pub struct PoolCompoundPrefs {
-    pub pool_address: String,
-    pub comp_prefs: CompoundPrefs<JunoDestinationProject>,
-}
 
-#[cw_serde]
-/// compound prefs for all of the pools that have rewards and were not
-/// individually specified
-pub struct PoolCatchAllDestinationAction {
-    pub destination: PoolCatchAllDestinationProject,
-    /// the percentage of the rewards that should be sent to this destination
-    /// this is a number with 18 decimal places
-    /// for example "250000000000000000" is 25%
-    pub amount: u128,
-}
 
-#[cw_serde]
-/// Compound prefs for a catch all pools that were not individually specified.
-/// The main difference between this and the normal DestinationProject is that
-/// in the catch all you have the ability to specify sending the rewards back to the pool
-/// it came from instead of needing to specify any static destination
-pub enum PoolCatchAllDestinationProject {
-    BasicDestination(JunoDestinationProject),
-    /// send pool rewards back to the pool that generated the rewards
-    ReturnToPool,
-}
-
-impl From<DestinationAction<JunoDestinationProject>> for PoolCatchAllDestinationAction {
-    fn from(
-        DestinationAction {
-            destination,
-            amount,
-        }: DestinationAction<JunoDestinationProject>,
-    ) -> Self {
-        PoolCatchAllDestinationAction {
-            destination: PoolCatchAllDestinationProject::BasicDestination(destination),
-            amount,
-        }
-    }
-}
-
-impl From<CompoundPrefs<JunoDestinationProject>> for Vec<PoolCatchAllDestinationAction> {
-    fn from(CompoundPrefs { relative }: CompoundPrefs<JunoDestinationProject>) -> Self {
-        relative
-            .into_iter()
-            .map(PoolCatchAllDestinationAction::from)
-            .collect()
-    }
-}
 
 #[cw_serde]
 #[derive(Default)]
@@ -374,7 +253,7 @@ pub struct DestinationProjectAddrs {
     pub juno_lsds: JunoLsdAddrs,
 }
 impl DestinationProjectAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DestinationProjectAddrs, OutpostError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DestinationProjectAddrs, DestinationError> {
         Ok(DestinationProjectAddrs {
             wynd: self.wynd.validate_addrs(api)?,
             gelotto: self.gelotto.validate_addrs(api)?,
@@ -403,7 +282,7 @@ pub struct RacoonBetAddrs {
     pub juno_usdc_wynd_pair: Addr,
 }
 impl RacoonBetAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<RacoonBetAddrs, OutpostError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<RacoonBetAddrs, DestinationError> {
         Ok(RacoonBetAddrs {
             game: api.addr_validate(&self.game)?,
             juno_usdc_wynd_pair: api.addr_validate(&self.juno_usdc_wynd_pair)?,
@@ -423,7 +302,7 @@ pub struct SparkIbcAddrs {
     pub fund: Addr,
 }
 impl SparkIbcAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<SparkIbcAddrs, OutpostError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<SparkIbcAddrs, DestinationError> {
         Ok(SparkIbcAddrs {
             fund: api.addr_validate(&self.fund)?,
         })
@@ -454,7 +333,7 @@ pub struct JunoLsdAddrs {
     pub amp_juno: Addr,
 }
 impl JunoLsdAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<JunoLsdAddrs, OutpostError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<JunoLsdAddrs, DestinationError> {
         Ok(JunoLsdAddrs {
             bone_juno: api.addr_validate(&self.bone_juno)?,
             wy_juno: api.addr_validate(&self.wy_juno)?,
@@ -504,7 +383,7 @@ pub struct WhiteWhaleSatelliteAddrs {
     pub rewards: Addr,
 }
 impl WhiteWhaleSatelliteAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhiteWhaleSatelliteAddrs, OutpostError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhiteWhaleSatelliteAddrs, DestinationError> {
         Ok(WhiteWhaleSatelliteAddrs {
             amp_whale: self.amp_whale.clone(),
             bone_whale: self.bone_whale.clone(),
@@ -528,7 +407,7 @@ impl WhiteWhaleSatelliteAddrs {
             Vec<white_whale::pool_network::router::SwapOperation>,
             String,
         ),
-        OutpostError,
+        DestinationError,
     > {
         match desired_asset {
             AssetInfo::Native(denom) if denom.eq(&self.amp_whale) => {
@@ -538,7 +417,7 @@ impl WhiteWhaleSatelliteAddrs {
                 Ok((self.juno_bone_whale_path.clone(), denom))
             }
             // if the asset isn't ampWHALE or bWhale then we can't do anything
-            _ => Err(OutpostError::InvalidAsset {
+            _ => Err(DestinationError::InvalidAsset {
                 denom: desired_asset.to_string(),
                 project: "white whale".to_string(),
             }),
@@ -552,7 +431,7 @@ impl WhiteWhaleSatelliteAddrs {
             Vec<white_whale::pool_network::router::SwapOperation>,
             String,
         ),
-        OutpostError,
+        DestinationError,
     > {
         match desired_asset {
             AssetInfo::Native(denom) if denom.eq(&self.amp_whale) => {
@@ -562,7 +441,7 @@ impl WhiteWhaleSatelliteAddrs {
                 Ok((self.usdc_bone_whale_path.clone(), denom))
             }
             // if the asset isn't ampWHALE or bWhale then we can't do anything
-            _ => Err(OutpostError::InvalidAsset {
+            _ => Err(DestinationError::InvalidAsset {
                 denom: desired_asset.to_string(),
                 project: "white whale".to_string(),
             }),
@@ -615,7 +494,7 @@ pub struct DaoAddrs {
     pub muse: DaoAddr,
 }
 impl DaoAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddrs, OutpostError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddrs, DestinationError> {
         Ok(DaoAddrs {
             neta: DaoAddress::validate_addrs(&self.neta, api)?,
             signal: DaoAddress::validate_addrs(&self.signal, api)?,
@@ -649,7 +528,7 @@ pub struct WyndAddrs {
 }
 
 impl WyndAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<WyndAddrs, OutpostError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<WyndAddrs, DestinationError> {
         Ok(WyndAddrs {
             cw20: api.addr_validate(&self.cw20)?,
             multihop: api.addr_validate(&self.multihop)?,
@@ -676,7 +555,7 @@ pub struct DaoAddr {
     pub wynd_wyndex_pair: Option<Addr>,
 }
 impl DaoAddress {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddr, OutpostError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddr, DestinationError> {
         Ok(DaoAddr {
             cw20: api.addr_validate(&self.cw20)?,
             staking: api.addr_validate(&self.staking)?,
@@ -719,7 +598,7 @@ pub struct GelottoAddrs {
 }
 
 impl GelottoAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<GelottoAddrs, OutpostError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<GelottoAddrs, DestinationError> {
         Ok(GelottoAddrs {
             pick3_contract: api.addr_validate(&self.pick3_contract)?,
             pick4_contract: api.addr_validate(&self.pick4_contract)?,

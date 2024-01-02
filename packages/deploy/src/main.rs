@@ -1,7 +1,7 @@
 use anybuf::Anybuf;
 use cosmwasm_std::Uint64;
 use cw_orch::{anyhow, daemon::{DaemonBuilder, ChainInfo, ChainKind, networks::juno::JUNO_NETWORK}, prelude::*};
-use outpost_utils::juno_comp_prefs::{DaoAddress, self};
+use outpost_utils::{juno_comp_prefs::{DaoAddress, self}, comp_prefs};
 use tokio::runtime::Runtime;
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
@@ -412,6 +412,10 @@ pub fn main() -> anyhow::Result<()> {
         let junowwmarket =
         ymos_junowwmarket_outpost::YmosJunowwmarketOutpost::new("Yieldmos Juno White Whale Market Outpost", juno_chain.clone());
 
+
+    
+
+
     juno_comp_prefs.upload_if_needed()?;
 
     junodca.upload_if_needed()?;
@@ -470,7 +474,7 @@ pub fn main() -> anyhow::Result<()> {
             &ymos_comp_prefs::msg::MigrateMsg {
                
             },
-            junostake.code_id()?,
+            juno_comp_prefs.code_id()?,
         )?;
     }
     println!("juno_comp_prefs: {}", juno_comp_prefs.addr_str()?);

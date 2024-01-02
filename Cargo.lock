@@ -90,6 +90,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59d2a3357dde987206219e78ecfbbb6e8dad06cbb65292758d3270e6254f7355"
 
 [[package]]
+name = "astroport"
+version = "2.0.0"
+source = "git+https://github.com/astroport-fi/astroport-core.git?rev=bc68bb65cc2f7d5916c1f0ea41de3b19b5b63b62#bc68bb65cc2f7d5916c1f0ea41de3b19b5b63b62"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus 0.13.4",
+ "cw20 0.13.4",
+ "itertools 0.10.5",
+ "schemars",
+ "serde",
+ "uint",
+]
+
+[[package]]
 name = "async-recursion"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -738,6 +752,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-asset"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64e2cf17accdcafe71859a683b6ed3f18311634a769550aacf4829b50151b221"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-address-like",
+ "cw-storage-plus 1.2.0",
+ "cw20 1.1.2",
+ "thiserror",
+]
+
+[[package]]
 name = "cw-controllers"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -801,6 +829,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "cw-fable"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a53c23c325c20ab1f6a8b5526cc0de13551d124f22cd52e9eda00971e744fda3"
+dependencies = [
+ "cosmwasm-std",
+ "cw20 1.1.2",
 ]
 
 [[package]]
@@ -1647,6 +1685,108 @@ dependencies = [
 ]
 
 [[package]]
+name = "eris"
+version = "1.6.0"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "astroport",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20 0.13.4",
+ "eris-chain-adapter",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "eris-chain-adapter"
+version = "1.2.2"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "eris-chain-shared",
+ "eris-injective",
+ "eris-kujira",
+ "eris-osmosis",
+ "eris-whitewhale",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "eris-chain-shared"
+version = "1.2.2"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "eris-injective"
+version = "1.2.2"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-asset",
+ "cw20 0.13.4",
+ "eris-chain-shared",
+ "osmosis-std-derive 0.13.2",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "eris-kujira"
+version = "1.2.2"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "eris-chain-shared",
+ "kujira",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "eris-osmosis"
+version = "1.0.0"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "eris-chain-shared",
+ "osmosis-std 0.15.3",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "eris-whitewhale"
+version = "1.2.2"
+source = "git+https://github.com/erisprotocol/contracts-tokenfactory.git?tag=v1.0.2-migaloo-arb-vault#c00d450256c1fc400ea74464058f3ccf237c616e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-asset",
+ "cw20 0.13.4",
+ "eris-chain-shared",
+ "osmosis-std-derive 0.13.2",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "errno"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1753,6 +1893,28 @@ name = "forward_ref"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8cbd1169bd7b4a0a20d92b9af7a7e0422888bd38a6f5ec29c1fd8c1558a272e"
+
+[[package]]
+name = "furnace"
+version = "0.2.0"
+source = "git+https://github.com/deving-zone-community/community-furnace.git#5d375141a5bf98eac788040b853d20f6460b9b7a"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-fable",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
+ "cw20 1.1.2",
+ "cw20-base 1.1.2",
+ "osmosis-std-derive 0.15.3",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "futures"
@@ -2346,30 +2508,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "juno-helpers"
-version = "0.2.2"
-dependencies = [
- "balance-token-swap",
- "bond-router",
- "cosmos-sdk-proto 0.19.0",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-grant-spec",
- "cw20 1.1.2",
- "cw20-stake 2.1.0",
- "cw20-vesting 1.6.0",
- "outpost-utils",
- "schemars",
- "serde",
- "thiserror",
- "white-whale",
- "wynd-helpers",
- "wynd-stake",
- "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
- "wyndex-multi-hop",
-]
-
-[[package]]
 name = "k256"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2390,6 +2528,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f6d5ed8676d904364de097082f4e7d240b571b67989ced0240f08b7f966f940"
 dependencies = [
  "cpufeatures",
+]
+
+[[package]]
+name = "kujira"
+version = "0.7.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b69b49819362f0ab701d4c322e86a0b2735b6129ca857b3b982b2a6ec5431b22"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "cw20 1.1.2",
+ "hex",
+ "schemars",
+ "serde",
+ "sha2 0.10.8",
+ "thiserror",
 ]
 
 [[package]]
@@ -2724,9 +2878,6 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "white-whale",
- "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
- "wyndex-multi-hop",
 ]
 
 [[package]]
@@ -4941,7 +5092,33 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "ymos-comp-prefs",
+]
+
+[[package]]
+name = "ymos-destinations"
+version = "0.2.2"
+dependencies = [
+ "balance-token-swap",
+ "bond-router",
+ "cosmos-sdk-proto 0.19.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-grant-spec",
+ "cw20 1.1.2",
+ "cw20-stake 2.1.0",
+ "cw20-vesting 1.6.0",
+ "eris",
+ "furnace",
+ "outpost-utils",
+ "schemars",
+ "serde",
+ "terraswap-helpers",
+ "thiserror",
+ "white-whale",
+ "wynd-helpers",
+ "wynd-stake",
+ "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
+ "wyndex-multi-hop",
 ]
 
 [[package]]
@@ -4962,7 +5139,6 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
- "juno-helpers",
  "outpost-utils",
  "schemars",
  "semver",
@@ -4974,6 +5150,7 @@ dependencies = [
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "wyndex-multi-hop",
+ "ymos-destinations",
 ]
 
 [[package]]
@@ -4994,7 +5171,6 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
- "juno-helpers",
  "outpost-utils",
  "schemars",
  "semver",
@@ -5007,6 +5183,7 @@ dependencies = [
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "wyndex-multi-hop",
+ "ymos-destinations",
 ]
 
 [[package]]
@@ -5027,7 +5204,6 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
- "juno-helpers",
  "outpost-utils",
  "schemars",
  "semver",
@@ -5040,6 +5216,7 @@ dependencies = [
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "wyndex-multi-hop",
+ "ymos-destinations",
 ]
 
 [[package]]
@@ -5060,7 +5237,6 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
- "juno-helpers",
  "outpost-utils",
  "schemars",
  "semver",
@@ -5072,6 +5248,7 @@ dependencies = [
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "wyndex-multi-hop",
+ "ymos-destinations",
 ]
 
 [[package]]

@@ -100,6 +100,27 @@ use white_whale::pool_network::{
 //     Ok((swap_msg, simulation))
 // }
 
+/// Queries the terraswap pool for the amount of `to_denom` that can be received for `from_token`
+/// IMPORTANT: you must provide the pair contract address for the simulation
+pub fn simulate_pool_swap(
+    querier: &QuerierWrapper,
+    pool_address: &str,
+    from_token: &Asset,
+    // just for error reporting purposes
+    to_denom: String,
+) -> Result<SimulationResponse, StdError> {
+
+    let simulated_swap: SimulationResponse = querier.query_wasm_smart(
+        pool_address.to_string(),
+        &white_whale::pool_network::pair::QueryMsg::Simulation{
+            offer_asset: from_token.clone(),
+
+        },
+    )?;
+
+    Ok(simulated_swap)
+}
+
 /// Creates a MsgExecuteContract for doing a token swap on terraswap via the multihop router.
 /// If you need to get a simulation of the swap as well, use `create_swap_msg_and_simulation` instead
 pub fn create_swap_msg(

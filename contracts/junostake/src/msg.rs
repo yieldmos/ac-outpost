@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
-use outpost_utils::juno_comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
+
 use wyndex::asset::AssetInfo;
 
 use crate::ContractError;

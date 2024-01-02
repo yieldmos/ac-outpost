@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
+use outpost_utils::comp_prefs::CompoundPrefs;
 
-use crate::comp_prefs::CompoundPrefs;
 
 pub type OsmosisCompPrefs = CompoundPrefs<OsmosisDestinationProject>;
 

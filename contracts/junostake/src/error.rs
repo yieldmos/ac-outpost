@@ -16,7 +16,7 @@ pub enum ContractError {
     WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
 
     #[error("Juno Helper Error: &{0}")]
-    JunoHelperError(#[from] juno_helpers::errors::JunoHelperError),
+    JunoHelperError(#[from] juno_helpers::errors::HelperError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),

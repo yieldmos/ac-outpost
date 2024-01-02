@@ -20,6 +20,7 @@ pub enum CosmosProtoMsg {
     Send(MsgSend),
     WithdrawDelegatorReward(MsgWithdrawDelegatorReward),
     Delegate(MsgDelegate),
+    AllianceDelegate(MsgDelegate),
     ExecuteContract(MsgExecuteContract),
     Exec(MsgExec),
     OsmosisSwapExactAmountIn(MsgSwapExactAmountIn),
@@ -32,6 +33,10 @@ impl TryFrom<&CosmosProtoMsg> for Any {
             CosmosProtoMsg::Send(msg) => msg.to_any(),
             CosmosProtoMsg::WithdrawDelegatorReward(msg) => msg.to_any(),
             CosmosProtoMsg::Delegate(msg) => msg.to_any(),
+            CosmosProtoMsg::AllianceDelegate(msg) => Ok(Any {
+                type_url: "/alliance.alliance.MsgDelegate".to_string(),
+                value: msg.clone().encode_to_vec(),
+            }),
             CosmosProtoMsg::ExecuteContract(msg) => msg.to_any(),
             CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => Ok(Any {
                 type_url: MsgSwapExactAmountIn::TYPE_URL.to_string(),
@@ -136,4 +141,24 @@ pub fn create_exec_msg(
         type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
         value: Binary::from(exec.encode_to_vec()),
     })
+}
+
+/// Creates an Alliance module Delegate message
+// TODO: this is probs not needed/used
+pub fn create_alliance_delegate_msg(
+    amount: Coin,
+    delegator_address: impl Into<String>,
+    validator_address: impl Into<String>,
+) -> CosmosMsg {
+    CosmosMsg::Stargate {
+        type_url: "/alliance.alliance.MsgDelegate".to_string(),
+        value: Binary::from(
+            MsgDelegate {
+                amount: Some(amount),
+                delegator_address: delegator_address.into(),
+                validator_address: validator_address.into(),
+            }
+            .encode_to_vec(),
+        ),
+    }
 }

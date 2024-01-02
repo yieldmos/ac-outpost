@@ -51,4 +51,4 @@ cw-orch = { workspace = true, optional = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
-ymos-comp-prefs = { path = "../comp_prefs", features = ["interface"] }
+# ymos-comp-prefs = { path = "../comp_prefs", features = ["interface"] }
