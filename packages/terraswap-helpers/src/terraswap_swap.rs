@@ -107,14 +107,12 @@ pub fn simulate_pool_swap(
     pool_address: &str,
     from_token: &Asset,
     // just for error reporting purposes
-    to_denom: String,
+    _to_denom: String,
 ) -> Result<SimulationResponse, StdError> {
-
     let simulated_swap: SimulationResponse = querier.query_wasm_smart(
         pool_address.to_string(),
-        &white_whale::pool_network::pair::QueryMsg::Simulation{
+        &white_whale::pool_network::pair::QueryMsg::Simulation {
             offer_asset: from_token.clone(),
-
         },
     )?;
 

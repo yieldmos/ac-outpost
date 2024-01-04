@@ -1,11 +1,9 @@
+use crate::errors::JunoDestinationError;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api};
-use schemars::JsonSchema;
-use wyndex::asset::AssetInfo;
 use outpost_utils::comp_prefs::CompoundPrefs;
-use crate::errors::DestinationError;
-use crate::sail_comp_prefs::{FundMsg, RacoonBetGame};
-
+use sail_destinations::comp_prefs::{FundMsg, RacoonBetGame};
+use wyndex::asset::AssetInfo;
 
 pub type JunoCompPrefs = CompoundPrefs<JunoDestinationProject>;
 
@@ -212,7 +210,7 @@ impl From<WyndLPBondingPeriod> for u64 {
 }
 // implement try_from for u64 to WyndLPBondingPeriod
 impl TryFrom<u64> for WyndLPBondingPeriod {
-    type Error = DestinationError;
+    type Error = JunoDestinationError;
 
     fn try_from(v: u64) -> Result<Self, Self::Error> {
         match v {
@@ -220,13 +218,10 @@ impl TryFrom<u64> for WyndLPBondingPeriod {
             1209600 => Ok(WyndLPBondingPeriod::FourteenDays),
             2419200 => Ok(WyndLPBondingPeriod::TwentyEightDays),
             3628800 => Ok(WyndLPBondingPeriod::FourtyTwoDays),
-            _ => Err(DestinationError::InvalidBondingPeriod(v.to_string())),
+            _ => Err(JunoDestinationError::InvalidBondingPeriod(v.to_string())),
         }
     }
 }
-
-
-
 
 #[cw_serde]
 #[derive(Default)]
@@ -253,7 +248,10 @@ pub struct DestinationProjectAddrs {
     pub juno_lsds: JunoLsdAddrs,
 }
 impl DestinationProjectAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DestinationProjectAddrs, DestinationError> {
+    pub fn validate_addrs(
+        &self,
+        api: &dyn Api,
+    ) -> Result<DestinationProjectAddrs, JunoDestinationError> {
         Ok(DestinationProjectAddrs {
             wynd: self.wynd.validate_addrs(api)?,
             gelotto: self.gelotto.validate_addrs(api)?,
@@ -282,7 +280,7 @@ pub struct RacoonBetAddrs {
     pub juno_usdc_wynd_pair: Addr,
 }
 impl RacoonBetAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<RacoonBetAddrs, DestinationError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<RacoonBetAddrs, JunoDestinationError> {
         Ok(RacoonBetAddrs {
             game: api.addr_validate(&self.game)?,
             juno_usdc_wynd_pair: api.addr_validate(&self.juno_usdc_wynd_pair)?,
@@ -302,7 +300,7 @@ pub struct SparkIbcAddrs {
     pub fund: Addr,
 }
 impl SparkIbcAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<SparkIbcAddrs, DestinationError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<SparkIbcAddrs, JunoDestinationError> {
         Ok(SparkIbcAddrs {
             fund: api.addr_validate(&self.fund)?,
         })
@@ -333,7 +331,7 @@ pub struct JunoLsdAddrs {
     pub amp_juno: Addr,
 }
 impl JunoLsdAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<JunoLsdAddrs, DestinationError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<JunoLsdAddrs, JunoDestinationError> {
         Ok(JunoLsdAddrs {
             bone_juno: api.addr_validate(&self.bone_juno)?,
             wy_juno: api.addr_validate(&self.wy_juno)?,
@@ -383,7 +381,10 @@ pub struct WhiteWhaleSatelliteAddrs {
     pub rewards: Addr,
 }
 impl WhiteWhaleSatelliteAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhiteWhaleSatelliteAddrs, DestinationError> {
+    pub fn validate_addrs(
+        &self,
+        api: &dyn Api,
+    ) -> Result<WhiteWhaleSatelliteAddrs, JunoDestinationError> {
         Ok(WhiteWhaleSatelliteAddrs {
             amp_whale: self.amp_whale.clone(),
             bone_whale: self.bone_whale.clone(),
@@ -407,7 +408,7 @@ impl WhiteWhaleSatelliteAddrs {
             Vec<white_whale::pool_network::router::SwapOperation>,
             String,
         ),
-        DestinationError,
+        JunoDestinationError,
     > {
         match desired_asset {
             AssetInfo::Native(denom) if denom.eq(&self.amp_whale) => {
@@ -417,7 +418,7 @@ impl WhiteWhaleSatelliteAddrs {
                 Ok((self.juno_bone_whale_path.clone(), denom))
             }
             // if the asset isn't ampWHALE or bWhale then we can't do anything
-            _ => Err(DestinationError::InvalidAsset {
+            _ => Err(JunoDestinationError::InvalidAsset {
                 denom: desired_asset.to_string(),
                 project: "white whale".to_string(),
             }),
@@ -431,7 +432,7 @@ impl WhiteWhaleSatelliteAddrs {
             Vec<white_whale::pool_network::router::SwapOperation>,
             String,
         ),
-        DestinationError,
+        JunoDestinationError,
     > {
         match desired_asset {
             AssetInfo::Native(denom) if denom.eq(&self.amp_whale) => {
@@ -441,7 +442,7 @@ impl WhiteWhaleSatelliteAddrs {
                 Ok((self.usdc_bone_whale_path.clone(), denom))
             }
             // if the asset isn't ampWHALE or bWhale then we can't do anything
-            _ => Err(DestinationError::InvalidAsset {
+            _ => Err(JunoDestinationError::InvalidAsset {
                 denom: desired_asset.to_string(),
                 project: "white whale".to_string(),
             }),
@@ -494,7 +495,7 @@ pub struct DaoAddrs {
     pub muse: DaoAddr,
 }
 impl DaoAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddrs, DestinationError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddrs, JunoDestinationError> {
         Ok(DaoAddrs {
             neta: DaoAddress::validate_addrs(&self.neta, api)?,
             signal: DaoAddress::validate_addrs(&self.signal, api)?,
@@ -528,7 +529,7 @@ pub struct WyndAddrs {
 }
 
 impl WyndAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<WyndAddrs, DestinationError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<WyndAddrs, JunoDestinationError> {
         Ok(WyndAddrs {
             cw20: api.addr_validate(&self.cw20)?,
             multihop: api.addr_validate(&self.multihop)?,
@@ -555,7 +556,7 @@ pub struct DaoAddr {
     pub wynd_wyndex_pair: Option<Addr>,
 }
 impl DaoAddress {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddr, DestinationError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddr, JunoDestinationError> {
         Ok(DaoAddr {
             cw20: api.addr_validate(&self.cw20)?,
             staking: api.addr_validate(&self.staking)?,
@@ -598,7 +599,7 @@ pub struct GelottoAddrs {
 }
 
 impl GelottoAddresses {
-    fn validate_addrs(&self, api: &dyn Api) -> Result<GelottoAddrs, DestinationError> {
+    fn validate_addrs(&self, api: &dyn Api) -> Result<GelottoAddrs, JunoDestinationError> {
         Ok(GelottoAddrs {
             pick3_contract: api.addr_validate(&self.pick3_contract)?,
             pick4_contract: api.addr_validate(&self.pick4_contract)?,

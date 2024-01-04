@@ -4,17 +4,15 @@ use cosmwasm_std::{Addr, Attribute, Coin, Decimal, Deps, DepsMut, Env, Event, Me
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs, RewardSplit},
-    juno_comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao},
     msg_gen::create_exec_msg,
 };
 use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
-
-use juno_helpers::dest_project_gen::{
-    balance_dao_msgs, daodao_cw20_staking_msg, gelotto_lottery_msgs, mint_juno_lsd_msgs, native_staking_msg, racoon_bet_msgs, wyndex_asset_send_tokens_msgs,
-    spark_ibc_msgs, white_whale_satellite_msgs, wynd_staking_msgs,
-};
 use wynd_helpers::wynd_swap::simulate_and_swap_wynd_pair;
 use wyndex::asset::{Asset, AssetInfo};
+use juno_destinations::comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao};
+use juno_destinations::dest_project_gen::{balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs};
+use sail_destinations::dest_project_gen::{spark_ibc_msgs, white_whale_satellite_msgs};
+use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg};
 
 use crate::{
     helpers::{query_and_generate_wynd_reward_msgs, wynd_wyndex_multihop_swap, },
@@ -396,7 +394,7 @@ pub fn prefs_to_msgs(
                         .map_err(ContractError::Std)?;
 
                         // after the swap we can send the estimated funds to the target address
-                        let mut send_msgs = wyndex_asset_send_tokens_msgs(
+                        let mut send_msgs = send_tokens_msgs(
                             user_addr,
                             &deps.api.addr_validate(&to_address)?,
                             Asset {

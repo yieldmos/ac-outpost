@@ -3,10 +3,11 @@ use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 use outpost_utils::{
     helpers::CompoundingFrequency,
-    juno_comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs},
+
 };
 use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
 use wyndex::asset::AssetInfo;
+use juno_destinations::comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
 
 use crate::ContractError;
 

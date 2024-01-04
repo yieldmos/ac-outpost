@@ -6,12 +6,13 @@ use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
+
 use std::fmt::Display;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use crate::errors::DestinationError;
+use crate::errors::UniversalDestinationError;
 
-pub type DestinationResult = Result<DestProjectMsgs, DestinationError>;
+pub type DestinationResult = Result<DestProjectMsgs, UniversalDestinationError>;
 
 /// Generates the messages needed to delegate to a validator
 pub fn native_staking_msg(
@@ -35,15 +36,79 @@ pub fn native_staking_msg(
     })
 }
 
-pub fn daodao_cw20_staking_msg<T>(
+// stakes an asset to a dao on daodao
+pub fn daodao_staking_msg<T>(
     dao_name: String,
     staker_address: &T,
-    cw20_addr: &T,
     staking_contract_addr: &T,
+    staking_asset: Asset,
+) -> DestinationResult
+where
+    T: Into<String> + Display,
+{
+    match staking_asset {
+        Asset {
+            amount,
+            info: AssetInfo::NativeToken { denom },
+        } => daodao_native_staking_msg(
+            dao_name,
+            staker_address,
+            staking_contract_addr,
+            Coin { denom, amount },
+        ),
+        Asset {
+            amount,
+            info: AssetInfo::Token { contract_addr },
+        } => daodao_cw20_staking_msg(
+            dao_name,
+            staker_address,
+            &contract_addr.to_string(),
+            staking_contract_addr,
+            amount,
+        ),
+    }
+}
+
+/// Stakes native token to daodao dao
+pub fn daodao_native_staking_msg<T, U>(
+    dao_name: String,
+    staker_address: &T,
+    staking_contract_addr: &U,
+    coin: cosmwasm_std::Coin,
+) -> DestinationResult
+where
+    T: Into<String> + Display,
+    U: Into<String> + Display,
+{
+    Ok(DestProjectMsgs {
+        sub_msgs: vec![],
+        msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+            &staking_contract_addr.to_string(),
+            &staker_address.to_string(),
+            &cw20_stake::msg::ReceiveMsg::Stake {},
+            Some(vec![CsdkCoin {
+                denom: coin.denom.clone(),
+                amount: coin.amount.to_string(),
+            }]),
+        )?)],
+        events: vec![Event::new("dao_stake")
+            .add_attribute("dao", dao_name.to_string())
+            .add_attribute("amount", coin.to_string())],
+    })
+}
+
+/// Stakes cw20 token to daodao cw20_stake contract
+pub fn daodao_cw20_staking_msg<T, U, V>(
+    dao_name: String,
+    staker_address: &T,
+    cw20_addr: &U,
+    staking_contract_addr: &V,
     staking_amount: Uint128,
 ) -> DestinationResult
 where
     T: Into<String> + Display,
+    U: Into<String> + Display,
+    V: Into<String> + Display,
 {
     Ok(DestProjectMsgs {
         sub_msgs: vec![],

@@ -3,7 +3,7 @@ use outpost_utils::{
     helpers::RewardSplit,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
-use wynd_stake::msg::{RewardsResponse, WithdrawableRewardsResponse};
+use wynd_stake::msg::WithdrawableRewardsResponse;
 
 use crate::helpers::gen_wynd_claim_rewards_msg;
 

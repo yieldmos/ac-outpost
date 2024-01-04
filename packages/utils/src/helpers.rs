@@ -1,4 +1,4 @@
-use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
+use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin as CsdkCoin};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, Event, ReplyOn, Timestamp, Uint128};
 use cw_storage_plus::Item;
@@ -252,4 +252,11 @@ pub struct RewardSplit {
     pub user_rewards: Uint128,
     pub tax_amount: Uint128,
     pub claim_msgs: Vec<CosmosProtoMsg>,
+}
+
+pub fn csdk_coins(amount: &Uint128, denom: impl Into<String>) -> Vec<CsdkCoin> {
+    vec![CsdkCoin {
+        denom: denom.into(),
+        amount: amount.to_string(),
+    }]
 }

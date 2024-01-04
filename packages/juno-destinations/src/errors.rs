@@ -1,16 +1,18 @@
 use cosmwasm_std::StdError;
+use sail_destinations::errors::SailDestinationError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum DestinationError {
+pub enum JunoDestinationError {
     #[error("Outpost StdError: {0}")]
     Std(#[from] StdError),
 
-    #[cfg(feature = "juno")]
+    #[error("Juno Dest - Sail Destinations Error: &{0}")]
+    SailDestinationsError(#[from] SailDestinationError),
+
     #[error("WyndHelper Error: {0}")]
     WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
 
-    #[cfg(feature = "juno")]
     #[error("Parsing invalid wynd pool bonding period: {0}")]
     InvalidBondingPeriod(String),
 

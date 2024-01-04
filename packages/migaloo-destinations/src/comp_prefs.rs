@@ -1,10 +1,13 @@
-use crate::errors::DestinationError;
-use crate::juno_comp_prefs::JunoLsd;
-use crate::sail_comp_prefs::{FundMsg, RacoonBetGame};
+use crate::errors::MigalooDestinationError;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Decimal};
 use outpost_utils::comp_prefs::CompoundPrefs;
-use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
+use sail_destinations::comp_prefs::{FundMsg, RacoonBetGame};
+use white_whale::pool_network::{
+    asset::{Asset, AssetInfo},
+    router::SwapOperation,
+};
 
 pub type MigalooCompPrefs = CompoundPrefs<MigalooDestinationProject>;
 
@@ -60,15 +63,15 @@ pub enum MigalooDestinationProject {
         game: RacoonBetGame,
     },
 
-    /// Mint one of many Juno LSDs
+    /// Mint one of many Migaloo/WHALE LSDs
     MintLsd {
-        lsd_type: JunoLsd,
+        lsd_type: WhaleLsd,
+        and_then: Option<LsdMintAction>,
     },
 
     /// Burn WHALE and receive ASH
     /// https://whale.burn.community/
     /// migaloo1erul6xyq0gk6ws98ncj7lnq9l4jn4gnnu9we73gdz78yyl2lr7qqrvcgup
-    /// burn {}
     Furnace {
         and_then: Option<AshAction>,
     },
@@ -93,6 +96,14 @@ pub enum MigalooDestinationProject {
     /// Ginku repay loan
     GinkouRepayLoan {},
 
+    // /// Provide Liquidity to a TerraSwap pool
+    // ProvideLiquidity {
+    //     pool_address: String,
+    //     pool_asset1: AssetInfo,
+    //     pool_asset2: AssetInfo,
+    //     // this is basically only for the whale usdc pool that can be used for ecosystem staking
+    //     and_then: Option<ProvideLiquidityAction>,
+    // },
     /// Do nothing with the funds
     Unallocated {},
 }
@@ -128,6 +139,11 @@ pub enum GinkouBorrowAction {
     GinkouDeposit { ecosystem_stake: bool },
     AmpUsdc,
     None,
+}
+
+#[cw_serde]
+pub enum LsdMintAction {
+    SatelliteMarket,
 }
 
 #[cw_serde]
@@ -167,12 +183,21 @@ impl std::fmt::Display for WhaleLsd {
 }
 
 #[cw_serde]
+#[derive(Default)]
+pub struct WhaleLsdAddresses {
+    ///
+    pub bone_whale: String,
+
+    ///
+    pub amp_whale: String,
+}
+#[cw_serde]
 pub struct WhaleLsdAddrs {
     pub bone_whale: Addr,
     pub amp_whale: Addr,
 }
 impl WhaleLsdAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhaleLsdAddrs, DestinationError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhaleLsdAddrs, MigalooDestinationError> {
         Ok(WhaleLsdAddrs {
             bone_whale: api.addr_validate(&self.bone_whale)?,
             amp_whale: api.addr_validate(&self.amp_whale)?,
@@ -193,6 +218,7 @@ pub enum MigalooVault {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct Denoms {
     /// ibc/80E8F826480B995AE28C1EE86106C1BE2034FF1966579D29951CF61885458040
     pub usdc: String,
@@ -229,6 +255,7 @@ pub struct Denoms {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct DestProjectSwapRoutes {
     /// migaloo1nha6qlam4p92cf9j64qv9he40xyf3akl2m9w5dukftmf2ryrxz5qy650zh
     pub whale_usdc_pool: String,
@@ -256,7 +283,7 @@ impl DestProjectSwapRoutes {
     pub fn validate_addrs(
         &self,
         api: &dyn Api,
-    ) -> Result<DestProjectVerifiedSwapRoutes, DestinationError> {
+    ) -> Result<DestProjectVerifiedSwapRoutes, MigalooDestinationError> {
         Ok(DestProjectVerifiedSwapRoutes {
             whale_usdc_pool: api.addr_validate(&self.whale_usdc_pool)?,
             whale_bwhale_pool: api.addr_validate(&self.whale_bwhale_pool)?,
@@ -284,9 +311,11 @@ pub struct DestProjectVerifiedSwapRoutes {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct WhaleRoutes {}
 
 #[cw_serde]
+#[derive(Default)]
 pub struct UsdcRoutes {
     pub whale: Vec<SwapOperation>,
     pub guppy: Vec<SwapOperation>,
@@ -309,7 +338,7 @@ impl MigalooDestinationProjectAddresses {
     pub fn validate_addrs(
         &self,
         api: &dyn Api,
-    ) -> Result<MigalooDestinationProjectAddrs, DestinationError> {
+    ) -> Result<MigalooDestinationProjectAddrs, MigalooDestinationError> {
         Ok(MigalooDestinationProjectAddrs {
             denoms: self.denoms.clone(),
             swap_routes: self.swap_routes.validate_addrs(api)?,
@@ -319,6 +348,7 @@ impl MigalooDestinationProjectAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct MigalooProjectAddresses {
     /// migaloo1tma28exp38q92c69r8uujhphxy95xa4awq2cudqqg3nhzkhnrg5s4r60en
     pub terraswap_multihop_router: String,
@@ -350,7 +380,10 @@ pub struct MigalooProjectAddrs {
     pub ecosystem_stake: Addr,
 }
 impl MigalooProjectAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<MigalooProjectAddrs, DestinationError> {
+    pub fn validate_addrs(
+        &self,
+        api: &dyn Api,
+    ) -> Result<MigalooProjectAddrs, MigalooDestinationError> {
         Ok(MigalooProjectAddrs {
             terraswap_multihop_router: api.addr_validate(&self.terraswap_multihop_router)?,
             daodao: self.daodao.validate_addrs(api)?,
@@ -367,6 +400,7 @@ impl MigalooProjectAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct GinkouAddresses {
     /// migaloo1qelh4gv5drg3yhj282l6n84a6wrrz033kwyak3ee3syvqg3mu3msgphpk4
     pub deposit: String,
@@ -381,7 +415,7 @@ pub struct GinkouAddrs {
     // pub provide_liquidity: Addr,
 }
 impl GinkouAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<GinkouAddrs, DestinationError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<GinkouAddrs, MigalooDestinationError> {
         Ok(GinkouAddrs {
             deposit: api.addr_validate(&self.deposit)?,
             borrow: api.addr_validate(&self.borrow)?,
@@ -391,6 +425,7 @@ impl GinkouAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct VaultAddresses {
     /// migaloo12ye2j33d6lv84x8zq6dpjj2hepzn2njnrnnwlmuam0v0eczr787qhmf7en
     pub amp_usdc: String,
@@ -408,7 +443,7 @@ pub struct VaultAddrs {
     pub amp_ash: Addr,
 }
 impl VaultAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<VaultAddrs, DestinationError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<VaultAddrs, MigalooDestinationError> {
         Ok(VaultAddrs {
             amp_usdc: api.addr_validate(&self.amp_usdc)?,
             arb_whale: api.addr_validate(&self.arb_whale)?,
@@ -431,7 +466,7 @@ pub struct WhaleLsdAddrs {
     pub amp_whale: Addr,
 }
 impl WhaleLsdAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhaleLsdAddrs, DestinationError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<WhaleLsdAddrs, MigalooDestinationError> {
         Ok(WhaleLsdAddrs {
             bone_whale: api.addr_validate(&self.bone_whale)?,
             amp_whale: api.addr_validate(&self.amp_whale)?,
@@ -440,6 +475,7 @@ impl WhaleLsdAddresses {
 }*/
 
 #[cw_serde]
+#[derive(Default)]
 pub struct SatelliteMarketAddresses {
     // migaloo1692nylpkryu7q00eukt93egtqu657z33nf0tedp0ps6htm8aty6qjdlpvh
     pub market: String,
@@ -451,7 +487,10 @@ pub struct SatelliteMarketAddrs {
     pub rewards: Addr,
 }
 impl SatelliteMarketAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<SatelliteMarketAddrs, DestinationError> {
+    pub fn validate_addrs(
+        &self,
+        api: &dyn Api,
+    ) -> Result<SatelliteMarketAddrs, MigalooDestinationError> {
         Ok(SatelliteMarketAddrs {
             market: api.addr_validate(&self.market)?,
             rewards: api.addr_validate(&self.rewards)?,
@@ -460,6 +499,7 @@ impl SatelliteMarketAddresses {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct DaoAddress {
     pub denom: String,
     pub staking_address: String,
@@ -469,24 +509,35 @@ pub struct DaoAddr {
     pub denom: String,
     pub staking_address: Addr,
 }
-impl DaoDaoAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DaoDaoAddrs, DestinationError> {
-        Ok(DaoDaoAddrs {
-            racoon_supply_dao: DaoAddr {
-                denom: self.racoon_supply_dao.denom.clone(),
-                staking_address: api.addr_validate(&self.racoon_supply_dao.staking_address)?,
-            },
-            guppy_dao: DaoAddr {
-                denom: self.guppy_dao.denom.clone(),
-                staking_address: api.addr_validate(&self.guppy_dao.staking_address)?,
-            },
+impl DaoAddress {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DaoAddr, MigalooDestinationError> {
+        Ok(DaoAddr {
+            denom: self.denom.clone(),
+            staking_address: api.addr_validate(&self.staking_address)?,
         })
     }
 }
+// impl DaoDaoAddresses {
+//     pub fn validate_addrs(&self, api: &dyn Api) -> Result<DaoDaoAddrs, MigalooDestinationError> {
+//         Ok(DaoDaoAddrs {
+//             racoon_supply_dao: DaoAddr {
+//                 denom: self.racoon_supply_dao.denom.clone(),
+//                 staking_address: api.addr_validate(&self.racoon_supply_dao.staking_address)?,
+//             },
+//             guppy_dao: DaoAddr {
+//                 denom: self.guppy_dao.denom.clone(),
+//                 staking_address: api.addr_validate(&self.guppy_dao.staking_address)?,
+//             },
+//         })
+//     }
+// }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct DaoDaoAddresses {
+    /// migaloo1398xz7e3zrv9ryx79lu8z46l3rqzy7tgta7dvhfx6853g8mp7fls43t7yf
     pub racoon_supply_dao: DaoAddress,
+    /// migaloo1w3n0kcmrtwnj8dj6t6p7gm9szv0nsamezqw58374zz06jvstvr9q539fjw
     pub guppy_dao: DaoAddress,
 }
 #[cw_serde]
@@ -495,10 +546,26 @@ pub struct DaoDaoAddrs {
     pub guppy_dao: DaoAddr,
 }
 impl DaoDaoAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DaoDaoAddrs, DestinationError> {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DaoDaoAddrs, MigalooDestinationError> {
         Ok(DaoDaoAddrs {
             racoon_supply_dao: self.racoon_supply_dao.validate_addrs(api)?,
             guppy_dao: self.guppy_dao.validate_addrs(api)?,
         })
     }
+}
+
+#[cw_serde]
+pub enum GinkouExecuteMsg {
+    DepositStable {},
+}
+
+#[cw_serde]
+pub enum ErisMsg {
+    Deposit {
+        asset: Asset,
+        receiver: Option<String>,
+    },
+    Bond {
+        receiver: Option<String>,
+    },
 }

@@ -1,7 +1,8 @@
 use anybuf::Anybuf;
 use cosmwasm_std::Uint64;
 use cw_orch::{anyhow, daemon::{DaemonBuilder, ChainInfo, ChainKind, networks::juno::JUNO_NETWORK}, prelude::*};
-use outpost_utils::{juno_comp_prefs::{DaoAddress, self}, comp_prefs};
+
+use juno_destinations::comp_prefs::DaoAddress;
 use tokio::runtime::Runtime;
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
@@ -19,6 +20,13 @@ pub enum DeploymentType {
 const YMOS_CONDUCTOR: &str = "juno1f49xq0rmah39sk58aaxq6gnqcvupee7jgl90tn";
 const YMOS_FEE_SHARE_COLLECTOR: &str = "juno1ewdttrv2ph7762egx4n2309h3m9r4z9pakz54p";
 
+// struct DaoAddress {
+//     cw20: String,
+//     staking: String,
+//     juno_wyndex_pair: Option<String>,
+//     wynd_wyndex_pair: Option<String>
+// }
+
 pub fn main() -> anyhow::Result<()> {
     let junostake_project_addresses = ymos_junostake_outpost::msg::ContractAddresses {
         staking_denom: "ujuno".to_string(),
@@ -31,8 +39,8 @@ pub fn main() -> anyhow::Result<()> {
             withdraw_tax: "juno1nak433pjd39et4g6jjclxk7yfmtfsd5m43su04rxe9ggttdvjwpqsumv30"
                 .to_string(),
         },
-        destination_projects: outpost_utils::juno_comp_prefs::DestinationProjectAddresses {
-            wynd: outpost_utils::juno_comp_prefs::WyndAddresses {
+        destination_projects: juno_destinations::comp_prefs::DestinationProjectAddresses {
+            wynd: juno_destinations::comp_prefs::WyndAddresses {
                 cw20: "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9".to_string(),
                 multihop: "juno1pctfpv9k03v0ff538pz8kkw5ujlptntzkwjg6c0lrtqv87s9k28qdtl50w"
                     .to_string(),
@@ -40,7 +48,7 @@ pub fn main() -> anyhow::Result<()> {
                     .to_string(),
                 wynd_usdc_pair: "juno18zk9xqj9xjm0ry39jjam8qsysj7qh49xwt4qdfp9lgtrk08sd58s2n54ve".to_string()
             },
-            gelotto: outpost_utils::juno_comp_prefs::GelottoAddresses {
+            gelotto: juno_destinations::comp_prefs::GelottoAddresses {
                 pick3_contract: "juno1v466lyrhsflkt9anxt4wyx7mtw8w2uyk0qxkqskqfj90rmwhph7s0dxvga"
                     .to_string(),
                 pick4_contract: "juno16xy5m05z6n4vnfzcf8cvd3anxhg4g2k8vvr4q2knv4akynfstr9qjmhdhs"
@@ -48,7 +56,7 @@ pub fn main() -> anyhow::Result<()> {
                 pick5_contract: "juno1txn3kejj4qrehua9vlg3hk4wunqafqunfy83cz5hg2xa3z3pkgssk4tzu4"
                     .to_string(),
             },
-            daos: outpost_utils::juno_comp_prefs::DaoAddresses {
+            daos: juno_destinations::comp_prefs::DaoAddresses {
                 neta: DaoAddress {
                     cw20: "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr"
                         .to_string(),
@@ -119,12 +127,12 @@ pub fn main() -> anyhow::Result<()> {
                     wynd_wyndex_pair: None,
                 },
             },
-            spark_ibc: outpost_utils::juno_comp_prefs::SparkIbcAddresses {
+            spark_ibc: juno_destinations::comp_prefs::SparkIbcAddresses {
                 fund: "juno1a6rna5tcl6p97rze6hnd5ug35kadqhudvr5f4mtr6s0yd5mruhss8gzrdy".to_string(),
             },
             balance_dao: "juno1ve7y09kvvnjk0yc2ycaq0y9thq5tct5ve6c0a5hfkt0h4jfy936qxtne5s"
                 .to_string(),
-            white_whale: outpost_utils::juno_comp_prefs::WhiteWhaleSatelliteAddresses {
+            white_whale: juno_destinations::comp_prefs::WhiteWhaleSatelliteAddresses {
                 amp_whale: "ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF"
                         .to_string(),
                
@@ -265,12 +273,12 @@ pub fn main() -> anyhow::Result<()> {
                     "juno128lewlw6kv223uw4yzdffl8rnh3k9qs8vrf6kef28579w8ygccyq7m90n2".to_string(),
                 // juno_bone_whale_path: todo!(),
             },
-            racoon_bet: outpost_utils::juno_comp_prefs::RacoonBetAddresses {
+            racoon_bet: juno_destinations::comp_prefs::RacoonBetAddresses {
                 game: "juno1h8p0jmfn06nfqpn0medn698h950vnl7v54m2azkyjdqjlzcly7jszxh7yu".to_string(),
                 juno_usdc_wynd_pair:
                     "juno1gqy6rzary8vwnslmdavqre6jdhakcd4n2z4r803ajjmdq08r66hq7zcwrj".to_string(),
             },
-            juno_lsds: outpost_utils::juno_comp_prefs::JunoLsdAddresses {
+            juno_lsds: juno_destinations::comp_prefs::JunoLsdAddresses {
                 bone_juno: "juno102at0mu2xeluyw9efg257yy6pyhv088qqhmp4f8wszqcwxnpdcgqsfq0nv"
                     .to_string(),
                 wy_juno: "juno18wuy5qr2mswgz7zak8yr9crhwhtur3v6mw4tcytupywxzw7sufyqgza7uh"

@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use outpost_utils::juno_comp_prefs::JunoCompPrefs;
+use juno_destinations::comp_prefs::JunoCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},

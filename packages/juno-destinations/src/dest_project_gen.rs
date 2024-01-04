@@ -1,17 +1,24 @@
-use std::fmt::Display;
-use cosmos_sdk_proto::cosmos::{
-    bank::v1beta1::MsgSend, base::v1beta1::Coin as CsdkCoin,
+use crate::{
+    comp_prefs::{
+        GelottoAddrs, GelottoExecute, GelottoLottery, JunoLsd, JunoLsdAddrs, StakeEasyMsgs,
+        WyndStakingBondingPeriod,
+    },
+    errors::JunoDestinationError,
 };
-use cosmwasm_std::{to_json_binary, Addr, Event, Uint128, QuerierWrapper, Coin, Attribute};
+
+use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin as CsdkCoin};
+use cosmwasm_std::{to_json_binary, Addr, Attribute, Coin, Event, QuerierWrapper, Uint128};
 use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
-use wyndex::asset::{Asset, AssetInfo};
+use sail_destinations::comp_prefs::{RacoonBetExec, RacoonBetGame};
+
+use std::fmt::Display;
 use wynd_helpers::wynd_swap::simulate_wynd_pool_swap;
-use crate::dest_project_gen::DestinationResult;
-use crate::juno_comp_prefs::{GelottoAddrs, GelottoExecute, GelottoLottery, JunoLsd, JunoLsdAddrs, StakeEasyMsgs, WyndStakingBondingPeriod};
-use crate::sail_comp_prefs::{RacoonBetExec, RacoonBetGame};
+use wyndex::asset::{Asset, AssetInfo};
+
+pub type DestinationResult = Result<DestProjectMsgs, JunoDestinationError>;
 
 pub fn mint_juno_lsd_msgs<T>(
     user_addr: &T,
@@ -219,8 +226,6 @@ where
     })
 }
 
-
-
 /// pair address to use to check the bet size is gte 1 USDC
 pub fn racoon_bet_msgs<T>(
     querier: &QuerierWrapper,
@@ -230,27 +235,27 @@ pub fn racoon_bet_msgs<T>(
     game: RacoonBetGame,
     game_addr: &Addr,
 ) -> DestinationResult
-    where
-        T: Into<String> + Display,
+where
+    T: Into<String> + Display,
 {
     // can't use racoon bet unless the value of the play is at least $1 usdc
     if wyndex_usdc_pair_addr.is_some()
         && simulate_wynd_pool_swap(
-        querier,
-        // safe to unwrap this since we checked it above
-        wyndex_usdc_pair_addr.unwrap().as_str(),
-        &Asset {
-            amount: bet.amount,
-            info: AssetInfo::Native(bet.denom.clone()),
-        },
-        "usdc".to_string(),
-    )?
+            querier,
+            // safe to unwrap this since we checked it above
+            wyndex_usdc_pair_addr.unwrap().as_str(),
+            &Asset {
+                amount: bet.amount,
+                info: AssetInfo::Native(bet.denom.clone()),
+            },
+            "usdc".to_string(),
+        )?
         .return_amount
         .lt(&1_000_000u128.into())
         || (
-        // otherwise we can assume we're receiving usdc and we can check the amount
-        wyndex_usdc_pair_addr.is_none() && bet.amount.lt(&1_000_000u128.into())
-    )
+            // otherwise we can assume we're receiving usdc and we can check the amount
+            wyndex_usdc_pair_addr.is_none() && bet.amount.lt(&1_000_000u128.into())
+        )
     {
         return Ok(DestProjectMsgs {
             msgs: vec![],

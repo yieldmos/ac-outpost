@@ -3,6 +3,7 @@ use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 
 use wyndex::asset::AssetInfo;
+use juno_destinations::comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
 
 use crate::ContractError;
 

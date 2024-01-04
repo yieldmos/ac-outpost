@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, Decimal, QuerierWrapper, StdError, StdResult, Uint128, WasmMsg};
 
 use wynd_helpers::wynd_swap::create_wyndex_swap_msg_with_simulation;
-use wynd_stake::msg::{QueryMsg::Rewards, RewardsResponse, WithdrawableRewardsResponse};
+use wynd_stake::msg::WithdrawableRewardsResponse;
 use wyndex::asset::AssetInfo;
 use wyndex_multi_hop::msg::SwapOperation;
 

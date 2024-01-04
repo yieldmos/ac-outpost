@@ -1,18 +1,18 @@
-use cosmos_sdk_proto::cosmos::{
-    bank::v1beta1::MsgSend, base::v1beta1::Coin as CsdkCoin, staking::v1beta1::MsgDelegate,
+use crate::{
+    comp_prefs::{FundMsg, RacoonBetExec, RacoonBetGame, SparkIbcFund},
+    errors::SailDestinationError,
 };
-use std::fmt::Display;
-
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmwasm_std::{Addr, Attribute, Coin, Event, QuerierWrapper, Uint128};
 use outpost_utils::{
     helpers::DestProjectMsgs,
-
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use std::fmt::Display;
 use terraswap_helpers::terraswap_swap::simulate_pool_swap;
-use crate::dest_project_gen::DestinationResult;
-use crate::sail_comp_prefs::{FundMsg, RacoonBetExec, RacoonBetGame, SparkIbcFund};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
+
+pub type DestinationResult = Result<DestProjectMsgs, SailDestinationError>;
 
 /// pair address to use to check the bet size is gte 1 USDC
 pub fn racoon_bet_msgs<T>(
@@ -34,7 +34,9 @@ where
             terraswap_usdc_pair_addr.unwrap().as_str(),
             &Asset {
                 amount: bet.amount,
-                info: AssetInfo::NativeToken { denom: bet.denom.clone()},
+                info: AssetInfo::NativeToken {
+                    denom: bet.denom.clone(),
+                },
             },
             "usdc".to_string(),
         )?

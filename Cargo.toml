@@ -45,7 +45,6 @@ wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0
 outpost-utils = { path = "./packages/utils" }
 wynd-helpers = { path = "./packages/wynd-helpers" }
 terraswap-helpers = { path = "./packages/terraswap-helpers" }
-ymos-destinations = { path = "./packages/destinations" }
 # wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0" }
 osmosis-std = "0.15.3"
 
@@ -66,9 +65,18 @@ balance-token-swap = { git = "https://github.com/racoon-supply-rac/balance-dao",
 bond-router = { git = "https://github.com/wynddao/wynd-lsd", features = [
     "library",
 ] }
-# migaloo furnace
-furnace = { git = "https://github.com/deving-zone-community/community-furnace.git" }
-eris = { git = "https://github.com/erisprotocol/contracts-tokenfactory.git", tag = "v1.0.2-migaloo-arb-vault" }
+
+furnace = { git = "https://github.com/deving-zone-community/community-furnace.git", features = [
+    "library",
+] }
+# eris = { git = "https://github.com/erisprotocol/contracts-tokenfactory.git", tag = "v1.0.2-migaloo-arb-vault" }
+astroport = { git = "https://github.com/astroport-fi/astroport-core.git", default-features = false, rev = "3b44a4044b823a145730f66ffaf7ae4205b2cd35" }
+universal-destinations = { path = "./packages/universal-destinations" }
+juno-destinations = { path = "./packages/juno-destinations" }
+migaloo-destinations = { path = "./packages/migaloo-destinations" }
+sail-destinations = { path = "./packages/sail-destinations" }
+osmosis-destinations = { path = "./packages/osmosis-destinations" }
+
 
 [profile.release.package.ymos-junostake-outpost]
 codegen-units = 1

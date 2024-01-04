@@ -53,7 +53,9 @@ wyndex-multi-hop = { workspace = true }
 wynd-stake = { workspace = true }
 wynd-helpers = { workspace = true }
 outpost-utils = { workspace = true }
-ymos-destinations = { workspace = true, features = ["juno"] }
+universal-destinations = { workspace = true }
+juno-destinations = { workspace = true }
+sail-destinations = { workspace = true }
 balance-token-swap = { workspace = true }
 # stake-easy = { workspace = true }
 bond-router = { workspace = true }

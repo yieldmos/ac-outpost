@@ -61,7 +61,9 @@ cw-grant-spec = { workspace = true }
 cw-orch = { workspace = true, optional = true }
 terraswap-helpers = { workspace = true }
 white-whale = { workspace = true }
-ymos-destinations = { workspace = true, features = ["juno"] }
+universal-destinations = { workspace = true }
+juno-destinations = { workspace = true }
+sail-destinations = { workspace = true }
 
 
 [dev-dependencies]

@@ -4,8 +4,6 @@ use cw_grant_spec::grants::{
     AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
 };
 
-use juno_helpers::grants::{balance_dao_grant, gelotto_lottery_grant, native_staking_grant, wyndao_staking_grant};
-use outpost_utils::juno_comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd};
 use terraswap_helpers::terraswap_swap::terraswap_multihop_swap_grant;
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
 use wynd_helpers::wynd_swap::{simulate_wynd_pool_swap, wynd_multihop_swap_grant, wynd_pool_swap_grant};
@@ -13,6 +11,8 @@ use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,
 };
+use juno_destinations::comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd};
+use juno_destinations::grants::{balance_dao_grant, gelotto_lottery_grant, native_staking_grant, wyndao_staking_grant};
 
 use crate::helpers::ww_market_rewards_split_grants;
 use crate::msg::{CompPrefsWithAddresses, JunoWhiteWhaleMarketCompoundPrefs, QueryMsg};

@@ -1,13 +1,10 @@
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
-    AuthorizationType, ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit, ContractExecutionSetting,
-    GrantBase, GrantRequirement, RevokeRequirement,
+    AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
 };
-
-use juno_helpers::grants::{balance_dao_grant, gelotto_lottery_grant, native_staking_grant, wyndao_staking_grant};
-use outpost_utils::juno_comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd};
-
+use juno_destinations::comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd};
+use juno_destinations::grants::{balance_dao_grant, gelotto_lottery_grant, native_staking_grant, wyndao_staking_grant};
 use terraswap_helpers::terraswap_swap::terraswap_multihop_swap_grant;
 use wynd_helpers::wynd_swap::{simulate_wynd_pool_swap, wynd_multihop_swap_grant, wynd_pool_swap_grant};
 use wyndex::{

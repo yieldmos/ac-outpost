@@ -1,0 +1,21 @@
+[package]
+name = "universal-destinations"
+version = { workspace = true }
+authors = ["Marc <marc@yieldmos.com>"]
+description = "Generalized message generators and compounding preferences used by Yieldmos outpost contracts"
+edition = { workspace = true }
+
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+cosmos-sdk-proto = { workspace = true }
+cw20 = { workspace = true }
+outpost-utils = { workspace = true }
+cw20-stake = { workspace = true }
+cw20-vesting = { workspace = true }
+white-whale = { workspace = true }
+cw-grant-spec = { workspace = true }
