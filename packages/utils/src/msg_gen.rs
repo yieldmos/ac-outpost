@@ -38,14 +38,28 @@ impl TryFrom<&CosmosProtoMsg> for Any {
                 value: msg.clone().encode_to_vec(),
             }),
             CosmosProtoMsg::ExecuteContract(msg) => msg.to_any(),
-            CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => Ok(Any {
-                type_url: MsgSwapExactAmountIn::TYPE_URL.to_string(),
-                value: msg.clone().encode_to_vec(),
-            }),
-            CosmosProtoMsg::OsmosisSwapExactAmountOut(msg) => Ok(Any {
-                type_url: MsgSwapExactAmountOut::TYPE_URL.to_string(),
-                value: msg.clone().encode_to_vec(),
-            }),
+            CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => {
+                let any = msg.to_any();
+                Ok(Any {
+                    type_url: any.type_url,
+                    value: any.value,
+                })
+            }
+            // Ok(Any {
+            //     type_url: MsgSwapExactAmountIn::TYPE_URL.to_string(),
+            //     value: msg.clone().encode_to_vec(),
+            // }),
+            CosmosProtoMsg::OsmosisSwapExactAmountOut(msg) => {
+                let any = msg.to_any();
+                Ok(Any {
+                    type_url: any.type_url,
+                    value: any.value,
+                })
+            }
+            // Ok(Any {
+            //     type_url: MsgSwapExactAmountOut::TYPE_URL.to_string(),
+            //     value: msg.clone().encode_to_vec(),
+            // }),
             CosmosProtoMsg::Exec(msg) => Ok(Any {
                 type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
                 value: Binary::from(msg.encode_to_vec()).to_vec(),

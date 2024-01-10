@@ -23,3 +23,4 @@ terraswap-helpers = { workspace = true }
 # eris = { workspace = true }
 astroport = { workspace = true }
 cw-grant-spec = { workspace = true }
+bond-router = { workspace = true }

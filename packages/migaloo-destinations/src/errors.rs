@@ -1,4 +1,5 @@
 use cosmwasm_std::StdError;
+use sail_destinations::errors::SailDestinationError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -6,13 +7,14 @@ pub enum MigalooDestinationError {
     #[error("Outpost StdError: {0}")]
     Std(#[from] StdError),
 
-    #[cfg(feature = "juno")]
-    #[error("WyndHelper Error: {0}")]
-    WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
+    #[error("Sail Destination Error in Migaloo Destinations: {0}")]
+    SailDestinationError(#[from] SailDestinationError),
 
-    #[cfg(feature = "juno")]
-    #[error("Parsing invalid wynd pool bonding period: {0}")]
-    InvalidBondingPeriod(String),
+    #[error("LSD Mint Estimate Error: {error}. Project: {project}")]
+    LsdMintEstimateError { error: String, project: String },
+
+    #[error("Migaloo Destination Query Error: {error}. Project: {project}")]
+    ProjectQueryError { error: String, project: String },
 
     #[error("Invalid asset: {denom} for project: {project}")]
     InvalidAsset { denom: String, project: String },

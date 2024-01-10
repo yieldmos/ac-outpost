@@ -3,13 +3,15 @@ use crate::{
     errors::SailDestinationError,
 };
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
-use cosmwasm_std::{Addr, Attribute, Coin, Event, QuerierWrapper, Uint128};
+use cosmwasm_std::{
+    coin, coins, to_json_binary, Addr, Attribute, Coin, Event, QuerierWrapper, Uint128,
+};
 use outpost_utils::{
-    helpers::DestProjectMsgs,
+    helpers::{csdk_coins, DestProjectMsgs},
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
 use std::fmt::Display;
-use terraswap_helpers::terraswap_swap::simulate_pool_swap;
+use terraswap_helpers::terraswap_swap::{create_terraswap_pool_swap_msg, simulate_pool_swap};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 pub type DestinationResult = Result<DestProjectMsgs, SailDestinationError>;
@@ -38,7 +40,6 @@ where
                     denom: bet.denom.clone(),
                 },
             },
-            "usdc".to_string(),
         )?
         .return_amount
         .lt(&1_000_000u128.into())
@@ -170,5 +171,76 @@ where
         )?)],
         sub_msgs: vec![],
         events: vec![Event::new("spark_ibc").add_attribute("amount", usdc_donation.to_string())],
+    })
+}
+
+pub fn terraswap_pool_swap_msgs(
+    user_addr: &Addr,
+    pool_addr: &Addr,
+    offer_asset: Asset,
+) -> DestinationResult {
+    Ok(DestProjectMsgs {
+        msgs: vec![create_terraswap_pool_swap_msg(
+            user_addr,
+            offer_asset.clone(),
+            pool_addr,
+        )?],
+        sub_msgs: vec![],
+        events: vec![Event::new("terraswap_pool_swap")
+            .add_attribute("offer", offer_asset.to_string())
+            .add_attribute("pool", pool_addr.to_string())],
+    })
+}
+
+pub fn terraswap_pool_swap_with_sim_msgs(
+    querier: &QuerierWrapper,
+    user_addr: &Addr,
+    pool_addr: &Addr,
+    offer_asset: Asset,
+) -> Result<(Uint128, DestProjectMsgs), SailDestinationError> {
+    Ok((
+        simulate_pool_swap(querier, &pool_addr.to_string(), &offer_asset)?.return_amount,
+        DestProjectMsgs {
+            msgs: vec![create_terraswap_pool_swap_msg(
+                user_addr,
+                offer_asset.clone(),
+                pool_addr,
+            )?],
+            sub_msgs: vec![],
+            events: vec![Event::new("terraswap_pool_swap")
+                .add_attribute("offer", offer_asset.to_string())
+                .add_attribute("pool", pool_addr.to_string())],
+        },
+    ))
+}
+
+pub fn mint_eris_lsd_msgs(user_addr: &Addr, amount: Asset, eris_addr: &Addr) -> DestinationResult {
+    Ok(DestProjectMsgs {
+        msgs: match amount.clone() {
+            Asset {
+                info: AssetInfo::NativeToken { denom },
+                amount,
+            } => vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                eris_addr,
+                user_addr,
+                &bond_router::msg::ExecuteMsg::Bond {},
+                Some(csdk_coins(&amount, denom)),
+            )?)],
+            Asset {
+                info: AssetInfo::Token { contract_addr },
+                amount,
+            } => vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+                contract_addr,
+                user_addr,
+                &cw20::Cw20ExecuteMsg::Send {
+                    contract: eris_addr.to_string(),
+                    amount,
+                    msg: to_json_binary(&bond_router::msg::ExecuteMsg::Bond {})?,
+                },
+                None,
+            )?)],
+        },
+        sub_msgs: vec![],
+        events: vec![Event::new("eris_lsd_mint").add_attribute("amount", amount.to_string())],
     })
 }

@@ -1,7 +1,7 @@
 use crate::errors::MigalooDestinationError;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Decimal};
+use cosmwasm_std::{Addr, Api, Decimal, Uint128, Uint64};
 use outpost_utils::comp_prefs::CompoundPrefs;
 use sail_destinations::comp_prefs::{FundMsg, RacoonBetGame};
 use white_whale::pool_network::{
@@ -24,11 +24,10 @@ pub enum MigalooDestinationProject {
         address: String,
     },
 
-    /// Swap and ecosystem stake
-    EcosystemStake {
-        asset: AssetInfo,
-    },
-
+    // /// Swap and ecosystem stake
+    // EcosystemStake {
+    //     asset: EcosystemStakeAsset,
+    // },
     /// Swapping to an abitrary token via TerraSwap
     TokenSwap {
         target_denom: AssetInfo,
@@ -101,12 +100,20 @@ pub enum MigalooDestinationProject {
     //     pool_address: String,
     //     pool_asset1: AssetInfo,
     //     pool_asset2: AssetInfo,
+    //     unlock_duration: Uint128,
     //     // this is basically only for the whale usdc pool that can be used for ecosystem staking
     //     and_then: Option<ProvideLiquidityAction>,
     // },
     /// Do nothing with the funds
     Unallocated {},
 }
+
+// #[cw_serde]
+// pub enum EcosystemStakeAsset {
+//     WhaleUsdcPool,
+//     Ash,
+
+// }
 
 #[cw_serde]
 pub enum MigalooDao {
@@ -115,6 +122,41 @@ pub enum MigalooDao {
 
     /// https://daodao.zone/dao/migaloo1mzxe5q5ry0kkajvf4mrytdvxfe66ep3jsx92fav6aef0xe2ckupqz97uce/home
     GuppyDao,
+}
+
+pub struct DaoDaoStakingInfo {
+    pub dao_name: String,
+    pub dao_addr: Addr,
+    pub swap_pair_addr: Addr,
+    pub asset_info: AssetInfo,
+}
+
+impl MigalooDao {
+    pub fn staking_info(&self, addrs: &MigalooDestinationProjectAddrs) -> DaoDaoStakingInfo {
+        match self {
+            MigalooDao::GuppyDao => DaoDaoStakingInfo {
+                dao_name: "GUPPY DAO".to_string(),
+                dao_addr: addrs.projects.daodao.guppy_dao.staking_address.clone(),
+                swap_pair_addr: addrs.swap_routes.whale_guppy_pool.clone(),
+                asset_info: AssetInfo::NativeToken {
+                    denom: addrs.denoms.guppy.clone(),
+                },
+            },
+            MigalooDao::RacoonSupply => DaoDaoStakingInfo {
+                dao_name: "$RAC DAO".to_string(),
+                dao_addr: addrs
+                    .projects
+                    .daodao
+                    .racoon_supply_dao
+                    .staking_address
+                    .clone(),
+                swap_pair_addr: addrs.swap_routes.whale_rac_pool.clone(),
+                asset_info: AssetInfo::NativeToken {
+                    denom: addrs.denoms.rac.clone(),
+                },
+            },
+        }
+    }
 }
 
 #[cw_serde]
@@ -126,6 +168,7 @@ pub enum AllianceAsset {
 #[cw_serde]
 pub enum MUsdcAction {
     EcosystemStake,
+    AmpUsdc,
 }
 
 #[cw_serde]
@@ -144,6 +187,7 @@ pub enum GinkouBorrowAction {
 #[cw_serde]
 pub enum LsdMintAction {
     SatelliteMarket,
+    // GinkouProvideLiquidity
 }
 
 #[cw_serde]
@@ -169,6 +213,30 @@ impl WhaleLsd {
             WhaleLsd::Backbone => addresses.bone_whale.clone(),
 
             WhaleLsd::Eris => addresses.amp_whale.clone(),
+        }
+    }
+    pub fn get_project_name(&self) -> String {
+        match self {
+            WhaleLsd::Backbone => "Backbone".to_string(),
+
+            WhaleLsd::Eris => "Eris".to_string(),
+        }
+    }
+    pub fn get_asset_info(&self, denoms: &Denoms) -> AssetInfo {
+        match self {
+            WhaleLsd::Backbone => AssetInfo::NativeToken {
+                denom: denoms.bwhale.clone(),
+            },
+
+            WhaleLsd::Eris => AssetInfo::NativeToken {
+                denom: denoms.ampwhale.clone(),
+            },
+        }
+    }
+    pub fn get_whale_pool_addr(&self, swap_routes: &DestProjectVerifiedSwapRoutes) -> Addr {
+        match self {
+            WhaleLsd::Backbone => swap_routes.whale_bwhale_pool.clone(),
+            WhaleLsd::Eris => swap_routes.whale_ampwhale_pool.clone(),
         }
     }
 }
@@ -557,6 +625,20 @@ impl DaoDaoAddresses {
 #[cw_serde]
 pub enum GinkouExecuteMsg {
     DepositStable {},
+}
+
+#[cw_serde]
+pub enum GinkouQueryMsg {
+    EpochState {},
+}
+
+#[cw_serde]
+pub struct GinkouEpochState {
+    pub exchange_rate: Decimal,
+    pub aterra_supply: Uint128,
+    pub reserves_rate_used_for_borrowers: Decimal,
+    pub prev_borrower_incentives: Uint128,
+    pub last_interest_updated: Uint64,
 }
 
 #[cw_serde]

@@ -46,7 +46,7 @@ outpost-utils = { path = "./packages/utils" }
 wynd-helpers = { path = "./packages/wynd-helpers" }
 terraswap-helpers = { path = "./packages/terraswap-helpers" }
 # wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0" }
-osmosis-std = "0.15.3"
+osmosis-std = "0.21.0"
 
 osmosis-helpers = { path = "./packages/osmosis-helpers" }
 mars-red-bank-types = "1.0.0"
@@ -78,23 +78,6 @@ sail-destinations = { path = "./packages/sail-destinations" }
 osmosis-destinations = { path = "./packages/osmosis-destinations" }
 
 
-[profile.release.package.ymos-junostake-outpost]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.ymos-wyndstake-outpost]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.ymos-wyndlp-outpost]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.ymos-osmostake-outpost]
-codegen-units = 1
-incremental = false
-
-
 [profile.release]
 rpath = false
 lto = true
@@ -102,3 +85,5 @@ overflow-checks = true
 opt-level = 3
 debug = false
 debug-assertions = false
+codegen-units = 1
+incremental = false

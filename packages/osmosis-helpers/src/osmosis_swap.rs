@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, QuerierWrapper, StdResult};
+use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Uint128};
 
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin,
@@ -11,6 +11,8 @@ use osmosis_std::types::{
 };
 
 use outpost_utils::msg_gen::CosmosProtoMsg;
+
+use crate::errors::OsmosisHelperError;
 
 // TODO: this should come from the swaprouter module instead of being copy and pasted here
 #[cw_serde]
@@ -199,4 +201,44 @@ pub fn generate_swap_msg(
     });
 
     Ok((simulation, vec![swap_msg]))
+}
+
+pub fn simulate_pool_swap(
+    querier: &QuerierWrapper,
+    pool_id: &u64,
+    offer_asset: &Coin,
+) -> Result<EstimateSwapExactAmountInResponse, OsmosisHelperError> {
+    let simulation = EstimateSwapExactAmountInRequest {
+        pool_id: pool_id.clone(),
+        token_in: offer_asset.denom.clone(),
+        routes: vec![SwapAmountInRoute {
+            pool_id: *pool_id,
+            token_out_denom: "".to_string(),
+        }],
+    }
+    .query(querier)?;
+
+    Ok(simulation)
+}
+
+pub fn pool_swap_with_sim(
+    querier: &QuerierWrapper,
+    user_addr: &Addr,
+    pool_id: &u64,
+    offer_asset: Coin,
+) -> Result<(vec![CosmosProtoMsg], Uint128), OsmosisHelperError> {
+    Ok((
+        vec![CosmosProtoMsg::OsmosisSwapExactAmountIn(
+            MsgSwapExactAmountIn {
+                token_in: Some(offer_asset),
+                sender: user_addr.to_string(),
+                routes: vec![SwapAmountInRoute {
+                    pool_id: *pool_id,
+                    token_out_denom: "".to_string(),
+                }],
+                token_out_min_amount: "0".to_string(),
+            },
+        )],
+        simulate_pool_swap(querier, &pool_id, &offer_asset)?.return_amount,
+    ))
 }

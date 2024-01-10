@@ -106,8 +106,6 @@ pub fn simulate_pool_swap(
     querier: &QuerierWrapper,
     pool_address: &str,
     from_token: &Asset,
-    // just for error reporting purposes
-    _to_denom: String,
 ) -> Result<SimulationResponse, StdError> {
     let simulated_swap: SimulationResponse = querier.query_wasm_smart(
         pool_address.to_string(),
@@ -218,16 +216,8 @@ pub fn create_terraswap_pool_swap_msg_with_simulation(
     //     return Ok((vec![], offer_amount));
     // }
 
-    // // generate the operations for the multihop here that way we can use the same ops for
-    // // the simulation and the actual swap msg
-    // let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
-
-    let simulated_swap: SimulationResponse = querier.query_wasm_smart(
-        pool_address.to_string(),
-        &PairQueryMsg::Simulation {
-            offer_asset: offer_asset.clone(),
-        },
-    )?;
+    let simulated_swap: SimulationResponse =
+        simulate_pool_swap(querier, &pool_address.to_string(), &offer_asset)?;
 
     let swap_msg = create_terraswap_pool_swap_msg(sender, offer_asset, pool_address)?;
 

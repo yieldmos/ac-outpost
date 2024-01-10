@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Coin, Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -66,8 +66,6 @@ pub enum SparkIbcFund {
     Fund(FundMsg),
 }
 
-
-
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub enum AddressType {
     Private,
@@ -75,4 +73,25 @@ pub enum AddressType {
     Organization,
 }
 
+#[cw_serde]
+pub enum LsdQueryMsg {
+    State {},
+}
 
+#[cw_serde]
+pub struct LsdStateResponse {
+    /// Total supply to the Stake token
+    pub total_ustake: Uint128,
+    /// Total amount of utoken staked (bonded)
+    pub total_utoken: Uint128,
+    /// The exchange rate between ustake and utoken, in terms of utoken per ustake
+    pub exchange_rate: Decimal,
+    /// Staking rewards currently held by the contract that are ready to be reinvested
+    pub unlocked_coins: Vec<Coin>,
+    // Amount of utoken currently unbonding
+    pub unbonding: Uint128,
+    // Amount of utoken currently available as balance of the contract
+    pub available: Uint128,
+    // Total amount of utoken within the contract (bonded + unbonding + available)
+    pub tvl_utoken: Uint128,
+}

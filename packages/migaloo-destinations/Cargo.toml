@@ -24,3 +24,4 @@ furnace = { workspace = true }
 # astroport = { workspace = true }
 sail-destinations = { workspace = true }
 white-whale = { workspace = true }
+bond-router = { workspace = true }

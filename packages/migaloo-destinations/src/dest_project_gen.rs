@@ -1,14 +1,20 @@
-use crate::comp_prefs::{AshAction, Denoms, ErisMsg, GinkouExecuteMsg, MigalooProjectAddrs};
+use crate::comp_prefs::{
+    AshAction, Denoms, DestProjectVerifiedSwapRoutes, ErisMsg, GinkouEpochState, GinkouExecuteMsg,
+    GinkouQueryMsg, MigalooProjectAddrs, WhaleLsd, WhaleLsdAddrs,
+};
 use crate::errors::MigalooDestinationError;
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
-use cosmwasm_std::{to_json_binary, Addr, Event, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, Event, Querier, QuerierWrapper, Uint128};
 use outpost_utils::helpers::csdk_coins;
 use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
 };
+use sail_destinations::comp_prefs::{LsdQueryMsg, LsdStateResponse};
+use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs, terraswap_pool_swap_msgs};
 use std::fmt::Display;
+use terraswap_helpers::terraswap_swap::simulate_pool_swap;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 pub type DestinationResult = Result<DestProjectMsgs, MigalooDestinationError>;
@@ -256,5 +262,116 @@ where
         events: vec![Event::new("deposit_ginkou_usdc")
             .add_attribute("amount", amount.to_string())
             .add_attribute("user", user_addr.to_string())],
+    })
+}
+
+/// Queries how much of the lsd will be minted given the amount of whale tokens supplied.
+/// Returns an Asset of the LSD that will be minted
+pub fn est_whale_lsd_mint(
+    querier: &QuerierWrapper,
+    whale_to_bond: Uint128,
+    lsd: &WhaleLsd,
+    lsd_addrs: &WhaleLsdAddrs,
+    denoms: &Denoms,
+) -> Result<Asset, MigalooDestinationError> {
+    // query the state which will give us the exchange rate we need to estimate the mint
+    let state: LsdStateResponse = querier
+        .query_wasm_smart(lsd.get_mint_address(lsd_addrs), &LsdQueryMsg::State {})
+        .map_err(|e| MigalooDestinationError::LsdMintEstimateError {
+            error: e.to_string(),
+            project: lsd.get_project_name(),
+        })?;
+
+    Ok(Asset {
+        amount: state.exchange_rate * whale_to_bond,
+        info: lsd.get_asset_info(denoms),
+    })
+}
+
+/// Bond message for whale LSDs
+pub fn mint_whale_lsd_msgs(
+    user_addr: &Addr,
+    lsd: &WhaleLsd,
+    whale_to_bond: Uint128,
+    lsd_addrs: &WhaleLsdAddrs,
+    denoms: &Denoms,
+) -> DestinationResult {
+    Ok(mint_eris_lsd_msgs(
+        user_addr,
+        Asset {
+            info: lsd.get_asset_info(denoms),
+            amount: whale_to_bond,
+        },
+        &lsd.get_mint_address(lsd_addrs),
+    )?)
+}
+
+pub fn mint_or_buy_whale_lsd_msgs(
+    querier: &QuerierWrapper,
+    user_addr: &Addr,
+    lsd: &WhaleLsd,
+    whale_to_bond: Uint128,
+    lsd_addrs: &WhaleLsdAddrs,
+    swap_routes: &DestProjectVerifiedSwapRoutes,
+    denoms: &Denoms,
+) -> Result<(Asset, DestProjectMsgs), MigalooDestinationError> {
+    let whale_asset = Asset {
+        info: AssetInfo::NativeToken {
+            denom: "uwhale".to_string(),
+        },
+        amount: whale_to_bond,
+    };
+
+    // check terraswap to see how much lsd we'd get for swapping
+    let swap_est = simulate_pool_swap(
+        querier,
+        &lsd.get_whale_pool_addr(swap_routes).to_string(),
+        &whale_asset,
+    )?;
+
+    // check the lsd provider to see how much lsd we'd get for bonding
+    let mint_est = est_whale_lsd_mint(querier, whale_to_bond, lsd, lsd_addrs, denoms)?;
+
+    // if the swap estimate is greater than the mint estimate, then we should swap
+    if swap_est.return_amount.ge(&mint_est.amount) {
+        Ok((
+            Asset {
+                info: lsd.get_asset_info(denoms),
+                amount: swap_est.return_amount,
+            },
+            terraswap_pool_swap_msgs(
+                user_addr,
+                &lsd.get_whale_pool_addr(swap_routes),
+                whale_asset,
+            )?,
+        ))
+    }
+    // otherwise we should be minting directly for a better rate
+    else {
+        Ok((
+            mint_est,
+            mint_whale_lsd_msgs(user_addr, lsd, whale_to_bond, lsd_addrs, denoms)?,
+        ))
+    }
+}
+
+pub fn query_ginkou_musdc_mint(
+    querier: &QuerierWrapper,
+    usdc_to_bond: Uint128,
+    ginkou_addr: &Addr,
+    denoms: &Denoms,
+) -> Result<Asset, MigalooDestinationError> {
+    let state: GinkouEpochState = querier
+        .query_wasm_smart(ginkou_addr, &GinkouQueryMsg::EpochState {})
+        .map_err(|e| MigalooDestinationError::ProjectQueryError {
+            error: e.to_string(),
+            project: "Ginkou - musdc epoch state".to_string(),
+        })?;
+
+    Ok(Asset {
+        amount: usdc_to_bond.div_floor(state.exchange_rate),
+        info: AssetInfo::Token {
+            contract_addr: denoms.musdc.to_string(),
+        },
     })
 }
