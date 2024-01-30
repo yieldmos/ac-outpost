@@ -1,16 +1,19 @@
 [workspace]
-members = ["packages/*","contracts/*"]
+members = ["packages/*", "contracts/*"]
 
 [workspace.package]
-version = "0.2.1"
-edition = "2021"
-authors = ["Marc <marc@yieldmos.com>"]
+version    = "0.2.1"
+edition    = "2021"
+authors    = ["Marc <marc@yieldmos.com>"]
 repository = "https://github.com/yieldmos/ac-outpost"
 
 
 [workspace.dependencies]
 cosmwasm-schema = "1.1.3"
-cosmwasm-std = {version="1.1.3", default-features = false, features = ["stargate", "staking"]}
+cosmwasm-std = { version = "1.1.3", default-features = false, features = [
+  "stargate",
+  "staking",
+] }
 cosmwasm-storage = "1.1.3"
 cw-storage-plus = "1.0.1"
 cw-multi-test = "0.16.2"
@@ -19,36 +22,44 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 semver = "1"
-cosmos-sdk-proto = {version="0.17", default-features = false, features=["cosmwasm"]}
+cosmos-sdk-proto = { version = "0.17", default-features = false, features = [
+  "cosmwasm",
+] }
 cw20 = "1.0.1"
-cw20-stake = {git = "https://github.com/DA0-DA0/dao-contracts.git", tag="v2.1.0", features=["library"]}
-cw20-vesting = {package="cw20-vesting", git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
-wyndex = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3"}
-wyndex-multi-hop = {git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3", features=["library"]}
-wynd-stake = {git = "https://github.com/wynddao/wynddao.git", tag="v1.6.0", features=["library"]}
-wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3"}
+cw20-stake = { git = "https://github.com/DA0-DA0/dao-contracts.git", tag = "v2.1.0", features = [
+  "library",
+] }
+cw20-vesting = { package = "cw20-vesting", git = "https://github.com/wynddao/wynddao.git", tag = "v1.6.0" }
+wyndex = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3" }
+wyndex-multi-hop = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3", features = [
+  "library",
+] }
+wynd-stake = { git = "https://github.com/wynddao/wynddao.git", tag = "v1.6.0", features = [
+  "library",
+] }
+wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3" }
 # wynd-utils = {git="https://github.com/wynddao/wynddao.git", tag="v1.6.0"}
-outpost-utils = {path="./packages/utils"}
-wynd-helpers = {path="./packages/wynd-helpers"}
-wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag="v2.0.3"}
+outpost-utils = { path = "./packages/utils" }
+wynd-helpers  = { path = "./packages/wynd-helpers" }
+wyndex-stake  = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.0.3" }
 
 [profile.release.package.ymos-junostake-outpost]
 codegen-units = 1
-incremental = false
+incremental   = false
 
 [profile.release.package.ymos-wyndstake-outpost]
 codegen-units = 1
-incremental = false
+incremental   = false
 
 [profile.release.package.ymos-wyndlp-outpost]
 codegen-units = 1
-incremental = false
+incremental   = false
 
 
 [profile.release]
-rpath = false
-lto = true
-overflow-checks = true
-opt-level = 3
-debug = false
+rpath            = false
+lto              = true
+overflow-checks  = true
+opt-level        = 3
+debug            = false
 debug-assertions = false
