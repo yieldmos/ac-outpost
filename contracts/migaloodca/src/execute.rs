@@ -1,94 +1,95 @@
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, StdError, SubMsg};
+use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use migaloo_destinations::{
-    comp_prefs::{
-        AllianceAsset, AshAction, DaoDaoStakingInfo, LsdMintAction, MUsdcAction, MigalooCompPrefs, MigalooDao,
-        MigalooDestinationProject, MigalooVault,
-    },
+    comp_prefs::{DaoDaoStakingInfo, LsdMintAction, MUsdcAction, MigalooCompPrefs, MigalooDestinationProject, MigalooVault},
     dest_project_gen::{
         burn_whale_msgs, deposit_ginkou_usdc_msgs, ecosystem_stake_msgs, eris_amp_vault_msgs, eris_arb_vault_msgs,
-        mint_or_buy_whale_lsd_msgs, mint_whale_lsd_msgs, query_ginkou_musdc_mint,
+        mint_or_buy_whale_lsd_msgs, query_ginkou_musdc_mint,
     },
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
-    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
-    msg_gen::{create_exec_msg, CosmosProtoMsg},
+    helpers::{
+        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins,
+        DestProjectMsgs, TaxSplitResult,
+    },
+    msg_gen::create_exec_msg,
 };
 use std::iter;
-use terraswap_helpers::terraswap_swap::{
-    create_terraswap_pool_swap_msg_with_simulation, create_terraswap_swap_msg_with_simulation,
-};
+use terraswap_helpers::terraswap_swap::create_terraswap_pool_swap_msg_with_simulation;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
 use crate::{
-    msg::ContractAddrs,
-    state::{ADMIN, AUTHORIZED_ADDRS},
+    msg::{ContractAddrs, DcaPrefs},
+    state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS},
     ContractError,
 };
-use sail_destinations::{
-    comp_prefs::SparkIbcFund,
-    dest_project_gen::{racoon_bet_msgs, spark_ibc_msgs, white_whale_satellite_msgs},
-    errors::SailDestinationError,
-};
-use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, daodao_staking_msg, native_staking_msg};
+use sail_destinations::dest_project_gen::{racoon_bet_msgs, spark_ibc_msgs, white_whale_satellite_msgs};
+use universal_destinations::dest_project_gen::{daodao_staking_msg, native_staking_msg};
 
 pub fn compound(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     project_addresses: ContractAddrs,
-    delegator_address: String,
-    comp_prefs: MigalooCompPrefs,
+    user_address: String,
+    comp_prefs: &DcaPrefs,
     tax_fee: Option<Decimal>,
 ) -> Result<Response, ContractError> {
+    let DcaPrefs {
+        compound_token,
+        compound_preferences,
+    } = comp_prefs;
+
     // validate that the preference quantites sum to 1
-    let _ = !prefs_sum_to_one(&comp_prefs)?;
+    let _ = !prefs_sum_to_one(compound_preferences)?;
 
     // check that the delegator address is valid
-    let delegator: Addr = deps.api.addr_validate(&delegator_address)?;
+    let user_addr: Addr = deps.api.addr_validate(&user_address)?;
 
     // validate that the user is authorized to compound
-    is_authorized_compounder(deps.as_ref(), &info.sender, &delegator, ADMIN, AUTHORIZED_ADDRS)?;
+    is_authorized_compounder(deps.as_ref(), &info.sender, &user_addr, ADMIN, AUTHORIZED_ADDRS)?;
 
-    // get the denom of the staking token. this should be "ujuno"
-    let staking_denom = project_addresses.staking_denom.clone();
+    let project_addrs = PROJECT_ADDRS.load(deps.storage)?;
 
-    // prepare the withdraw rewards message and simulation from the authzpp grant
-    let (
-        SimulateExecuteResponse {
-            // the rewards that the delegator is due to recieve
-            delegator_rewards,
-            ..
-        },
-        // withdraw delegator rewards wasm message
-        withdraw_msg,
-    ) = WithdrawRewardsTaxClient::new(&project_addresses.authzpp.withdraw_tax, &delegator)
-        .simulate_with_contract_execute(deps.querier, tax_fee)?;
-
-    let total_rewards = sum_coins(&staking_denom, &delegator_rewards);
+    // calculate the total amount of rewards that will be compounded
+    let TaxSplitResult {
+        remaining_rewards,
+        tax_amount,
+        claim_and_tax_msgs: tax_store_msg,
+    } = calc_additional_tax_split(
+        compound_token,
+        tax_fee.unwrap_or(Decimal::percent(1)),
+        user_address.clone(),
+        project_addrs.take_rate_addr.to_string(),
+    );
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
-        &project_addresses,
-        // &env.block,
-        // staking_denom,
-        &delegator,
-        total_rewards.clone(),
-        comp_prefs,
+        &project_addrs,
+        &user_addr,
+        remaining_rewards.clone(),
+        compound_preferences.clone(),
         deps.as_ref(),
     )?;
 
-    let combined_msgs = all_msgs.iter().fold(DestProjectMsgs::default(), |mut acc, msg| {
-        acc.msgs.append(&mut msg.msgs.clone());
-        acc.sub_msgs.append(&mut msg.sub_msgs.clone());
-        acc.events.append(&mut msg.events.clone());
-        acc
-    });
+    let combined_msgs = all_msgs.iter().fold(
+        DestProjectMsgs {
+            msgs: tax_store_msg,
+            sub_msgs: vec![],
+            events: vec![Event::new("dca_tax").add_attribute("amount", tax_amount.to_string())],
+        },
+        |mut acc, msg| {
+            acc.msgs.append(&mut msg.msgs.clone());
+            acc.sub_msgs.append(&mut msg.sub_msgs.clone());
+            acc.events.append(&mut msg.events.clone());
+            acc
+        },
+    );
 
     let amount_automated_event =
-        Event::new("amount_automated").add_attributes([total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
+        Event::new("amount_automated").add_attributes([remaining_rewards].iter().enumerate().map(|(i, coin)| Attribute {
             key: format!("amount_{}", i),
             value: coin.to_string(),
         }));
@@ -98,11 +99,8 @@ pub fn compound(
 
     let resp = Response::default()
         .add_attribute("action", "outpost compound")
-        .add_attribute("compoundee", delegator_address)
-        .add_message(withdraw_msg)
-        .add_attribute("subaction", "withdraw rewards")
+        .add_attribute("compoundee", user_address.clone())
         .add_event(amount_automated_event)
-        // .add_attribute("amount_automated", to_json_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
         .add_submessages(
             combined_msgs

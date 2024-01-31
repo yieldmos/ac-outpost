@@ -134,14 +134,17 @@ pub struct DaoDaoStakingInfo {
 impl MigalooDao {
     pub fn staking_info(&self, addrs: &MigalooDestinationProjectAddrs) -> DaoDaoStakingInfo {
         match self {
-            MigalooDao::GuppyDao => DaoDaoStakingInfo {
-                dao_name: "GUPPY DAO".to_string(),
-                dao_addr: addrs.projects.daodao.guppy_dao.staking_address.clone(),
-                swap_pair_addr: addrs.swap_routes.whale_guppy_pool.clone(),
-                asset_info: AssetInfo::NativeToken {
-                    denom: addrs.denoms.guppy.clone(),
-                },
-            },
+            MigalooDao::GuppyDao => {
+                unimplemented!();
+                // DaoDaoStakingInfo {
+                //     dao_name: "GUPPY DAO".to_string(),
+                //     dao_addr: addrs.projects.daodao.guppy_dao.staking_address.clone(),
+                //     swap_pair_addr: addrs.swap_routes.whale_guppy_pool.clone(),
+                //     asset_info: AssetInfo::NativeToken {
+                //         denom: addrs.denoms.guppy.clone(),
+                //     },
+                // }
+            }
             MigalooDao::RacoonSupply => DaoDaoStakingInfo {
                 dao_name: "$RAC DAO".to_string(),
                 dao_addr: addrs
@@ -334,12 +337,11 @@ pub struct DestProjectSwapRoutes {
     /// migaloo1ull9s4el2pmkdevdgrjt6pwa4e5xhkda40w84kghftnlxg4h3knqpm5u3n
     pub whale_ampwhale_pool: String,
 
-    /// migaloo1u4npx7xvprwanpru7utv8haq99rtfmdzzw6p3hpfc38n7zmzm42q8ydga3
+    /// migaloo1ull9s4el2pmkdevdgrjt6pwa4e5xhkda40w84kghftnlxg4h3knqpm5u3n
     pub whale_ash_pool: String,
 
-    ///
-    pub whale_guppy_pool: String,
-
+    // ///
+    // pub whale_guppy_pool: String,
     /// migaloo1crsvm4qddplxhag29nd2zyw6k6jzh06hlcctya4ynfvuhhu3yt4q0pn4t3
     pub whale_rac_pool: String,
 
@@ -357,7 +359,7 @@ impl DestProjectSwapRoutes {
             whale_bwhale_pool: api.addr_validate(&self.whale_bwhale_pool)?,
             whale_ampwhale_pool: api.addr_validate(&self.whale_ampwhale_pool)?,
             whale_ash_pool: api.addr_validate(&self.whale_ash_pool)?,
-            whale_guppy_pool: api.addr_validate(&self.whale_guppy_pool)?,
+            // whale_guppy_pool: api.addr_validate(&self.whale_guppy_pool)?,
             whale_rac_pool: api.addr_validate(&self.whale_rac_pool)?,
             whale: self.whale.clone(),
             usdc: self.usdc.clone(),
@@ -371,7 +373,7 @@ pub struct DestProjectVerifiedSwapRoutes {
     pub whale_bwhale_pool: Addr,
     pub whale_ampwhale_pool: Addr,
     pub whale_ash_pool: Addr,
-    pub whale_guppy_pool: Addr,
+    // pub whale_guppy_pool: Addr,
     pub whale_rac_pool: Addr,
     /// From WHALE to something else
     pub whale: WhaleRoutes,
@@ -386,7 +388,7 @@ pub struct WhaleRoutes {}
 #[derive(Default)]
 pub struct UsdcRoutes {
     pub whale: Vec<SwapOperation>,
-    pub guppy: Vec<SwapOperation>,
+    // pub guppy: Vec<SwapOperation>,
 }
 
 #[cw_serde]

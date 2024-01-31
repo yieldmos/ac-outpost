@@ -10,6 +10,9 @@ use cosmos_sdk_proto::Any;
 
 use cosmwasm_std::{to_json_binary, Addr, Binary, CosmosMsg, StdError};
 
+use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::MsgCreatePosition;
+use osmosis_std::types::osmosis::gamm::v1beta1::MsgJoinSwapExternAmountIn;
+use osmosis_std::types::osmosis::lockup::MsgLockTokens;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountOut,
 };
@@ -25,6 +28,9 @@ pub enum CosmosProtoMsg {
     Exec(MsgExec),
     OsmosisSwapExactAmountIn(MsgSwapExactAmountIn),
     OsmosisSwapExactAmountOut(MsgSwapExactAmountOut),
+    OsmosisSingleSidedJoinPool(MsgJoinSwapExternAmountIn),
+    OsmosisLockTokens(MsgLockTokens),
+    OsomsisCLJoinPool(MsgCreatePosition),
 }
 
 impl TryFrom<&CosmosProtoMsg> for Any {
@@ -45,10 +51,7 @@ impl TryFrom<&CosmosProtoMsg> for Any {
                     value: any.value,
                 })
             }
-            // Ok(Any {
-            //     type_url: MsgSwapExactAmountIn::TYPE_URL.to_string(),
-            //     value: msg.clone().encode_to_vec(),
-            // }),
+
             CosmosProtoMsg::OsmosisSwapExactAmountOut(msg) => {
                 let any = msg.to_any();
                 Ok(Any {
@@ -56,10 +59,27 @@ impl TryFrom<&CosmosProtoMsg> for Any {
                     value: any.value,
                 })
             }
-            // Ok(Any {
-            //     type_url: MsgSwapExactAmountOut::TYPE_URL.to_string(),
-            //     value: msg.clone().encode_to_vec(),
-            // }),
+            CosmosProtoMsg::OsmosisSingleSidedJoinPool(msg) => {
+                let any = msg.to_any();
+                Ok(Any {
+                    type_url: any.type_url,
+                    value: any.value,
+                })
+            }
+            CosmosProtoMsg::OsmosisLockTokens(msg) => {
+                let any = msg.to_any();
+                Ok(Any {
+                    type_url: any.type_url,
+                    value: any.value,
+                })
+            }
+            CosmosProtoMsg::OsomsisCLJoinPool(msg) => {
+                let any = msg.to_any();
+                Ok(Any {
+                    type_url: any.type_url,
+                    value: any.value,
+                })
+            }
             CosmosProtoMsg::Exec(msg) => Ok(Any {
                 type_url: "/cosmos.authz.v1beta1.MsgExec".to_string(),
                 value: Binary::from(msg.encode_to_vec()).to_vec(),

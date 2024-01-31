@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Uint128};
 
@@ -144,7 +146,7 @@ pub fn generate_exact_out_swap_msg_from_sim(
 /// Returns both the swap simulation and the queried swap route
 pub fn simulate_swap(
     querier: &QuerierWrapper,
-    _delegator_address: &Addr,
+    user_addr: &Addr,
     from_token: Coin,
     // just for error reporting purposes
     to_denom: String,
@@ -207,13 +209,14 @@ pub fn simulate_pool_swap(
     querier: &QuerierWrapper,
     pool_id: &u64,
     offer_asset: &Coin,
+    token_out_denom: &str,
 ) -> Result<EstimateSwapExactAmountInResponse, OsmosisHelperError> {
     let simulation = EstimateSwapExactAmountInRequest {
         pool_id: pool_id.clone(),
         token_in: offer_asset.denom.clone(),
         routes: vec![SwapAmountInRoute {
             pool_id: *pool_id,
-            token_out_denom: "".to_string(),
+            token_out_denom: token_out_denom.to_string(),
         }],
     }
     .query(querier)?;
@@ -226,19 +229,24 @@ pub fn pool_swap_with_sim(
     user_addr: &Addr,
     pool_id: &u64,
     offer_asset: Coin,
-) -> Result<(vec![CosmosProtoMsg], Uint128), OsmosisHelperError> {
+    token_out_denom: &str,
+) -> Result<(Vec<CosmosProtoMsg>, Uint128), OsmosisHelperError> {
     Ok((
         vec![CosmosProtoMsg::OsmosisSwapExactAmountIn(
             MsgSwapExactAmountIn {
                 token_in: Some(offer_asset),
                 sender: user_addr.to_string(),
+                token_out_min_amount: "0".to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: *pool_id,
-                    token_out_denom: "".to_string(),
+                    token_out_denom: token_out_denom.to_string(),
                 }],
-                token_out_min_amount: "0".to_string(),
             },
         )],
-        simulate_pool_swap(querier, &pool_id, &offer_asset)?.return_amount,
+        Uint128::from_str(
+            simulate_pool_swap(querier, pool_id, &offer_asset, token_out_denom)?
+                .token_out_amount
+                .as_str(),
+        )?,
     ))
 }

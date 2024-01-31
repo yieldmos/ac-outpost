@@ -36,7 +36,11 @@ interface = ["dep:cw-orch"]
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, features = [
+  "stargate",
+  # "staking",
+  "cosmwasm_1_4",
+] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw2 = { workspace = true }
@@ -61,6 +65,7 @@ cw-grant-spec = { workspace = true }
 cw-orch = { workspace = true, optional = true }
 terraswap-helpers = { workspace = true }
 white-whale = { workspace = true }
+osmosis-helpers = { workspace = true }
 
 
 [dev-dependencies]

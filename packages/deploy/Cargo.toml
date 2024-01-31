@@ -15,6 +15,12 @@ ymos-junowwmarket-outpost = { path = "../../contracts/junowwmarket", features = 
 #     "starship",
 # ] }
 cw-orch = { workspace = true }
+ymos-migaloostake-outpost = { path = "../../contracts/migaloostake", features = [
+    "interface",
+] }
+ymos-migaloodca-outpost = { path = "../../contracts/migaloodca", features = [
+    "interface",
+] }
 ymos-junostake-outpost = { path = "../../contracts/junostake", features = [
     "interface",
 ] }
@@ -36,8 +42,19 @@ cw20-base = { version = "0.13.2", features = ["library"] }
 cosmrs = "0.14.0"
 anybuf = "0.1.0"
 juno-destinations = { workspace = true }
+migaloo-destinations = { workspace = true }
 
 # [dev-dependencies]
 # Deps for deployment
 dotenv = { version = "0.15.0" }     # Enables loading of .env files
 env_logger = { version = "0.10.0" } # Enables logging to stdout
+
+
+[[bin]]
+name = "juno-deploy"
+path = "src/juno-deploy.rs"
+
+
+[[bin]]
+name = "migaloo-deploy"
+path = "src/migaloo-deploy.rs"

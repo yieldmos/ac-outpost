@@ -37,7 +37,11 @@ interface = ["dep:cw-orch"]
 [dependencies]
 withdraw-rewards-tax-grant = { workspace = true }
 cosmwasm-schema = { workspace = true }
-cosmwasm-std = { workspace = true }
+cosmwasm-std = { workspace = true, features = [
+    "stargate",
+    "staking",
+    "cosmwasm_1_4",
+] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw2 = { workspace = true }

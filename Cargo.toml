@@ -14,8 +14,8 @@ repository = "https://github.com/yieldmos/ac-outpost"
 cosmwasm-schema = "1.5.0"
 cosmwasm-std = { version = "1.5.0", default-features = false, features = [
     "stargate",
-    "staking",
-    "cosmwasm_1_4",
+    # "staking",
+    # "cosmwasm_1_4",
 ] }
 cosmwasm-storage = "1.5.0"
 cw-orch = { version = "0.19.1", features = ["daemon"] }

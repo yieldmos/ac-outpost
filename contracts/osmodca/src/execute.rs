@@ -2,9 +2,10 @@ use std::iter;
 
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use osmosis_destinations::{
-    comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd},
-    dest_project_gen::mint_milk_tia_msgs,
+    comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
+    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
 };
+use osmosis_helpers::osmosis_swap::pool_swap_with_sim;
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
@@ -188,23 +189,32 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::MintLsd {
                         lsd: OsmosisLsd::MilkyWay,
                     } => {
+                        // swap OSMO to TIA
                         let (swap_to_tia_msgs, est_tia) = pool_swap_with_sim(
                             &deps.querier,
                             user_addr,
                             &project_addrs.destination_projects.swap_routes.osmo_tia_pool,
                             coin(comp_token_amount.u128(), dca_denom.clone()),
+                            &project_addrs.destination_projects.denoms.tia,
                         )?;
 
+                        // Mint milkTIA
                         let mut mint_milk_tia = mint_milk_tia_msgs(
                             user_addr,
                             &project_addrs.destination_projects.projects.milky_way_bonding,
-                            est_tia,
+                            coin(est_tia, project_addrs.destination_projects.denoms.tia),
                         )?;
 
                         mint_milk_tia.append_msgs(swap_to_tia_msgs);
 
                         Ok(mint_milk_tia)
                     }
+
+                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => mint_eris_lsd_msgs(
+                        user_addr,
+                        comp_token_amount,
+                        &project_addrs.destination_projects.projects.eris_amposmo_bonding,
+                    ),
 
                     OsmosisDestinationProject::SendTokens {
                         denom: target_asset,
@@ -234,6 +244,37 @@ pub fn prefs_to_msgs(
                         send_msgs.append_msgs(swap_msgs);
 
                         Ok(send_msgs)
+                    }
+                    OsmosisDestinationProject::IonStaking {} => {
+                        let (swap_msgs, ion_amount) = pool_swap_with_sim(
+                            &deps.querier,
+                            user_addr,
+                            &project_addrs.destination_projects.swap_routes.osmo_ion_pool,
+                            coin(comp_token_amount.u128(), dca_denom.clone()),
+                            &project_addrs.destination_projects.denoms.ion,
+                        )?;
+
+                        let staking_msg =
+                            stake_ion_msgs(user_addr, &project_addrs.destination_projects.projects.ion_dao, ion_to_stake);
+
+                        staking_msg.prepend_msgs(swap_msgs);
+
+                        Ok(swap_msg)
+                    }
+                    OsmosisDestinationProject::RedBankDeposit { target_denom } => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::OsmosisLiquidityPool { pool_id, pool_settings } => {
+                        match pool_settings {
+                            OsmosisPoolSettings::Standard { bond_tokens } => {}
+                            OsmosisPoolSettings::ConcentratedLiquidity {
+                                lower_tick,
+                                upper_tick,
+                                token_min_amount_0,
+                                token_min_amount_1,
+                            } => {
+                                unimplemented!()
+                            }
+                        }
+                        Ok(DestProjectMsgs::default())
                     }
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }

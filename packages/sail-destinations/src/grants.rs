@@ -3,53 +3,21 @@ use cw_grant_spec::grants::{
     AuthorizationType, GrantBase, GrantRequirement, StakeAuthorizationPolicy,
     StakeAuthorizationType, StakeAuthorizationValidators,
 };
+use white_whale::pool_network::asset::AssetInfo;
 
-pub fn native_staking_grant(
-    GrantBase {
-        granter,
-        grantee,
-        expiration,
-    }: GrantBase,
-    max_tokens: Option<Coin>,
-    validators: Option<Vec<String>>,
-) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::GrantSpec {
-        grant_type: AuthorizationType::StakeAuthorization {
-            max_tokens,
-            authorization_type: StakeAuthorizationType::Delegate,
-            validators: validators.map(|vs| {
-                StakeAuthorizationPolicy::AllowList(StakeAuthorizationValidators { address: vs })
-            }),
-        },
-        granter,
-        grantee,
-        expiration,
+pub fn eris_lsd_grant(base: GrantBase, lsd_addr: Addr, asset: AssetInfo) -> Vec<GrantRequirement> {
+    vec![match asset {
+        AssetInfo::NativeToken { denom } => GrantRequirement::default_contract_exec_auth(
+            base,
+            lsd_addr,
+            vec!["bond"],
+            Some(denom.as_str()),
+        ),
+        AssetInfo::Token { contract_addr } => GrantRequirement::default_contract_exec_auth(
+            base,
+            Addr::unchecked(contract_addr),
+            vec!["send"],
+            None,
+        ),
     }]
-}
-
-pub fn balance_dao_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::default_contract_exec_auth(
-        base,
-        contract_addr,
-        vec!["swap"],
-        Some("ujuno"),
-    )]
-}
-
-pub fn gelotto_lottery_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::default_contract_exec_auth(
-        base,
-        contract_addr,
-        vec!["sender_buy_seed"],
-        Some("ujuno"),
-    )]
-}
-
-pub fn wyndao_staking_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::default_contract_exec_auth(
-        base,
-        contract_addr,
-        vec!["delegate"],
-        None,
-    )]
 }

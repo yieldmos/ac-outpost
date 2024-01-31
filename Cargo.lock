@@ -1436,6 +1436,7 @@ dependencies = [
  "dotenv",
  "env_logger",
  "juno-destinations",
+ "migaloo-destinations",
  "outpost-utils",
  "tokio",
  "white-whale",
@@ -1444,6 +1445,8 @@ dependencies = [
  "ymos-junodca-outpost",
  "ymos-junostake-outpost",
  "ymos-junowwmarket-outpost",
+ "ymos-migaloodca-outpost",
+ "ymos-migaloostake-outpost",
  "ymos-wyndstake-outpost",
 ]
 
@@ -2710,6 +2713,7 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
+ "osmosis-std 0.21.0",
  "outpost-utils",
  "schemars",
  "serde",
@@ -5174,6 +5178,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "ymos-migaloodca-outpost"
+version = "0.2.2"
+dependencies = [
+ "cosmos-sdk-proto 0.19.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-grant-spec",
+ "cw-multi-test",
+ "cw-orch",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
+ "cw20 1.1.2",
+ "cw20-stake 2.1.0",
+ "cw20-vesting 1.6.0",
+ "migaloo-destinations",
+ "outpost-utils",
+ "sail-destinations",
+ "schemars",
+ "semver",
+ "serde",
+ "terraswap-helpers",
+ "thiserror",
+ "universal-destinations",
+ "white-whale",
+ "withdraw-rewards-tax-grant",
+]
+
+[[package]]
 name = "ymos-migaloostake-outpost"
 version = "0.2.2"
 dependencies = [
@@ -5219,6 +5252,7 @@ dependencies = [
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
  "osmosis-destinations",
+ "osmosis-helpers",
  "osmosis-std 0.21.0",
  "outpost-utils",
  "sail-destinations",

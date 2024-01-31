@@ -95,6 +95,7 @@ pub fn compound(
 
     let resp = Response::default()
         .add_attribute("action", "outpost compound")
+        .add_attribute("compoundee", user_addr)
         .add_event(amount_automated_event)
         .add_message(exec_msg)
         .add_submessages(

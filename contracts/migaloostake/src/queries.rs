@@ -4,6 +4,7 @@ use cw_grant_spec::grants::{
     AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
 };
 use migaloo_destinations::comp_prefs::MigalooDestinationProject;
+use migaloo_destinations::grants::furnace_grant;
 use terraswap_helpers::terraswap_swap::terraswap_multihop_swap_grant;
 use universal_destinations::grants::native_staking_grant;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -125,6 +126,14 @@ pub fn gen_comp_pref_grants(
             MigalooDestinationProject::MigalooStaking { validator_address } => {
                 native_staking_grant(base, None, Some(vec![validator_address]))
             }
+            MigalooDestinationProject::Furnace { and_then } => furnace_grant(
+                base,
+                project_addresses.destination_projects.projects.clone(),
+                and_then,
+                AssetInfo::NativeToken {
+                    denom: project_addresses.destination_projects.denoms.ash.clone(),
+                },
+            ),
             _ => vec![],
             // MigalooDestinationProject::DaoStaking(dao) => {
             //     let DaoAddr {
