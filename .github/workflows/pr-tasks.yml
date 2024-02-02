@@ -31,9 +31,9 @@ jobs:
         - name: Print Summary
           run: |
             echo "Coverage summary: ${{ steps.coverage.outputs.summary }}"
-        - name: Print Coverage
-          run: |
-            echo "Coverage: ${{ steps.coverage.outputs.coverage }}"
+        # - name: Print Coverage
+        #   run: |
+        #     echo "Coverage: ${{ steps.coverage.outputs.coverage }}"
         - name: Comment on PR
           if: github.event_name == 'pull_request'
           uses: peter-evans/create-or-update-comment@v1
