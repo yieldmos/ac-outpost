@@ -1,0 +1,84 @@
+name: pr-tasks
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+jobs:
+  Coverage:
+    permissions: write-all
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+        - name: Install required dependencies
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y libssl-dev pkg-config
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            export PATH="$HOME/.cargo/bin:$PATH"
+        - name: Install tarpaulin
+          run: cargo install cargo-tarpaulin  
+        - name: Generate code coverage
+          id: coverage
+          run: |
+            OUTPUT=$(printf "%q" "$(cargo tarpaulin --verbose --workspace --timeout 120 --out xml --avoid-cfg-tarpaulin 2>&1 || true)")
+            echo "::set-output name=coverage::$OUTPUT"
+            SUMMARY=$(echo "$OUTPUT" | grep -oP '\d+\.\d+% coverage, \d+/\d+ lines covered')
+            echo "::set-output name=summary::$SUMMARY"
+        - name: Print Summary
+          run: |
+            echo "Coverage summary: ${{ steps.coverage.outputs.summary }}"
+        # - name: Print Coverage
+        #   run: |
+        #     echo "Coverage: ${{ steps.coverage.outputs.coverage }}"
+        - name: Comment on PR
+          if: github.event_name == 'pull_request'
+          uses: peter-evans/create-or-update-comment@v1
+          with:
+                token: ${{ secrets.GITHUB_TOKEN }}
+                issue-number: ${{ github.event.pull_request.number }}
+                body: |
+                    # Coverage
+                    ${{ steps.coverage.outputs.summary }}
+  
+  linter:
+    permissions: write-all
+    name: linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install rust and cargo
+        run:  curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - name: Run Clippy and Format
+        id: linter
+        run: |
+            CLIPPY_OUTPUT=$(printf "%q" "$(cargo clippy --all-targets -- -D warnings 2>&1 || true)")
+            echo "::set-output name=clippy::$CLIPPY_OUTPUT"
+            FMT_OUTPUT=$(printf "%q" "$(cargo fmt --all -- --check --verbose 2>&1 || true)")
+            echo "::set-output name=fmt::$FMT_OUTPUT"
+      - name: Use clippy output
+        run: |
+            echo "Clippy output: ${{ steps.linter.outputs.clippy }}"
+            echo "fmt output: ${{ steps.linter.outputs.fmt }}"
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            issue-number: ${{ github.event.pull_request.number }}
+            body: |
+                # Linter
+                
+                ```
+                ${{ steps.linter.outputs.clippy }}
+                ```
+                
+                # Format
+                
+                ```
+                ${{ steps.linter.outputs.fmt }}
+                ```
