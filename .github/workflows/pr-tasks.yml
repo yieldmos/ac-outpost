@@ -6,6 +6,7 @@ on:
 
 jobs:
   Coverage:
+    permissions: write-all
     name: coverage
     runs-on: ubuntu-latest
     steps:
@@ -43,6 +44,7 @@ jobs:
                     ${{ steps.coverage.outputs.summary }}
   
   linter:
+    permissions: write-all
     name: linter
     runs-on: ubuntu-latest
     steps:
