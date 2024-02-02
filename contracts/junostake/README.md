@@ -15,3 +15,5 @@ The things you can do with your rewards during any given compounding.
 | `Neta Staking`      | `working` |                                              |
 | `Token Swap`        | `working` | Can pick any token that's on Wyndex          |
 | `Wyndex LPs`        | `working` | Must specify the given pool contract address |
+
+All Staking projects will automatically compound the rewards for you. The other projects will simply send the rewards to the specified address.
