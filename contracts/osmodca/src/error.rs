@@ -18,6 +18,9 @@ pub enum ContractError {
     #[error("Universal Destinations Error: &{0}")]
     UniversalDestinationError(#[from] universal_destinations::errors::UniversalDestinationError),
 
+    #[error("Osmosis Helper Error: &{0}")]
+    OsmosisHelperError(#[from] osmosis_helpers::errors::OsmosisHelperError),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 

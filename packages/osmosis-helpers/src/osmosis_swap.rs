@@ -12,6 +12,7 @@ use osmosis_std::types::{
     },
 };
 
+use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
 use outpost_utils::msg_gen::CosmosProtoMsg;
 
 use crate::errors::OsmosisHelperError;
@@ -228,13 +229,18 @@ pub fn pool_swap_with_sim(
     querier: &QuerierWrapper,
     user_addr: &Addr,
     pool_id: &u64,
-    offer_asset: Coin,
+    offer_asset: cosmwasm_std::Coin,
     token_out_denom: &str,
 ) -> Result<(Vec<CosmosProtoMsg>, Uint128), OsmosisHelperError> {
+    let offer_coin = OsmosisCoin {
+        denom: offer_asset.denom.to_string(),
+        amount: offer_asset.amount.to_string(),
+    };
+
     Ok((
         vec![CosmosProtoMsg::OsmosisSwapExactAmountIn(
             MsgSwapExactAmountIn {
-                token_in: Some(offer_asset),
+                token_in: Some(offer_coin.clone()),
                 sender: user_addr.to_string(),
                 token_out_min_amount: "0".to_string(),
                 routes: vec![SwapAmountInRoute {
@@ -244,7 +250,7 @@ pub fn pool_swap_with_sim(
             },
         )],
         Uint128::from_str(
-            simulate_pool_swap(querier, pool_id, &offer_asset, token_out_denom)?
+            simulate_pool_swap(querier, pool_id, &offer_coin, token_out_denom)?
                 .token_out_amount
                 .as_str(),
         )?,

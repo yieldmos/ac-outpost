@@ -167,19 +167,19 @@ pub fn prefs_to_msgs(
 
                     OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
 
-                    OsmosisDestinationProject::TokenSwap { target_denom } => Ok(DestProjectMsgs {
-                        msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
-                            user_addr,
-                            comp_token_amount,
-                            AssetInfo::Native(dca_denom.clone()),
-                            target_denom,
-                            project_addrs.destination_projects.wynd.multihop.to_string(),
-                        )
-                        .map_err(ContractError::Std)?,
-                        sub_msgs: vec![],
-                        events: vec![],
-                    }),
-
+                    OsmosisDestinationProject::TokenSwap { target_denom } => unimplemented!("TokenSwap not implemented"),
+                    // OsmosisDestinationProject::TokenSwap { target_denom } => Ok(DestProjectMsgs {
+                    //     msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
+                    //         user_addr,
+                    //         comp_token_amount,
+                    //         AssetInfo::Native(dca_denom.clone()),
+                    //         target_denom,
+                    //         project_addrs.destination_projects.wynd.multihop.to_string(),
+                    //     )
+                    //     .map_err(ContractError::Std)?,
+                    //     sub_msgs: vec![],
+                    //     events: vec![],
+                    // }),
                     OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
                         user_addr,
                         compounding_asset,
@@ -202,7 +202,7 @@ pub fn prefs_to_msgs(
                         let mut mint_milk_tia = mint_milk_tia_msgs(
                             user_addr,
                             &project_addrs.destination_projects.projects.milky_way_bonding,
-                            coin(est_tia, project_addrs.destination_projects.denoms.tia),
+                            coin(est_tia.u128(), project_addrs.destination_projects.denoms.tia.clone()),
                         )?;
 
                         mint_milk_tia.append_msgs(swap_to_tia_msgs);
@@ -210,38 +210,39 @@ pub fn prefs_to_msgs(
                         Ok(mint_milk_tia)
                     }
 
-                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => mint_eris_lsd_msgs(
+                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
                         user_addr,
-                        comp_token_amount,
+                        compounding_asset,
                         &project_addrs.destination_projects.projects.eris_amposmo_bonding,
-                    ),
+                    )?),
 
                     OsmosisDestinationProject::SendTokens {
                         denom: target_asset,
                         address: to_address,
                     } => {
-                        let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
-                            &deps.querier,
-                            user_addr,
-                            comp_token_amount,
-                            AssetInfo::Native(dca_denom.clone()),
-                            target_asset.clone(),
-                            project_addrs.destination_projects.wynd.multihop.to_string(),
-                            None,
-                        )
-                        .map_err(ContractError::Std)?;
+                        // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
+                        //     &deps.querier,
+                        //     user_addr,
+                        //     comp_token_amount,
+                        //     AssetInfo::Native(dca_denom.clone()),
+                        //     target_asset.clone(),
+                        //     project_addrs.destination_projects.wynd.multihop.to_string(),
+                        //     None,
+                        // )
+                        // .map_err(ContractError::Std)?;
+                        let sim = 0u128.into();
 
                         // after the swap we can send the estimated funds to the target address
                         let mut send_msgs = send_tokens_msgs(
                             user_addr,
                             &deps.api.addr_validate(&to_address)?,
                             Asset {
-                                info: target_asset,
+                                info: AssetInfo::NativeToken { denom: target_asset },
                                 amount: sim,
                             },
                         )?;
 
-                        send_msgs.append_msgs(swap_msgs);
+                        // send_msgs.append_msgs(swap_msgs);
 
                         Ok(send_msgs)
                     }
@@ -254,12 +255,12 @@ pub fn prefs_to_msgs(
                             &project_addrs.destination_projects.denoms.ion,
                         )?;
 
-                        let staking_msg =
-                            stake_ion_msgs(user_addr, &project_addrs.destination_projects.projects.ion_dao, ion_to_stake);
+                        let mut staking_msg =
+                            stake_ion_msgs(user_addr, &project_addrs.destination_projects.projects.ion_dao, ion_amount)?;
 
                         staking_msg.prepend_msgs(swap_msgs);
 
-                        Ok(swap_msg)
+                        Ok(staking_msg)
                     }
                     OsmosisDestinationProject::RedBankDeposit { target_denom } => Ok(DestProjectMsgs::default()),
                     OsmosisDestinationProject::OsmosisLiquidityPool { pool_id, pool_settings } => {

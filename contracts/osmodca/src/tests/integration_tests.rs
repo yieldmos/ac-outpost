@@ -5,7 +5,7 @@ use crate::{
 };
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
-use juno_destinations::comp_prefs::DestinationProjectAddresses;
+use osmosis_destinations::comp_prefs::OsmosisDestinationProjectAddresses;
 
 fn auctioning_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(execute, instantiate, query);
@@ -36,9 +36,9 @@ fn instantiate_with_defaults() {
             admin: None,
             project_addresses: ContractAddresses {
                 take_rate_addr: "".to_string(),
-                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+
                 authzpp: AuthzppAddresses::default(),
-                destination_projects: DestinationProjectAddresses::default(),
+                destination_projects: OsmosisDestinationProjectAddresses::default(),
             },
         },
     )
@@ -115,9 +115,9 @@ fn validator_only_compounding() {
             admin: None,
             project_addresses: ContractAddresses {
                 take_rate_addr: "".to_string(),
-                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+
                 authzpp: AuthzppAddresses::default(),
-                destination_projects: DestinationProjectAddresses::default(),
+                destination_projects: OsmosisDestinationProjectAddresses::default(),
             },
         },
     )
