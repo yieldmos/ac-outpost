@@ -35,9 +35,6 @@ jobs:
                 body: |
                     # Coverage
                     ${{ steps.coverage.outputs.summary }}
-                    ```sh
-                    ${{ steps.coverage.outputs.coverage }}
-                    ```
   
   linter:
     name: linter
