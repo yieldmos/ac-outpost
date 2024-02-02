@@ -1,9 +1,11 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
+use cosmwasm_std::{Addr, Api, Coin, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 
-use juno_destinations::comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
-use wyndex::asset::AssetInfo;
+use osmosis_destinations::comp_prefs::{
+    OsmosisCompPrefs, OsmosisDestinationProjectAddresses, OsmosisDestinationProjectAddrs,
+};
+use outpost_utils::helpers::CompoundingFrequency;
 
 use crate::ContractError;
 
@@ -35,11 +37,11 @@ pub enum QueryMsg {
     #[returns(Vec<GrantRequirement>)]
     GrantSpec {
         expiration: Timestamp,
-        comp_prefs: JunostakeCompoundPrefs,
+        comp_prefs: OsmostakeCompoundPrefs,
     },
 
     #[returns(Vec<RevokeRequirement>)]
-    RevokeSpec { comp_prefs: JunostakeCompoundPrefs },
+    RevokeSpec { comp_prefs: OsmostakeCompoundPrefs },
 }
 
 #[cw_serde]
@@ -58,20 +60,21 @@ pub struct VersionResponse {
 pub enum ExecuteMsg {
     AddAuthorizedCompounder(String),
     RemoveAuthorizedCompounder(String),
-    Compound(JunostakeCompoundPrefs),
-    UpdateProjectAddresses(ContractAddresses),
+    Compound(OsmostakeCompoundPrefs),
+    UpdateProjectAddresses(Box<ContractAddresses>),
 }
 
 #[cw_serde]
-pub struct JunostakeCompoundPrefs {
-    pub comp_prefs: JunoCompPrefs,
+pub struct OsmostakeCompoundPrefs {
+    /// For now this should be an array of one item containing directives for compounding juno tokens only
+    pub comp_prefs: OsmosisCompPrefs,
     pub user_address: String,
     pub tax_fee: Option<Decimal>,
 }
 
 #[cw_serde]
 pub struct CompPrefsWithAddresses {
-    pub comp_prefs: JunostakeCompoundPrefs,
+    pub comp_prefs: OsmostakeCompoundPrefs,
     pub project_addresses: ContractAddrs,
 }
 
@@ -79,30 +82,8 @@ pub struct CompPrefsWithAddresses {
 pub struct ContractAddresses {
     pub staking_denom: String,
     pub take_rate_addr: String,
-    pub usdc: AssetInfo,
     pub authzpp: AuthzppAddresses,
-    pub destination_projects: DestinationProjectAddresses,
-}
-
-#[cw_serde]
-pub struct ContractAddrs {
-    pub staking_denom: String,
-    pub take_rate_addr: Addr,
-    pub usdc: AssetInfo,
-    pub authzpp: AuthzppAddrs,
-    pub destination_projects: DestinationProjectAddrs,
-}
-
-impl ContractAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<ContractAddrs, ContractError> {
-        Ok(ContractAddrs {
-            staking_denom: self.staking_denom.clone(),
-            take_rate_addr: api.addr_validate(&self.take_rate_addr)?,
-            usdc: self.usdc.clone(),
-            authzpp: self.authzpp.validate_addrs(api)?,
-            destination_projects: self.destination_projects.validate_addrs(api)?,
-        })
-    }
+    pub destination_projects: OsmosisDestinationProjectAddresses,
 }
 
 #[cw_serde]
@@ -122,6 +103,25 @@ impl AuthzppAddresses {
         Ok(AuthzppAddrs {
             withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
             // allowlist_send: api.addr_validate(&self.allowlist_send)?,
+        })
+    }
+}
+
+#[cw_serde]
+pub struct ContractAddrs {
+    pub staking_denom: String,
+    pub take_rate_addr: Addr,
+    pub authzpp: AuthzppAddrs,
+    pub destination_projects: OsmosisDestinationProjectAddrs,
+}
+
+impl ContractAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<ContractAddrs, ContractError> {
+        Ok(ContractAddrs {
+            staking_denom: self.staking_denom.clone(),
+            take_rate_addr: api.addr_validate(&self.take_rate_addr)?,
+            authzpp: self.authzpp.validate_addrs(api)?,
+            destination_projects: self.destination_projects.validate_addrs(api)?,
         })
     }
 }

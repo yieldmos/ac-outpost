@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmodcaCompoundPrefs, QueryMsg};
+use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmostakeCompoundPrefs, QueryMsg};
 use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
@@ -13,7 +13,7 @@ use outpost_utils::helpers::CompoundingFrequency;
 use semver::Version;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ac-outpost-osmodca";
+const CONTRACT_NAME: &str = "crates.io:ac-outpost-osmostake";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -116,19 +116,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 
             Ok(Response::default())
         }
-        ExecuteMsg::Compound(OsmodcaCompoundPrefs {
+        ExecuteMsg::Compound(OsmostakeCompoundPrefs {
             user_address,
             comp_prefs,
             tax_fee,
         }) => {
             let addresses = PROJECT_ADDRS.load(deps.storage)?;
 
-            let prefs = comp_prefs.first().ok_or(ContractError::NoDCACompoundPrefs)?;
-            if prefs.compound_token.denom != "ujuno" || (comp_prefs.len() > 1) {
-                return Err(ContractError::InvalidDCACompoundPrefs);
-            }
-
-            execute::compound(deps, env, info, addresses, user_address, prefs, tax_fee)
+            execute::compound(deps, env, info, addresses, user_address, comp_prefs, tax_fee)
         }
     }
 }
@@ -139,11 +134,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Version {} => to_json_binary(&queries::query_version()),
         QueryMsg::AuthorizedCompounders {} => to_json_binary(&queries::query_authorized_compounders(deps)),
-        QueryMsg::GrantSpec {
-            comp_prefs,
-            frequency,
-            expiration,
-        } => {
+        QueryMsg::GrantSpec { comp_prefs, expiration } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
             to_json_binary(&QueryMsg::query_grants(
                 GrantStructure {
@@ -152,7 +143,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     expiration,
                     grant_contract: env.contract.address,
                     grant_data: CompPrefsWithAddresses {
-                        comp_frequency: frequency,
                         comp_prefs,
                         project_addresses,
                     },
@@ -168,7 +158,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 expiration: Timestamp::default(),
                 grant_contract: env.contract.address,
                 grant_data: CompPrefsWithAddresses {
-                    comp_frequency: CompoundingFrequency::default(),
                     comp_prefs,
                     project_addresses,
                 },
