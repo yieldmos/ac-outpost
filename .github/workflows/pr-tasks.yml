@@ -26,6 +26,12 @@ jobs:
             echo "::set-output name=coverage::$OUTPUT"
             SUMMARY=$(echo "$OUTPUT" | grep -oP '\d+\.\d+% coverage, \d+/\d+ lines covered')
             echo "::set-output name=summary::$SUMMARY"
+        - name: Print Summary
+          run: |
+            echo "Coverage summary: ${{ steps.coverage.outputs.summary }}"
+        - name: Print Coverage
+          run: |
+            echo "Coverage: ${{ steps.coverage.outputs.coverage }}"
         - name: Comment on PR
           if: github.event_name == 'pull_request'
           uses: peter-evans/create-or-update-comment@v1
@@ -55,7 +61,6 @@ jobs:
         run: |
             echo "Clippy output: ${{ steps.linter.outputs.clippy }}"
             echo "fmt output: ${{ steps.linter.outputs.fmt }}"
-
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: peter-evans/create-or-update-comment@v1
