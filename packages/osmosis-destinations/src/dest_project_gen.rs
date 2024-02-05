@@ -3,6 +3,7 @@ use crate::errors::OsmosisDestinationError;
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, Event, Uint128};
+use mars_types::credit_manager::{Action, ActionCoin};
 use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
@@ -54,5 +55,43 @@ pub fn stake_ion_msgs(
         )?)],
         sub_msgs: vec![],
         events: vec![Event::new("stake_ion").add_attribute("amount", ion_to_stake.to_string())],
+    })
+}
+
+pub fn fund_red_bank_acct_msgs(
+    funder_addr: &Addr,
+    funder_account_id: &str,
+    redbank_addr: &Addr,
+    fund_amount: Coin,
+    lend_asset: bool,
+) -> DestinationResult {
+    // fund the account
+    let mut actions: Vec<Action> = vec![Action::Deposit(fund_amount)];
+
+    // if the user wants to lend the asset add that action to the end
+    if lend_asset {
+        actions.push(Action::LendAsset {
+            asset: fund_amount.denom.to_string(),
+            amount: fund_amount.amount.to_string(),
+        });
+    }
+
+    Ok(DestProjectMsgs {
+        msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+            redbank_addr,
+            funder_addr,
+            &mars_types::credit_manager::ExecuteMsg::UpdateCreditAccount {
+                account_id: funder_account_id.as_str(),
+                actions,
+            },
+            Some(vec![CsdkCoin {
+                denom: usdc_to_fund.denom.to_string(),
+                amount: usdc_to_fund.amount.to_string(),
+            }]),
+        )?)],
+        sub_msgs: vec![],
+        events: vec![Event::new("fund_red_bank_acct")
+            .add_attribute("fund_amount", fund_amount.to_string())
+            .add_attribute("fund_and_lend", lend_asset.to_string())],
     })
 }

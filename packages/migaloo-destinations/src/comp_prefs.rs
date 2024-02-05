@@ -71,6 +71,7 @@ pub enum MigalooDestinationProject {
     /// Burn WHALE and receive ASH
     /// https://whale.burn.community/
     /// migaloo1erul6xyq0gk6ws98ncj7lnq9l4jn4gnnu9we73gdz78yyl2lr7qqrvcgup
+    /// TODO: add guppy burn
     Furnace {
         and_then: Option<AshAction>,
     },
@@ -95,7 +96,7 @@ pub enum MigalooDestinationProject {
     /// Ginku repay loan
     GinkouRepayLoan {},
 
-    // /// Provide Liquidity to a TerraSwap pool
+    // /// TODO: Provide Liquidity to a TerraSwap pool
     // ProvideLiquidity {
     //     pool_address: String,
     //     pool_asset1: AssetInfo,
@@ -104,9 +105,13 @@ pub enum MigalooDestinationProject {
     //     // this is basically only for the whale usdc pool that can be used for ecosystem staking
     //     and_then: Option<ProvideLiquidityAction>,
     // },
+
+    // TODO: whale usdc alliance
     /// Do nothing with the funds
     Unallocated {},
 }
+
+// native staking rewards, alliance rewards, lp rewards, sat market rewards
 
 // #[cw_serde]
 // pub enum EcosystemStakeAsset {

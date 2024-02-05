@@ -41,10 +41,45 @@ pub enum OsmosisDestinationProject {
     // /// Eventually there should be an option to pay back the highest cost debt first
     // RedBankPayback(PaybackDenoms),
     /// Deposit into redbank to potentially gain
-    RedBankDeposit {
-        /// IMPORTANT: if the deposit cap is reached, the compounding will not be forced to
-        /// error out. Instead, the alloted funds for depositing will remain liquid and unswapped and undeposited
+    RedBankFundAccount {
+        /*
+                        {
+                  "update_credit_account": {
+                    "account_id": "13773",
+                    "actions": [
+                      {
+                        "deposit": {
+                          "denom": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+                          "amount": "264953"
+                        }
+                      }
+                    ]
+                  }
+                }
+
+                {
+          "update_credit_account": {
+            "account_id": "13773",
+            "actions": [
+              {
+                "deposit": {
+                  "denom": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+                  "amount": "134694"
+                }
+              },
+              {
+                "lend": {
+                  "denom": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+                  "amount": "account_balance"
+                }
+              }
+            ]
+          }
+        }
+                */
+        account_id: String,
         target_denom: String,
+        lend_asset: bool,
     },
     /// Continuously lever up the given denom
     // RedBankLeverLoop {
@@ -72,6 +107,12 @@ pub enum OsmosisDestinationProject {
     //     vault_address: String,
     //     leverage_amount: u64,
     // },
+    /// Join the White Whale satellite market
+    /// https://app.whitewhale.money/osmosis/dashboard
+    // WhiteWhaleSatellite { asset: pool_network::asset::Asset },
+    WhiteWhaleSatellite {
+        asset: String,
+    },
     Unallocated {},
 }
 
@@ -145,6 +186,7 @@ pub struct DestProjectSwapRoutes {
     pub osmo_mars_pool: u64,
     pub osmo_usdc_pool: u64,
     pub osmo_atom_pool: u64,
+    pub osmo_whale_pool: u64,
 }
 
 #[cw_serde]
@@ -199,6 +241,8 @@ pub struct Denoms {
     pub tia: String,
     pub amp_osmo: String,
     pub mars: String,
+    pub whale: String,
+    pub amp_whale: String,
 }
 
 #[cw_serde]

@@ -22,3 +22,5 @@ cw20-vesting = { workspace = true }
 bond-router = { workspace = true, optional = true }
 cw-grant-spec = { workspace = true }
 osmosis-std = { workspace = true }
+sail-destinations = { workspace = true }
+mars-types = { workspace = true }
