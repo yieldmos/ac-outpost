@@ -163,10 +163,6 @@ pub fn prefs_to_msgs(
                             amount: comp_token_amount,
                         },
                     )?),
-
-                    OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
-
-                    OsmosisDestinationProject::TokenSwap { target_denom } => unimplemented!("TokenSwap not implemented"),
                     // OsmosisDestinationProject::TokenSwap { target_denom } => Ok(DestProjectMsgs {
                     //     msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
                     //         user_addr,
@@ -192,7 +188,7 @@ pub fn prefs_to_msgs(
                         let (swap_to_tia_msgs, est_tia) = pool_swap_with_sim(
                             &deps.querier,
                             user_addr,
-                            &project_addrs.destination_projects.swap_routes.osmo_tia_pool,
+                            &project_addrs.destination_projects.swap_routes.osmo_pools.tia,
                             coin(comp_token_amount.u128(), dca_denom.clone()),
                             &project_addrs.destination_projects.denoms.tia,
                         )?;
@@ -216,8 +212,8 @@ pub fn prefs_to_msgs(
                     )?),
 
                     OsmosisDestinationProject::SendTokens {
-                        denom: target_asset,
                         address: to_address,
+                        target_asset,
                     } => {
                         // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
                         //     &deps.querier,
@@ -249,7 +245,7 @@ pub fn prefs_to_msgs(
                         let (swap_msgs, ion_amount) = pool_swap_with_sim(
                             &deps.querier,
                             user_addr,
-                            &project_addrs.destination_projects.swap_routes.osmo_ion_pool,
+                            &project_addrs.destination_projects.swap_routes.osmo_pools.ion,
                             coin(comp_token_amount.u128(), dca_denom.clone()),
                             &project_addrs.destination_projects.denoms.ion,
                         )?;
@@ -261,7 +257,6 @@ pub fn prefs_to_msgs(
 
                         Ok(staking_msg)
                     }
-                    OsmosisDestinationProject::RedBankDeposit { target_denom } => Ok(DestProjectMsgs::default()),
                     OsmosisDestinationProject::OsmosisLiquidityPool { pool_id, pool_settings } => {
                         match pool_settings {
                             OsmosisPoolSettings::Standard { bond_tokens } => {}
@@ -276,6 +271,31 @@ pub fn prefs_to_msgs(
                         }
                         Ok(DestProjectMsgs::default())
                     }
+
+                    OsmosisDestinationProject::RedBankLendAsset {
+                        target_asset,
+                        account_id,
+                    } => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::WhiteWhaleSatellite { asset } => Ok(white_whale_satellite_msgs(
+                        user_addr,
+                        &project_addrs.destination_projects.projects.white_whale_satellite,
+                        comp_token_amount,
+                    )?),
+                    OsmosisDestinationProject::MembraneStake {} => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::MembraneRepay {
+                        asset,
+                        ltv_ratio_threshold,
+                    } => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::MarginedRepay {
+                        asset,
+                        ltv_ratio_threshold,
+                    } => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::MembraneDeposit { position_id, asset } => Ok(DestProjectMsgs::default()),
+
+                    OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
+
+                    OsmosisDestinationProject::TokenSwap { target_asset } => unimplemented!("TokenSwap not implemented"),
+
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
             },

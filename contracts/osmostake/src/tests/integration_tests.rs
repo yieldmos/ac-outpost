@@ -36,7 +36,7 @@ fn instantiate_with_defaults() {
             admin: None,
             project_addresses: ContractAddresses {
                 take_rate_addr: "".to_string(),
-
+                staking_denom: "uosmo".to_string(),
                 authzpp: AuthzppAddresses::default(),
                 destination_projects: OsmosisDestinationProjectAddresses::default(),
             },
@@ -115,7 +115,7 @@ fn validator_only_compounding() {
             admin: None,
             project_addresses: ContractAddresses {
                 take_rate_addr: "".to_string(),
-
+                staking_denom: "uosmo".to_string(),
                 authzpp: AuthzppAddresses::default(),
                 destination_projects: OsmosisDestinationProjectAddresses::default(),
             },

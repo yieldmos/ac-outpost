@@ -9,6 +9,12 @@ pub enum OsmosisHelperError {
     #[error("Divide by zero error: {0}")]
     DivideByZeroError(#[from] DivideByZeroError),
 
+    #[error("Invalid swap denom {denom}. {label}")]
+    InvalidRouteDenom { denom: &str, label: &str },
+
+    #[error("Known to known swap route not found. From: {from_denom} To: {to_denom}")]
+    NoKnownToKnownRoute { to_denom: &str, from_denom: &str },
+
     #[error("Pool not found: {pool_id}")]
     PoolNotFound { pool_id: u64 },
 

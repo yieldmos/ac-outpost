@@ -1,9 +1,11 @@
-use crate::errors::OsmosisDestinationError;
+use crate::{
+    errors::OsmosisDestinationError,
+    mars_types::{ActionAmount, RedBankAction, RedBankExecuteMsgs},
+};
 
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, Event, Uint128};
-use mars_types::credit_manager::{Action, ActionCoin};
 use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
@@ -58,6 +60,7 @@ pub fn stake_ion_msgs(
     })
 }
 
+// fund account and lend the asset if wanted
 pub fn fund_red_bank_acct_msgs(
     funder_addr: &Addr,
     funder_account_id: &str,
@@ -66,27 +69,24 @@ pub fn fund_red_bank_acct_msgs(
     lend_asset: bool,
 ) -> DestinationResult {
     // fund the account
-    let mut actions: Vec<Action> = vec![Action::Deposit(fund_amount)];
+    let mut actions: Vec<RedBankAction> = vec![RedBankAction::Deposit(fund_amount.clone())];
 
     // if the user wants to lend the asset add that action to the end
     if lend_asset {
-        actions.push(Action::LendAsset {
-            asset: fund_amount.denom.to_string(),
-            amount: fund_amount.amount.to_string(),
-        });
+        actions.push(RedBankAction::Lend((&fund_amount).into()));
     }
 
     Ok(DestProjectMsgs {
         msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
             redbank_addr,
             funder_addr,
-            &mars_types::credit_manager::ExecuteMsg::UpdateCreditAccount {
-                account_id: funder_account_id.as_str(),
+            &RedBankExecuteMsgs::UpdateCreditAccount {
+                account_id: funder_account_id.to_string(),
                 actions,
             },
             Some(vec![CsdkCoin {
-                denom: usdc_to_fund.denom.to_string(),
-                amount: usdc_to_fund.amount.to_string(),
+                denom: fund_amount.denom.to_string(),
+                amount: fund_amount.amount.to_string(),
             }]),
         )?)],
         sub_msgs: vec![],

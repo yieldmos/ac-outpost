@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Uint128};
+use cosmwasm_std::{Addr, Api, Decimal, Uint128};
 use outpost_utils::comp_prefs::CompoundPrefs;
+use struct_field_names_as_array::FieldNamesAsArray;
 
 use crate::errors::OsmosisDestinationError;
 
@@ -14,6 +15,13 @@ pub type OsmosisCompPrefs = CompoundPrefs<OsmosisDestinationProject>;
 // }
 
 #[cw_serde]
+pub struct TargetAsset {
+    pub denom: String,
+    pub exit_pool_id: u64,
+    pub paired_asset: KnownPairedPoolAsset,
+}
+
+#[cw_serde]
 pub enum OsmosisDestinationProject {
     /// Stake the tokens to a given validator
     OsmosisStaking {
@@ -22,12 +30,12 @@ pub enum OsmosisDestinationProject {
 
     /// Swap the given denom for the target denom and leave that token liquid.
     TokenSwap {
-        target_denom: String,
+        target_asset: TargetAsset,
     },
 
     /// Send tokens to a specific address
     SendTokens {
-        denom: String,
+        target_asset: TargetAsset,
         address: String,
     },
 
@@ -36,51 +44,72 @@ pub enum OsmosisDestinationProject {
         dao: OsmosisDao,
     },
 
+    MembraneStake {},
+    MembraneDeposit {
+        position_id: Uint128,
+        asset: String,
+    },
+    MembraneRepay {
+        asset: String,
+        ltv_ratio_threshold: Decimal,
+    },
+    MarginedRepay {
+        asset: String,
+        ltv_ratio_threshold: Decimal,
+    },
+    // NolusLendAsset {
+    //     asset: String,
+    // },
+
     // /// Pay back borrowed balance. Currently the first denom strings specified in the vector will be
     // /// paid back first. No order is guaranteed when no vector is passed in.
     // /// Eventually there should be an option to pay back the highest cost debt first
     // RedBankPayback(PaybackDenoms),
-    /// Deposit into redbank to potentially gain
-    RedBankFundAccount {
-        /*
-                        {
-                  "update_credit_account": {
-                    "account_id": "13773",
-                    "actions": [
-                      {
-                        "deposit": {
-                          "denom": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
-                          "amount": "264953"
-                        }
-                      }
-                    ]
-                  }
-                }
-
-                {
-          "update_credit_account": {
-            "account_id": "13773",
-            "actions": [
-              {
-                "deposit": {
-                  "denom": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-                  "amount": "134694"
-                }
-              },
-              {
-                "lend": {
-                  "denom": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-                  "amount": "account_balance"
-                }
-              }
-            ]
-          }
-        }
-                */
+    RedBankLendAsset {
+        target_asset: TargetAsset,
         account_id: String,
-        target_denom: String,
-        lend_asset: bool,
     },
+    /// Deposit into redbank to potentially gain
+    // RedBankFundAccount {
+    //     /*
+    //                     {
+    //               "update_credit_account": {
+    //                 "account_id": "13773",
+    //                 "actions": [
+    //                   {
+    //                     "deposit": {
+    //                       "denom": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+    //                       "amount": "264953"
+    //                     }
+    //                   }
+    //                 ]
+    //               }
+    //             }
+
+    //             {
+    //       "update_credit_account": {
+    //         "account_id": "13773",
+    //         "actions": [
+    //           {
+    //             "deposit": {
+    //               "denom": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+    //               "amount": "134694"
+    //             }
+    //           },
+    //           {
+    //             "lend": {
+    //               "denom": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+    //               "amount": "account_balance"
+    //             }
+    //           }
+    //         ]
+    //       }
+    //     }
+    //             */
+    //     account_id: String,
+    //     target_denom: String,
+    //     lend_asset: bool,
+    // },
     /// Continuously lever up the given denom
     // RedBankLeverLoop {
     //     /// the denom to continuously lever up.
@@ -114,6 +143,12 @@ pub enum OsmosisDestinationProject {
         asset: String,
     },
     Unallocated {},
+}
+
+#[cw_serde]
+pub enum KnownPairedPoolAsset {
+    OSMO,
+    USDC,
 }
 
 #[cw_serde]
@@ -181,12 +216,81 @@ impl OsmosisProjectAddresses {
 #[cw_serde]
 #[derive(Default)]
 pub struct DestProjectSwapRoutes {
-    pub osmo_tia_pool: u64,
-    pub osmo_ion_pool: u64,
-    pub osmo_mars_pool: u64,
-    pub osmo_usdc_pool: u64,
-    pub osmo_atom_pool: u64,
-    pub osmo_whale_pool: u64,
+    pub osmo_pools: OsmoPools,
+    pub usdc_pools: UsdcPools, // pub osmo_tia_pool: u64,
+                               // pub osmo_ion_pool: u64,
+                               // pub osmo_mars_pool: u64,
+                               // pub osmo_usdc_pool: u64,
+                               // pub osmo_atom_pool: u64,
+                               // pub osmo_whale_pool: u64,
+}
+
+#[cw_serde]
+#[derive(Default, FieldNamesAsArray)]
+pub struct OsmoPools {
+    pub tia: u64,
+    pub ion: u64,
+    pub mars: u64,
+    pub usdc: u64,
+    pub atom: u64,
+    pub whale: u64,
+    pub mbrn: u64,
+    pub cdt: u64,
+}
+
+#[cw_serde]
+#[derive(Default, FieldNamesAsArray)]
+pub struct UsdcPools {
+    pub tia: u64,
+    pub atom: u64,
+    pub osmo: u64,
+    pub cdt: u64,
+    pub axlusdc: u64,
+}
+
+#[cw_serde]
+#[derive(Default, FieldNamesAsArray)]
+pub struct Denoms {
+    pub usdc: String,
+    pub axlusdc: String,
+    pub osmo: String,
+    pub ion: String,
+    pub tia: String,
+    pub atom: String,
+    pub amp_osmo: String,
+    pub mars: String,
+    pub whale: String,
+    pub amp_whale: String,
+    pub mbrn: String,
+    pub cdt: String,
+}
+
+pub trait QueryableByDenom {
+    fn get_pool_id(&self, denom: &str) -> Option<u64>;
+}
+
+impl QueryableByDenom for OsmoPools {
+    fn get_pool_id(&self, denom: &str) -> Option<u64> {
+        self::FIELD_NAMES_AS_ARRAY.iter().find()
+    }
+}
+
+impl QueryableByDenom for UsdcPools {
+    fn get_pool_id(&self, denom: &str) -> Option<u64> {
+        self::FIELD_NAMES_AS_ARRAY.iter().find()
+    }
+}
+
+impl Denoms {
+    pub fn is_known_denom(&self, denom: &str) -> bool {
+        self::FIELD_NAMES_AS_ARRAY.iter().any(|&denom_title| {
+            if let Some(val) = self.get(field) {
+                val == denom
+            } else {
+                false
+            }
+        })
+    }
 }
 
 #[cw_serde]
@@ -218,31 +322,18 @@ impl OsmosisDestinationProjectAddresses {
 #[cw_serde]
 #[derive(Default)]
 pub struct RedbankAddresses {
-    deposit: String,
+    pub credit_manager: String,
 }
 #[cw_serde]
 pub struct RedbankAddrs {
-    deposit: Addr,
+    pub credit_manager: Addr,
 }
 impl RedbankAddresses {
     pub fn validate_addrs(&self, api: &dyn Api) -> Result<RedbankAddrs, OsmosisDestinationError> {
         Ok(RedbankAddrs {
-            deposit: api.addr_validate(&self.deposit)?,
+            credit_manager: api.addr_validate(&self.credit_manager)?,
         })
     }
-}
-
-#[cw_serde]
-#[derive(Default)]
-pub struct Denoms {
-    pub usdc: String,
-    pub osmo: String,
-    pub ion: String,
-    pub tia: String,
-    pub amp_osmo: String,
-    pub mars: String,
-    pub whale: String,
-    pub amp_whale: String,
 }
 
 #[cw_serde]

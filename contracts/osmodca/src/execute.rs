@@ -3,7 +3,7 @@ use std::iter;
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
-    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
+    dest_project_gen::{fund_red_bank_acct_msgs, mint_milk_tia_msgs, stake_ion_msgs},
 };
 use osmosis_helpers::osmosis_swap::pool_swap_with_sim;
 use outpost_utils::{
@@ -245,6 +245,34 @@ pub fn prefs_to_msgs(
                         // send_msgs.append_msgs(swap_msgs);
 
                         Ok(send_msgs)
+                    }
+                    OsmosisDestinationProject::RedBankFundAccount {
+                        account_id,
+                        target_denom,
+                        lend_asset,
+                    } => {
+                        // TODO: implement the swap
+                        // do a swap from osmo to `target_denom` and receive the sim
+                        let (swap_msgs, simulated_target_amount) = (vec![], 0u128.into());
+                        // pool_swap_with_sim(
+                        //     &deps.querier,
+                        //     user_addr,
+                        //     &project_addrs.destination_projects.swap_routes.osmo_usdc_pool,
+                        //     coin(comp_token_amount.u128(), dca_denom.clone()),
+                        //     &target_denom,
+                        // )?;
+
+                        let mut funding_msgs = fund_red_bank_acct_msgs(
+                            user_addr,
+                            &account_id,
+                            &project_addrs.destination_projects.projects.redbank.credit_manager.clone(),
+                            coin(simulated_target_amount, target_denom),
+                            lend_asset,
+                        )?;
+
+                        funding_msgs.prepend_msgs(swap_msgs);
+
+                        Ok(DestProjectMsgs::default())
                     }
                     OsmosisDestinationProject::IonStaking {} => {
                         let (swap_msgs, ion_amount) = pool_swap_with_sim(

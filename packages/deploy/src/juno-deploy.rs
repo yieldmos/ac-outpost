@@ -467,16 +467,16 @@ pub fn main() -> anyhow::Result<()> {
 
         // setup the feeshare only on the first deploy
         // this seems to sometimes need an increased gas multiplier in the .env to work
-        juno_chain
-            .commit_any::<cosmrs::Any>(
-                vec![feeshare_msg(
-                    juno_comp_prefs.address().unwrap().to_string(),
-                    juno_chain.sender().to_string(),
-                    juno_chain.sender().to_string(),
-                )],
-                None,
-            )
-            .unwrap();
+        // juno_chain
+        //     .commit_any::<cosmrs::Any>(
+        //         vec![feeshare_msg(
+        //             juno_comp_prefs.address().unwrap().to_string(),
+        //             juno_chain.sender().to_string(),
+        //             juno_chain.sender().to_string(),
+        //         )],
+        //         None,
+        //     )
+        //     .unwrap();
     } else {
         juno_comp_prefs.migrate(
             &ymos_comp_prefs::msg::MigrateMsg {
@@ -505,16 +505,16 @@ pub fn main() -> anyhow::Result<()> {
 
         // setup the feeshare only on the first deploy
         // this seems to sometimes need an increased gas multiplier in the .env to work
-        juno_chain
-            .commit_any::<cosmrs::Any>(
-                vec![feeshare_msg(
-                    junostake.address().unwrap().to_string(),
-                    juno_chain.sender().to_string(),
-                    juno_chain.sender().to_string(),
-                )],
-                None,
-            )
-            .unwrap();
+        // juno_chain
+        //     .commit_any::<cosmrs::Any>(
+        //         vec![feeshare_msg(
+        //             junostake.address().unwrap().to_string(),
+        //             juno_chain.sender().to_string(),
+        //             juno_chain.sender().to_string(),
+        //         )],
+        //         None,
+        //     )
+        //     .unwrap();
     } else {
         junostake.migrate(
             &ymos_junostake_outpost::msg::MigrateMsg {
@@ -538,16 +538,16 @@ pub fn main() -> anyhow::Result<()> {
 
         // setup the feeshare only on the first deploy
         // this seems to sometimes need an increased gas multiplier in the .env to work
-        juno_chain
-            .commit_any::<cosmrs::Any>(
-                vec![feeshare_msg(
-                    junodca.address().unwrap().to_string(),
-                    juno_chain.sender().to_string(),
-                    juno_chain.sender().to_string(),
-                )],
-                None,
-            )
-            .unwrap();
+        // juno_chain
+        //     .commit_any::<cosmrs::Any>(
+        //         vec![feeshare_msg(
+        //             junodca.address().unwrap().to_string(),
+        //             juno_chain.sender().to_string(),
+        //             juno_chain.sender().to_string(),
+        //         )],
+        //         None,
+        //     )
+        //     .unwrap();
 
         // add yieldmos.juno as an authorized compounder
         junodca
@@ -582,16 +582,16 @@ pub fn main() -> anyhow::Result<()> {
 
         // setup the feeshare only on the first deploy
         // this seems to sometimes need an increased gas multiplier in the .env to work
-        juno_chain
-            .commit_any::<cosmrs::Any>(
-                vec![feeshare_msg(
-                    wyndstake.address().unwrap().to_string(),
-                    juno_chain.sender().to_string(),
-                    juno_chain.sender().to_string(),
-                )],
-                None,
-            )
-            .unwrap();
+        // juno_chain
+        //     .commit_any::<cosmrs::Any>(
+        //         vec![feeshare_msg(
+        //             wyndstake.address().unwrap().to_string(),
+        //             juno_chain.sender().to_string(),
+        //             juno_chain.sender().to_string(),
+        //         )],
+        //         None,
+        //     )
+        //     .unwrap();
     } else {
         wyndstake.migrate(
             &ymos_wyndstake_outpost::msg::MigrateMsg {
@@ -621,16 +621,16 @@ pub fn main() -> anyhow::Result<()> {
 
         // setup the feeshare only on the first deploy
         // this seems to sometimes need an increased gas multiplier in the .env to work
-        juno_chain
-            .commit_any::<cosmrs::Any>(
-                vec![feeshare_msg(
-                    junowwmarket.address().unwrap().to_string(),
-                    juno_chain.sender().to_string(),
-                    juno_chain.sender().to_string(),
-                )],
-                None,
-            )
-            .unwrap();
+        // juno_chain
+        //     .commit_any::<cosmrs::Any>(
+        //         vec![feeshare_msg(
+        //             junowwmarket.address().unwrap().to_string(),
+        //             juno_chain.sender().to_string(),
+        //             juno_chain.sender().to_string(),
+        //         )],
+        //         None,
+        //     )
+        //     .unwrap();
     } else {
         junowwmarket.migrate(
             &ymos_junowwmarket_outpost::msg::MigrateMsg {

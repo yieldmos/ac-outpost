@@ -1,55 +1,52 @@
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_grant_spec::grants::{
     AuthorizationType, GrantBase, GrantRequirement, StakeAuthorizationPolicy,
     StakeAuthorizationType, StakeAuthorizationValidators,
 };
 
-pub fn native_staking_grant(
-    GrantBase {
-        granter,
-        grantee,
-        expiration,
-    }: GrantBase,
-    max_tokens: Option<Coin>,
-    validators: Option<Vec<String>>,
+use crate::{comp_prefs::Denoms, mars_types::RedBankExecuteMsgs};
+
+pub fn membrane_deposit_grant(
+    base: GrantBase,
+    contract_addr: Addr,
+    position_id: Uint128,
+    asset: String,
+    mbrn_denom: &str,
 ) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::GrantSpec {
-        grant_type: AuthorizationType::StakeAuthorization {
-            max_tokens,
-            authorization_type: StakeAuthorizationType::Delegate,
-            validators: validators.map(|vs| {
-                StakeAuthorizationPolicy::AllowList(StakeAuthorizationValidators { address: vs })
-            }),
-        },
-        granter,
-        grantee,
-        expiration,
-    }]
-}
-
-pub fn balance_dao_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::default_contract_exec_auth(
+    vec![GrantRequirement::contract_exec_messages_auth(
         base,
         contract_addr,
-        vec!["swap"],
-        Some("ujuno"),
+        vec![&membrane::cdp::ExecuteMsg::Deposit {
+            position_id: Some(position_id),
+            position_owner: None,
+        }],
+        Some(mbrn_denom),
     )]
 }
 
-pub fn gelotto_lottery_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
+pub fn mint_milk_tia_grant(
+    base: GrantBase,
+    contract_addr: Addr,
+    tia_denom: &str,
+) -> Vec<GrantRequirement> {
     vec![GrantRequirement::default_contract_exec_auth(
         base,
         contract_addr,
-        vec!["sender_buy_seed"],
-        Some("ujuno"),
+        vec!["liquid_stake"],
+        Some(tia_denom),
     )]
 }
 
-pub fn wyndao_staking_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::default_contract_exec_auth(
+pub fn red_bank_repay_grant(
+    base: GrantBase,
+    contract_addr: Addr,
+    account_id: String,
+    repay_denom: &str,
+) -> Vec<GrantRequirement> {
+    vec![GrantRequirement::contract_exec_messages_auth(
         base,
         contract_addr,
-        vec!["delegate"],
-        None,
+        vec![&RedBankExecuteMsgs::RepayFromWallet { account_id }],
+        Some(repay_denom),
     )]
 }
