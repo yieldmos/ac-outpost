@@ -4,7 +4,7 @@ use cw_grant_spec::grants::{
     StakeAuthorizationType, StakeAuthorizationValidators,
 };
 
-use crate::{comp_prefs::Denoms, mars_types::RedBankExecuteMsgs};
+use crate::mars_types::RedBankExecuteMsgs;
 
 pub fn membrane_deposit_grant(
     base: GrantBase,

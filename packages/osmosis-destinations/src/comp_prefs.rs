@@ -1,9 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Decimal, Uint128};
 use outpost_utils::comp_prefs::CompoundPrefs;
-use struct_field_names_as_array::FieldNamesAsArray;
 
-use crate::errors::OsmosisDestinationError;
+use crate::{
+    errors::OsmosisDestinationError,
+    pools::{Denoms, OsmoPools, UsdcPools},
+};
 
 pub type OsmosisCompPrefs = CompoundPrefs<OsmosisDestinationProject>;
 
@@ -217,80 +219,7 @@ impl OsmosisProjectAddresses {
 #[derive(Default)]
 pub struct DestProjectSwapRoutes {
     pub osmo_pools: OsmoPools,
-    pub usdc_pools: UsdcPools, // pub osmo_tia_pool: u64,
-                               // pub osmo_ion_pool: u64,
-                               // pub osmo_mars_pool: u64,
-                               // pub osmo_usdc_pool: u64,
-                               // pub osmo_atom_pool: u64,
-                               // pub osmo_whale_pool: u64,
-}
-
-#[cw_serde]
-#[derive(Default, FieldNamesAsArray)]
-pub struct OsmoPools {
-    pub tia: u64,
-    pub ion: u64,
-    pub mars: u64,
-    pub usdc: u64,
-    pub atom: u64,
-    pub whale: u64,
-    pub mbrn: u64,
-    pub cdt: u64,
-}
-
-#[cw_serde]
-#[derive(Default, FieldNamesAsArray)]
-pub struct UsdcPools {
-    pub tia: u64,
-    pub atom: u64,
-    pub osmo: u64,
-    pub cdt: u64,
-    pub axlusdc: u64,
-}
-
-#[cw_serde]
-#[derive(Default, FieldNamesAsArray)]
-pub struct Denoms {
-    pub usdc: String,
-    pub axlusdc: String,
-    pub osmo: String,
-    pub ion: String,
-    pub tia: String,
-    pub atom: String,
-    pub amp_osmo: String,
-    pub mars: String,
-    pub whale: String,
-    pub amp_whale: String,
-    pub mbrn: String,
-    pub cdt: String,
-}
-
-pub trait QueryableByDenom {
-    fn get_pool_id(&self, denom: &str) -> Option<u64>;
-}
-
-impl QueryableByDenom for OsmoPools {
-    fn get_pool_id(&self, denom: &str) -> Option<u64> {
-        self::FIELD_NAMES_AS_ARRAY.iter().find()
-    }
-}
-
-impl QueryableByDenom for UsdcPools {
-    fn get_pool_id(&self, denom: &str) -> Option<u64> {
-        self::FIELD_NAMES_AS_ARRAY.iter().find()
-    }
-}
-
-impl Denoms {
-    pub fn is_known_denom(&self, denom: &str) -> bool {
-        self::FIELD_NAMES_AS_ARRAY.iter().any(|&denom_title| {
-            if let Some(val) = self.get(field) {
-                val == denom
-            } else {
-                false
-            }
-        })
-    }
+    pub usdc_pools: UsdcPools,
 }
 
 #[cw_serde]

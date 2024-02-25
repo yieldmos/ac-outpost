@@ -163,140 +163,144 @@ pub fn prefs_to_msgs(
                             amount: comp_token_amount,
                         },
                     )?),
-                    // OsmosisDestinationProject::TokenSwap { target_denom } => Ok(DestProjectMsgs {
-                    //     msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
+                    OsmosisDestinationProject::TokenSwap { target_asset } => {
+                        // Ok(DestProjectMsgs {
+                        //     msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
+                        //         user_addr,
+                        //         comp_token_amount,
+                        //         AssetInfo::Native(dca_denom.clone()),
+                        //         target_denom,
+                        //         project_addrs.destination_projects.wynd.multihop.to_string(),
+                        //     )
+                        //     .map_err(ContractError::Std)?,
+                        //     sub_msgs: vec![],
+                        //     events: vec![],
+                        // })
+                        unimplemented!()
+                    }
+                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
+                        user_addr,
+                        compounding_asset,
+                        &project_addrs.destination_projects.projects.eris_amposmo_bonding,
+                    )?),
+
+                    // OsmosisDestinationProject::MintLsd {
+                    //     lsd: OsmosisLsd::MilkyWay,
+                    // } => {
+                    //     // swap OSMO to TIA
+                    //     let (swap_to_tia_msgs, est_tia) = pool_swap_with_sim(
+                    //         &deps.querier,
                     //         user_addr,
-                    //         comp_token_amount,
-                    //         AssetInfo::Native(dca_denom.clone()),
-                    //         target_denom,
-                    //         project_addrs.destination_projects.wynd.multihop.to_string(),
-                    //     )
-                    //     .map_err(ContractError::Std)?,
-                    //     sub_msgs: vec![],
-                    //     events: vec![],
-                    // }),
-                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
-                        user_addr,
-                        compounding_asset,
-                        &project_addrs.destination_projects.projects.eris_amposmo_bonding,
-                    )?),
+                    //         &project_addrs.destination_projects.swap_routes.osmo_pools.tia,
+                    //         coin(comp_token_amount.u128(), dca_denom.clone()),
+                    //         &project_addrs.destination_projects.denoms.tia,
+                    //     )?;
 
-                    OsmosisDestinationProject::MintLsd {
-                        lsd: OsmosisLsd::MilkyWay,
-                    } => {
-                        // swap OSMO to TIA
-                        let (swap_to_tia_msgs, est_tia) = pool_swap_with_sim(
-                            &deps.querier,
-                            user_addr,
-                            &project_addrs.destination_projects.swap_routes.osmo_pools.tia,
-                            coin(comp_token_amount.u128(), dca_denom.clone()),
-                            &project_addrs.destination_projects.denoms.tia,
-                        )?;
+                    //     // Mint milkTIA
+                    //     let mut mint_milk_tia = mint_milk_tia_msgs(
+                    //         user_addr,
+                    //         &project_addrs.destination_projects.projects.milky_way_bonding,
+                    //         coin(est_tia.u128(), project_addrs.destination_projects.denoms.tia.clone()),
+                    //     )?;
 
-                        // Mint milkTIA
-                        let mut mint_milk_tia = mint_milk_tia_msgs(
-                            user_addr,
-                            &project_addrs.destination_projects.projects.milky_way_bonding,
-                            coin(est_tia.u128(), project_addrs.destination_projects.denoms.tia.clone()),
-                        )?;
+                    //     mint_milk_tia.append_msgs(swap_to_tia_msgs);
 
-                        mint_milk_tia.append_msgs(swap_to_tia_msgs);
+                    //     Ok(mint_milk_tia)
+                    // }
 
-                        Ok(mint_milk_tia)
-                    }
+                    // OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
+                    //     user_addr,
+                    //     compounding_asset,
+                    //     &project_addrs.destination_projects.projects.eris_amposmo_bonding,
+                    // )?),
 
-                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
-                        user_addr,
-                        compounding_asset,
-                        &project_addrs.destination_projects.projects.eris_amposmo_bonding,
-                    )?),
+                    // OsmosisDestinationProject::SendTokens {
+                    //     address: to_address,
+                    //     target_asset,
+                    // } => {
+                    //     // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
+                    //     //     &deps.querier,
+                    //     //     user_addr,
+                    //     //     comp_token_amount,
+                    //     //     AssetInfo::Native(dca_denom.clone()),
+                    //     //     target_asset.clone(),
+                    //     //     project_addrs.destination_projects.wynd.multihop.to_string(),
+                    //     //     None,
+                    //     // )
+                    //     // .map_err(ContractError::Std)?;
+                    //     let sim = 0u128.into();
 
-                    OsmosisDestinationProject::SendTokens {
-                        address: to_address,
-                        target_asset,
-                    } => {
-                        // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
-                        //     &deps.querier,
-                        //     user_addr,
-                        //     comp_token_amount,
-                        //     AssetInfo::Native(dca_denom.clone()),
-                        //     target_asset.clone(),
-                        //     project_addrs.destination_projects.wynd.multihop.to_string(),
-                        //     None,
-                        // )
-                        // .map_err(ContractError::Std)?;
-                        let sim = 0u128.into();
+                    //     // after the swap we can send the estimated funds to the target address
+                    //     let mut send_msgs = send_tokens_msgs(
+                    //         user_addr,
+                    //         &deps.api.addr_validate(&to_address)?,
+                    //         Asset {
+                    //             info: AssetInfo::NativeToken { denom: target_asset },
+                    //             amount: sim,
+                    //         },
+                    //     )?;
 
-                        // after the swap we can send the estimated funds to the target address
-                        let mut send_msgs = send_tokens_msgs(
-                            user_addr,
-                            &deps.api.addr_validate(&to_address)?,
-                            Asset {
-                                info: AssetInfo::NativeToken { denom: target_asset },
-                                amount: sim,
-                            },
-                        )?;
+                    //     // send_msgs.append_msgs(swap_msgs);
 
-                        // send_msgs.append_msgs(swap_msgs);
+                    //     Ok(send_msgs)
+                    // }
+                    // OsmosisDestinationProject::IonStaking {} => {
+                    //     let (swap_msgs, ion_amount) = pool_swap_with_sim(
+                    //         &deps.querier,
+                    //         user_addr,
+                    //         &project_addrs.destination_projects.swap_routes.osmo_pools.ion,
+                    //         coin(comp_token_amount.u128(), dca_denom.clone()),
+                    //         &project_addrs.destination_projects.denoms.ion,
+                    //     )?;
 
-                        Ok(send_msgs)
-                    }
-                    OsmosisDestinationProject::IonStaking {} => {
-                        let (swap_msgs, ion_amount) = pool_swap_with_sim(
-                            &deps.querier,
-                            user_addr,
-                            &project_addrs.destination_projects.swap_routes.osmo_pools.ion,
-                            coin(comp_token_amount.u128(), dca_denom.clone()),
-                            &project_addrs.destination_projects.denoms.ion,
-                        )?;
+                    //     let mut staking_msg =
+                    //         stake_ion_msgs(user_addr, &project_addrs.destination_projects.projects.ion_dao, ion_amount)?;
 
-                        let mut staking_msg =
-                            stake_ion_msgs(user_addr, &project_addrs.destination_projects.projects.ion_dao, ion_amount)?;
+                    //     staking_msg.prepend_msgs(swap_msgs);
 
-                        staking_msg.prepend_msgs(swap_msgs);
+                    //     Ok(staking_msg)
+                    // }
+                    // OsmosisDestinationProject::OsmosisLiquidityPool { pool_id, pool_settings } => {
+                    //     match pool_settings {
+                    //         OsmosisPoolSettings::Standard { bond_tokens } => {}
+                    //         OsmosisPoolSettings::ConcentratedLiquidity {
+                    //             lower_tick,
+                    //             upper_tick,
+                    //             token_min_amount_0,
+                    //             token_min_amount_1,
+                    //         } => {
+                    //             unimplemented!()
+                    //         }
+                    //     }
+                    //     Ok(DestProjectMsgs::default())
+                    // }
 
-                        Ok(staking_msg)
-                    }
-                    OsmosisDestinationProject::OsmosisLiquidityPool { pool_id, pool_settings } => {
-                        match pool_settings {
-                            OsmosisPoolSettings::Standard { bond_tokens } => {}
-                            OsmosisPoolSettings::ConcentratedLiquidity {
-                                lower_tick,
-                                upper_tick,
-                                token_min_amount_0,
-                                token_min_amount_1,
-                            } => {
-                                unimplemented!()
-                            }
-                        }
-                        Ok(DestProjectMsgs::default())
-                    }
+                    // OsmosisDestinationProject::RedBankLendAsset {
+                    //     target_asset,
+                    //     account_id,
+                    // } => Ok(DestProjectMsgs::default()),
+                    // OsmosisDestinationProject::WhiteWhaleSatellite { asset } => Ok(white_whale_satellite_msgs(
+                    //     user_addr,
+                    //     &project_addrs.destination_projects.projects.white_whale_satellite,
+                    //     comp_token_amount,
+                    // )?),
+                    // OsmosisDestinationProject::MembraneStake {} => Ok(DestProjectMsgs::default()),
+                    // OsmosisDestinationProject::MembraneRepay {
+                    //     asset,
+                    //     ltv_ratio_threshold,
+                    // } => Ok(DestProjectMsgs::default()),
+                    // OsmosisDestinationProject::MarginedRepay {
+                    //     asset,
+                    //     ltv_ratio_threshold,
+                    // } => Ok(DestProjectMsgs::default()),
+                    // OsmosisDestinationProject::MembraneDeposit { position_id, asset } => Ok(DestProjectMsgs::default()),
 
-                    OsmosisDestinationProject::RedBankLendAsset {
-                        target_asset,
-                        account_id,
-                    } => Ok(DestProjectMsgs::default()),
-                    OsmosisDestinationProject::WhiteWhaleSatellite { asset } => Ok(white_whale_satellite_msgs(
-                        user_addr,
-                        &project_addrs.destination_projects.projects.white_whale_satellite,
-                        comp_token_amount,
-                    )?),
-                    OsmosisDestinationProject::MembraneStake {} => Ok(DestProjectMsgs::default()),
-                    OsmosisDestinationProject::MembraneRepay {
-                        asset,
-                        ltv_ratio_threshold,
-                    } => Ok(DestProjectMsgs::default()),
-                    OsmosisDestinationProject::MarginedRepay {
-                        asset,
-                        ltv_ratio_threshold,
-                    } => Ok(DestProjectMsgs::default()),
-                    OsmosisDestinationProject::MembraneDeposit { position_id, asset } => Ok(DestProjectMsgs::default()),
+                    // OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
 
-                    OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
-
-                    OsmosisDestinationProject::TokenSwap { target_asset } => unimplemented!("TokenSwap not implemented"),
-
+                    // OsmosisDestinationProject::TokenSwap { target_asset } => unimplemented!("TokenSwap not implemented"),
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
+
+                    _ => unimplemented!("Destination project not implemented"),
                 }
             },
         )

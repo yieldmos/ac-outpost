@@ -52,7 +52,7 @@ osmosis-helpers = { path = "./packages/osmosis-helpers" }
 # mars-types = { git = "https://github.com/mars-protocol/contracts.git", version = "2.0.0" }
 
 white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", tag = "v1.4.0-juno-1-token_factory-hotfix" }
-cw-grant-spec = { git = "https://github.com/kakucodes/authzpp", version = "0.3.1" }
+cw-grant-spec = { git = "https://github.com/kakucodes/authzpp", version = "0.3.2" }
 withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", version = "0.3.0", features = [
     "library",
 ] }
@@ -78,7 +78,7 @@ migaloo-destinations = { path = "./packages/migaloo-destinations" }
 sail-destinations = { path = "./packages/sail-destinations" }
 osmosis-destinations = { path = "./packages/osmosis-destinations" }
 membrane = { git = "https://github.com/MembraneFinance/membrane-core.git", version = "0.1.0" }
-struct-field-names-as-array = "0.3.0"
+struct_iterable = "0.1.1"
 
 
 [profile.release]

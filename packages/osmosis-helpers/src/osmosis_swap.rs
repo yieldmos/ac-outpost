@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Storage, Uint128};
 
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin,
@@ -12,6 +12,10 @@ use osmosis_std::types::{
     },
 };
 
+use osmosis_destinations::{
+    comp_prefs::{DestProjectSwapRoutes, KnownPairedPoolAsset, TargetAsset},
+    pools::{Denoms, MultipleStoredPools, StoredDenoms},
+};
 use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
 use outpost_utils::{helpers::DestProjectMsgs, msg_gen::CosmosProtoMsg};
 
@@ -28,6 +32,15 @@ pub struct GetRouteResponse {
 pub struct GetRoute {
     input_denom: String,
     output_denom: String,
+}
+
+/// Denotes the found known pools pertaining to a swap.
+/// Since only osmo and usdc pools are premeditated those are the only pools to pass here
+pub struct KnownRoutePools {
+    pub from_token_osmo_pool: Option<u64>,
+    pub to_token_osmo_pool: Option<u64>,
+    pub from_token_usdc_pool: Option<u64>,
+    pub to_token_usdc_pool: Option<u64>,
 }
 
 // /// Queries the swaprouter's state to get a valid route from `from_denom` to `to_denom`
@@ -134,7 +147,6 @@ pub fn generate_exact_out_swap_msg_from_sim(
 
     let swap_msg = CosmosProtoMsg::OsmosisSwapExactAmountOut(MsgSwapExactAmountOut {
         token_out: Some(to_token),
-
         sender: delegator_address.to_string(),
         routes,
         token_in_max_amount: sim.clone().token_in_amount,
@@ -143,54 +155,64 @@ pub fn generate_exact_out_swap_msg_from_sim(
     Ok(vec![swap_msg])
 }
 
+/// The base data needed to be able to construct routes
+pub struct OsmosisRoutePools<'a> {
+    stored_denoms: StoredDenoms<'a>,
+    stored_pools: MultipleStoredPools<'a>,
+    pools: DestProjectSwapRoutes,
+    denoms: Denoms,
+}
+
 /// Generated a route for a swap the resolves to a `TargetAsset` which
 /// has a given pool id and paired pool asset. for example (ION -> DYDX (pool#1246, paired with USDC))
 pub fn generate_known_to_unknown_route(
-    denoms: Denoms,
-    pools: DestProjectMsgs,
-    from_denom: String,
+    store: &dyn Storage,
+    route_pools: OsmosisRoutePools,
+    from_denom: &str,
     TargetAsset {
         denom: to_denom,
         exit_pool_id,
         paired_asset,
     }: TargetAsset,
-) -> StdResult<Vec<SwapAmountInRoute>> {
+) -> Result<Vec<SwapAmountInRoute>, OsmosisHelperError> {
     // nothing to swap if from and to are the same denom
     if from_denom.eq(&to_denom) {
-        Ok(vec![])
+        return Ok(vec![]);
     }
 
+    let denoms = route_pools.denoms.clone();
+
     // if the from isn't a known denom this isn't the right place to get a route
-    if !denoms.is_known_denom(from_denom) {
-        Err(InvalidRouteDenom {
-            denom: to_denom.as_str(),
-            label: "known to unknown from denom",
-        })
+    if !route_pools.stored_denoms.has(store, from_denom) {
+        return Err(OsmosisHelperError::InvalidRouteDenom {
+            denom: to_denom.to_string(),
+            label: "known to unknown from denom".to_string(),
+        });
     }
 
     match paired_asset {
         // if the target asset is paired with osmo and our from denom is osmo we have our route
-        OSMO if from_denom.eq(&denoms.osmo) => Ok(vec![SwapAmountInRoute {
+        KnownPairedPoolAsset::OSMO if from_denom.eq(&denoms.osmo) => Ok(vec![SwapAmountInRoute {
             pool_id: exit_pool_id,
             token_out_denom: to_denom,
         }]),
         // if the target asset is paired with usdc and our from denom is usdc we have our route
-        USDC if from_denom.eq(&denoms.usdc) => Ok(vec![SwapAmountInRoute {
+        KnownPairedPoolAsset::USDC if from_denom.eq(&denoms.usdc) => Ok(vec![SwapAmountInRoute {
             pool_id: exit_pool_id,
             token_out_denom: to_denom,
         }]),
-        OSMO => {
+        KnownPairedPoolAsset::OSMO => {
             let mut to_osmo_route =
-                generate_known_to_known_route(denoms, pools, from_denom, denoms.osmo)?;
+                generate_known_to_known_route(store, route_pools, from_denom, &denoms.osmo)?;
             to_osmo_route.push(SwapAmountInRoute {
                 pool_id: exit_pool_id,
                 token_out_denom: to_denom,
             });
             Ok(to_osmo_route)
         }
-        USDC => {
+        KnownPairedPoolAsset::USDC => {
             let mut to_usdc_route =
-                generate_known_to_known_route(denoms, pools, from_denom, denoms.usdc)?;
+                generate_known_to_known_route(store, route_pools, from_denom, &denoms.usdc)?;
             to_usdc_route.push(SwapAmountInRoute {
                 pool_id: exit_pool_id,
                 token_out_denom: to_denom,
@@ -200,114 +222,162 @@ pub fn generate_known_to_unknown_route(
     }
 }
 
-/// Generates a route for a swap from a known denom to another known denom.
-/// Known denoms denote anything in the `OsmoPools` or `UsdcPools` structs
 pub fn generate_known_to_known_route(
-    denoms: Denoms,
-    pools: DestProjectSwapRoutes,
-    from_denom: String,
-    to_denom: String,
-) -> StdResult<Vec<SwapAmountInRoute>> {
+    store: &dyn Storage,
+    OsmosisRoutePools {
+        stored_denoms,
+        stored_pools,
+        pools,
+        denoms,
+    }: OsmosisRoutePools,
+    from_denom: &str,
+    to_denom: &str,
+) -> Result<Vec<SwapAmountInRoute>, OsmosisHelperError> {
     // nothing to swap if from and to are the same denom
-    if from_denom.eq(&to_denom) {
-        Ok(vec![])
+    if from_denom.eq(to_denom) {
+        return Ok(vec![]);
     }
 
     // validate that from and to are both known denoms
-    if !denoms.is_known_denom(from_denom) {
-        Err(InvalidRouteDenom {
-            denom: from_denom.as_str(),
-            label: "known to known from denom",
-        })
+    if !stored_denoms.has(store, &from_denom) {
+        return Err(OsmosisHelperError::InvalidRouteDenom {
+            denom: from_denom.to_string(),
+            label: "known to known from denom".to_string(),
+        });
     }
-    if !denoms.is_known_denom(to_denom) {
-        Err(InvalidRouteDenom {
-            denom: to_denom.as_str(),
-            label: "known to known to denom",
-        })
+    if !stored_denoms.has(store, &to_denom) {
+        return Err(OsmosisHelperError::InvalidRouteDenom {
+            denom: to_denom.to_string(),
+            label: "known to known to denom".to_string(),
+        });
     }
 
-    match (
-        pools.osmo.get_pool_id(from_denom),
-        pools.osmo.get_pool_id(to_denom),
-        pools.usdc.get_pool_id(from_denom),
-        pools.usdc.get_pool_id(to_denom),
-    ) {
-        // special case where we're going to or from osmo and there's an osmo pooll
-        (Some(pool_id), _, _, _) | (_, Some(pool_id), _, _)
-            if to_denom.eq(&denoms.osmo) || from_denom.eq(&denoms.osmo) =>
-        {
+    unsafe_generate_known_to_known_route(
+        &pools,
+        &denoms,
+        from_denom,
+        to_denom,
+        KnownRoutePools {
+            from_token_osmo_pool: stored_pools.osmo.may_load(store, &from_denom)?,
+            to_token_osmo_pool: stored_pools.osmo.may_load(store, &to_denom)?,
+            from_token_usdc_pool: stored_pools.usdc.may_load(store, &from_denom)?,
+            to_token_usdc_pool: stored_pools.usdc.may_load(store, &to_denom)?,
+        },
+    )
+}
+
+/// Generates a route for a swap from a known denom to another known denom
+/// given a set of related pool routes that were presumably pulled from contract state.
+/// OUTPOST CODE SHOULD NOT CALL THIS FUNCTION. USE `generate_known_to_known_route` INSTEAD.
+pub fn unsafe_generate_known_to_known_route(
+    pools: &DestProjectSwapRoutes,
+    denoms: &Denoms,
+    from_denom: &str,
+    to_denom: &str,
+    related_pools: KnownRoutePools,
+) -> Result<Vec<SwapAmountInRoute>, OsmosisHelperError> {
+    match related_pools {
+        // special case where we're going to or from osmo and there's an osmo pool
+        KnownRoutePools {
+            from_token_osmo_pool: Some(pool_id),
+            ..
+        }
+        | KnownRoutePools {
+            to_token_osmo_pool: Some(pool_id),
+            ..
+        } if to_denom.eq(&denoms.osmo) || from_denom.eq(&denoms.osmo) => {
             Ok(vec![SwapAmountInRoute {
                 pool_id,
-                token_out_denom: to_denom,
+                token_out_denom: to_denom.to_string(),
             }])
         }
         // special case where we're going to usdc and there's a usdc pool
-        (_, _, Some(pool_id), _) | (_, _, _, Some(pool_id))
-            if to_denom.eq(&denoms.usdc) || from_denom.eq(&denoms.usdc) =>
-        {
+        KnownRoutePools {
+            from_token_usdc_pool: Some(pool_id),
+            ..
+        }
+        | KnownRoutePools {
+            to_token_usdc_pool: Some(pool_id),
+            ..
+        } if to_denom.eq(&denoms.usdc) || from_denom.eq(&denoms.usdc) => {
             Ok(vec![SwapAmountInRoute {
                 pool_id,
-                token_out_denom: to_denom,
+                token_out_denom: to_denom.to_string(),
             }])
         }
         // can swap via osmo (for example MBRN -> OSMO -> WHALE)
-        (Some(in_pool_id), Some(out_pool_id), _, _) => Ok(vec![
+        KnownRoutePools {
+            from_token_osmo_pool: Some(in_pool_id),
+            to_token_osmo_pool: Some(out_pool_id),
+            ..
+        } => Ok(vec![
             SwapAmountInRoute {
                 pool_id: in_pool_id,
-                token_out_denom: denoms.osmo,
+                token_out_denom: denoms.osmo.clone(),
             },
             SwapAmountInRoute {
                 pool_id: out_pool_id,
-                token_out_denom: to_denom,
+                token_out_denom: to_denom.to_string(),
             },
         ]),
-        // can swap via usdc (for example TIA -> USDC -> CDT)
-        (_, _, Some(in_pool_id), Some(out_pool_id)) => Ok(vec![
+        // can swap via usdc (for example CDT -> USDC -> axlUSDC)
+        KnownRoutePools {
+            from_token_usdc_pool: Some(in_pool_id),
+            to_token_usdc_pool: Some(out_pool_id),
+            ..
+        } => Ok(vec![
             SwapAmountInRoute {
                 pool_id: in_pool_id,
-                token_out_denom: denoms.usdc,
+                token_out_denom: denoms.usdc.clone(),
             },
             SwapAmountInRoute {
                 pool_id: out_pool_id,
-                token_out_denom: to_denom,
+                token_out_denom: to_denom.to_string(),
             },
         ]),
 
         // can swap to osmo and then to usdc and then out (for example MARS -> OSMO -> USDC -> axlUSDC)
-        (Some(in_pool_id), _, _, Some(out_pool_id)) => Ok(vec![
+        KnownRoutePools {
+            from_token_osmo_pool: Some(in_pool_id),
+            to_token_usdc_pool: Some(out_pool_id),
+            ..
+        } => Ok(vec![
             SwapAmountInRoute {
                 pool_id: in_pool_id,
-                token_out_denom: denoms.osmo,
+                token_out_denom: denoms.osmo.clone(),
             },
             SwapAmountInRoute {
-                pool_id: pools.osmo.usdc,
-                token_out_denom: denoms.usdc,
+                pool_id: pools.osmo_pools.usdc.pool_id,
+                token_out_denom: denoms.usdc.clone(),
             },
             SwapAmountInRoute {
                 pool_id: out_pool_id,
-                token_out_denom: to_denom,
+                token_out_denom: to_denom.to_string(),
             },
         ]),
 
         // can swap to usdc and then to osmo and then out (for example axlUSDC -> USDC -> OSMO -> ION)
-        (_, Some(out_pool_id), Some(in_pool_id), _) => Ok(vec![
+        KnownRoutePools {
+            from_token_usdc_pool: Some(in_pool_id),
+            to_token_osmo_pool: Some(out_pool_id),
+            ..
+        } => Ok(vec![
             SwapAmountInRoute {
                 pool_id: in_pool_id,
-                token_out_denom: denoms.usdc,
+                token_out_denom: denoms.usdc.clone(),
             },
             SwapAmountInRoute {
-                pool_id: pools.usdc.osmo,
-                token_out_denom: denoms.osmo,
+                pool_id: pools.usdc_pools.osmo.pool_id,
+                token_out_denom: denoms.osmo.clone(),
             },
             SwapAmountInRoute {
                 pool_id: out_pool_id,
-                token_out_denom: to_denom,
+                token_out_denom: to_denom.to_string(),
             },
         ]),
-        _ => Err(NoKnownToKnownRoute {
-            from_denom,
-            to_denom,
+        _ => Err(OsmosisHelperError::NoKnownToKnownRoute {
+            from_denom: from_denom.to_string(),
+            to_denom: to_denom.to_string(),
         }),
     }
 }
@@ -320,27 +390,48 @@ pub fn simulate_swap(
     from_token: Coin,
     // just for error reporting purposes
     to_denom: String,
-    swap_router_address: String,
-    route: Vec<SwapAmountOutRoute>,
+    route: Vec<SwapAmountInRoute>,
 ) -> StdResult<(EstimateSwapExactAmountInResponse, Vec<SwapAmountInRoute>)> {
     let estimate = EstimateSwapExactAmountInRequest {
         // sender: delegator_address.to_string(),
-        pool_id: swap_route.clone().first().unwrap().pool_id,
+        pool_id: route.clone().first().unwrap().pool_id,
         token_in: from_token.denom,
         routes: route.clone(),
     }
     .query(querier)?;
 
-    Ok((estimate, swap_route))
+    Ok((estimate, route))
 }
 
-pub fn generate_swap_msg(
+pub fn generate_known_to_known_swap_and_sim_msg(
     querier: &QuerierWrapper,
-    delegator_address: &Addr,
+    store: &dyn Storage,
+    pool_routes: OsmosisRoutePools,
+    user_addr: &Addr,
+    from_denom: &str,
+    to_denom: &str,
+    from_token_amount: &Uint128,
+) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
+    generate_swap_and_sim_msg(
+        querier,
+        user_addr,
+        Coin {
+            denom: from_denom.to_string(),
+            amount: from_token_amount.to_string(),
+        },
+        to_denom.to_string(),
+        generate_known_to_known_route(store, pool_routes, from_denom, to_denom)?,
+    )
+}
+
+/// Generates the swap message and the simulated response given a route
+pub fn generate_swap_and_sim_msg(
+    querier: &QuerierWrapper,
+    user_address: &Addr,
     from_token: Coin,
     to_denom: String,
-    swap_router_address: String,
-) -> StdResult<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>)> {
+    route: Vec<SwapAmountInRoute>,
+) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     if from_token.denom == to_denom {
         return Ok((
             EstimateSwapExactAmountInResponse {
@@ -350,22 +441,17 @@ pub fn generate_swap_msg(
         ));
     }
 
-    // TODO: set route here
-    let route = vec![];
-
     let (simulation, routes) = simulate_swap(
         querier,
-        delegator_address,
+        user_address,
         from_token.clone(),
         to_denom.clone(),
-        swap_router_address,
         route,
     )?;
 
     let swap_msg = CosmosProtoMsg::OsmosisSwapExactAmountIn(MsgSwapExactAmountIn {
         token_in: Some(from_token),
-
-        sender: delegator_address.to_string(),
+        sender: user_address.to_string(),
         routes,
         token_out_min_amount: simulation.clone().token_out_amount,
     });

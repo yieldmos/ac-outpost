@@ -191,8 +191,8 @@ dependencies = [
 
 [[package]]
 name = "authzpp-utils"
-version = "0.3.1"
-source = "git+https://github.com/kakucodes/authzpp#b7914ee2d13a1a68eda7e5ba81a2f6b4af01be15"
+version = "0.3.2"
+source = "git+https://github.com/kakucodes/authzpp#05805a0d4631110dc9d491cf93c7247e9f20f28f"
 dependencies = [
  "cosmos-sdk-proto 0.20.0",
  "cosmwasm-schema",
@@ -928,8 +928,8 @@ dependencies = [
 
 [[package]]
 name = "cw-grant-spec"
-version = "0.3.1"
-source = "git+https://github.com/kakucodes/authzpp#b7914ee2d13a1a68eda7e5ba81a2f6b4af01be15"
+version = "0.3.2"
+source = "git+https://github.com/kakucodes/authzpp#05805a0d4631110dc9d491cf93c7247e9f20f28f"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2848,6 +2848,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-grant-spec",
+ "cw-storage-plus 1.2.0",
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
@@ -2857,7 +2858,7 @@ dependencies = [
  "sail-destinations",
  "schemars",
  "serde",
- "struct-field-names-as-array",
+ "struct_iterable",
  "thiserror",
 ]
 
@@ -2869,6 +2870,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw20 1.1.2",
+ "osmosis-destinations",
  "osmosis-std 0.21.0",
  "outpost-utils",
  "schemars",
@@ -3985,24 +3987,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "struct-field-names-as-array"
-version = "0.3.0"
+name = "struct_iterable"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22ba4bae771f9cc992c4f403636c54d2ef13acde6367583e99d06bb336674dd9"
+checksum = "849a064c6470a650b72e41fa6c057879b68f804d113af92900f27574828e7712"
 dependencies = [
- "struct-field-names-as-array-derive",
+ "struct_iterable_derive",
+ "struct_iterable_internal",
 ]
 
 [[package]]
-name = "struct-field-names-as-array-derive"
-version = "0.3.0"
+name = "struct_iterable_derive"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2dbf8b57f3ce20e4bb171a11822b283bdfab6c4bb0fe64fa729f045f23a0938"
+checksum = "8bb939ce88a43ea4e9d012f2f6b4cc789deb2db9d47bad697952a85d6978662c"
 dependencies = [
+ "erased-serde",
  "proc-macro2",
  "quote",
+ "struct_iterable_internal",
  "syn 2.0.48",
 ]
+
+[[package]]
+name = "struct_iterable_internal"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9426b2a0c03e6cc2ea8dbc0168dbbf943f88755e409fb91bcb8f6a268305f4a"
 
 [[package]]
 name = "subtle"
@@ -5119,8 +5130,8 @@ dependencies = [
 
 [[package]]
 name = "withdraw-rewards-tax-grant"
-version = "0.3.1"
-source = "git+https://github.com/kakucodes/authzpp#b7914ee2d13a1a68eda7e5ba81a2f6b4af01be15"
+version = "0.3.2"
+source = "git+https://github.com/kakucodes/authzpp#05805a0d4631110dc9d491cf93c7247e9f20f28f"
 dependencies = [
  "authzpp-utils",
  "cosmos-sdk-proto 0.20.0",

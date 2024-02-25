@@ -15,4 +15,5 @@ cosmos-sdk-proto = { workspace = true }
 cw20 = { workspace = true }
 outpost-utils = { workspace = true }
 osmosis-std = { workspace = true }
+osmosis-destinations = { workspace = true }
 # swaprouter = { workspace = true }
