@@ -3,7 +3,7 @@ name = "juno-destinations"
 version = { workspace = true }
 authors = ["Marc <marc@yieldmos.com>"]
 description = "Message generators for the Juno blockchain for use by Yieldmos outpost contracts"
-edition = { workspace = true }
+edition = "2021"
 
 
 [dependencies]

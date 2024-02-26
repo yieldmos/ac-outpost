@@ -3,7 +3,7 @@ name = "terraswap-helpers"
 version = { workspace = true }
 authors = ["Marc <marc@yieldmos.com>"]
 description = "Utility functions for Terraswap interaction used by Yieldmos outpost contracts"
-edition = { workspace = true }
+edition = "2021"
 
 [dependencies]
 cosmwasm-std = { workspace = true }

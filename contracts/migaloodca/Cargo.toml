@@ -2,7 +2,7 @@
 name = "ymos-migaloodca-outpost"
 authors = ["Marc <marc@yieldmos.com>"]
 version = "0.1.0"
-edition = { workspace = true }
+edition = "2021"
 description = "Yieldmos Migaloo DCAing Outpost"
 
 exclude = [

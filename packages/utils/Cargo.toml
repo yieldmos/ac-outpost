@@ -3,7 +3,7 @@ name = "outpost-utils"
 version = { workspace = true }
 authors = ["Marc <marc@yieldmos.com>"]
 description = "Utility functions used by Yieldmos outpost contracts"
-edition = { workspace = true }
+edition = "2021"
 
 [features]
 # osmosis = []

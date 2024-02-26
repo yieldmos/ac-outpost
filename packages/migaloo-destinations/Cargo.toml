@@ -3,7 +3,7 @@ name = "migaloo-destinations"
 version = { workspace = true }
 authors = ["Marc <marc@yieldmos.com>"]
 description = "Generalized message generators and compounding preferences used by Yieldmos outpost contracts"
-edition = { workspace = true }
+edition = "2021"
 
 
 [dependencies]
