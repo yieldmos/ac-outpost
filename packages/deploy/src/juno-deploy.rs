@@ -135,16 +135,13 @@ pub fn main() -> anyhow::Result<()> {
             white_whale: juno_destinations::comp_prefs::WhiteWhaleSatelliteAddresses {
                 amp_whale: "ibc/2F7C2A3D5D42553ED46F57D8B0DE3733B1B5FF571E2C6A051D34525904B4C0AF"
                         .to_string(),
-               
-                bone_whale: 
+                bone_whale:
                     "ibc/01BAE2E69D02670B22758FBA74E4114B6E88FC1878936C919DA345E6C6C92ABF"
                         .to_string(),
-               
                 market: "juno1n8slcc79dmwuzdxhsesvhcncaqfg9h4czdm5t5ey8x25ajmn3xzqyde4wv"
                     .to_string(),
                 rewards: "juno184ghwgprva7dlr2hwhzgvt6mem6zx78fygk0cpw7klssmzyf67tqdtwt3h"
                     .to_string(),
-                    
                     juno_amp_whale_path:  vec![
                         // swap juno for usdc
                         SwapOperation::TerraSwap {
@@ -178,14 +175,11 @@ pub fn main() -> anyhow::Result<()> {
                             }
                         },
                     ],
-                    
-    
-                    juno_bone_whale_path: 
+                    juno_bone_whale_path:
                         vec![
                             // swap juno for usdc
                             SwapOperation::TerraSwap {
                                 offer_asset_info: WWAssetInfo::NativeToken { denom: "ujuno".to_string() },
-    
                                 ask_asset_info: WWAssetInfo::NativeToken {
                                     denom:
                                     "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string()
@@ -215,8 +209,6 @@ pub fn main() -> anyhow::Result<()> {
                             },
                         ],
                         usdc_amp_whale_path:  vec![
-                    
-                    
                     // usdc to whale
                     SwapOperation::TerraSwap {
                         offer_asset_info:  WWAssetInfo::NativeToken {
@@ -240,11 +232,8 @@ pub fn main() -> anyhow::Result<()> {
                         }
                     },
                 ],
-                
-
-                usdc_bone_whale_path: 
+                usdc_bone_whale_path:
                     vec![
-                       
                         // usdc to whale
                         SwapOperation::TerraSwap {
                             offer_asset_info:  WWAssetInfo::NativeToken {

@@ -147,13 +147,13 @@ pub fn prefs_to_msgs(
                 };
 
                 match destination {
-                    JunoDestinationProject::JunoStaking { validator_address } =>{
+                    JunoDestinationProject::JunoStaking { validator_address } => {
 
                         let (swap_msg, wyndex::pair::SimulationResponse {
-                            return_amount: expected_juno, ..}) = 
+                            return_amount: expected_juno, ..}) =
                             simulate_and_swap_wynd_pair(&deps.querier,
-                        user_addr, 
-                        project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(), 
+                        user_addr,
+                        project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(),
                         compounding_asset, juno_asset_info.clone())?;
 
                       let mut staking_msgs =  native_staking_msg(
@@ -166,7 +166,7 @@ pub fn prefs_to_msgs(
                     )?;
                     staking_msgs.append_msgs(vec![swap_msg]);
 
-                    Ok(staking_msgs)   
+                    Ok(staking_msgs)
                 },
 
                     JunoDestinationProject::DaoStaking(dao) => {
@@ -179,7 +179,7 @@ pub fn prefs_to_msgs(
 
                             return Ok(noop_resp);
                         }
-                        
+
                         let dao_addresses = dao.get_daos_addresses(&project_addrs.destination_projects.daos);
 
                         let (swap_msgs, expected_dao_token_amount) =
@@ -191,8 +191,6 @@ pub fn prefs_to_msgs(
                                 wynd_asset_info.clone(),
                                 AssetInfo::Token(dao_addresses.cw20.to_string()),
                                 project_addrs.destination_projects.wynd.multihop.to_string(),)?;
-                            
-                        
 
                         let mut stake_msgs = daodao_cw20_staking_msg(
                             dao.to_string(),
@@ -206,50 +204,56 @@ pub fn prefs_to_msgs(
 
                         Ok(stake_msgs)
                     }
-
-                    JunoDestinationProject::WyndStaking { bonding_period } => {                        
+                    JunoDestinationProject::WyndStaking { bonding_period } => {
                         Ok(wynd_staking_msgs(&project_addrs.destination_projects.wynd.cw20.to_string(),
-                                &user_addr.to_string(), 
+                                &user_addr.to_string(),
                                 comp_token_amount, bonding_period)?)
                     }
-
                     JunoDestinationProject::TokenSwap { target_denom } => {
                         let (swaps, sim) = match target_denom.clone() {
                             AssetInfo::Native(juno_denom) if juno_denom.eq("ujuno") => {
                                 // if we're swapping to juno we can avoid the multihop and go straight to the pair
                                 let (swap, sim) = simulate_and_swap_wynd_pair(
-                                    &deps.querier, user_addr
-                                    , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(), 
-                                    Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, juno_asset_info.clone())?;
+                                    &deps.querier,
+                                    user_addr,
+                                    project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(),
+                                    Asset { info: wynd_asset_info.clone(),amount: comp_token_amount },
+                                    juno_asset_info.clone()
+                                )?;
 
                                 (vec![swap], sim.return_amount)
                             }
-                            _ => wynd_wyndex_multihop_swap(&deps.querier,                                
-                                 user_addr, comp_token_amount,
+                            _ => wynd_wyndex_multihop_swap(
+                                &deps.querier,                                
+                                 user_addr,
+                                 comp_token_amount,
                                   wynd_asset_info.clone(),
                                    target_denom.clone(), 
-                                   project_addrs.destination_projects.wynd.multihop.to_string())?
+                                   project_addrs.destination_projects.wynd.multihop.to_string()
+                            )?
                         };
-                    
-                    
                     Ok(DestProjectMsgs {
                         msgs: swaps,
                         sub_msgs: vec![],
-                        events: vec![Event::new("swap").add_attribute("denom", target_denom.to_string()).add_attribute("amount", sim.to_string())],
+                        events: vec![
+                            Event::new("swap")
+                                .add_attribute("denom", target_denom.to_string())
+                                .add_attribute("amount", sim.to_string())],
                     })},
                     JunoDestinationProject::WyndLp {
                         ..
                         // contract_address,
                         // bonding_period,
                     } => {
-                      
                         Ok(DestProjectMsgs::default())
                     }
-                    JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } =>{ 
+                    JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => {
                         let (juno_swap, juno_sim) = simulate_and_swap_wynd_pair(
-                            &deps.querier, user_addr
-                            , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(), 
-                            Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, juno_asset_info.clone())?;
+                            &deps.querier,
+                            user_addr,
+                            project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(),
+                            Asset { info: wynd_asset_info.clone(), amount: comp_token_amount },
+                            juno_asset_info.clone())?;
 
                         let mut lottery_msgs = gelotto_lottery_msgs(
                         user_addr,
@@ -260,8 +264,7 @@ pub fn prefs_to_msgs(
                         juno_sim.return_amount,
                     )?;
 
-                    lottery_msgs.append_msgs(vec![juno_swap]);                
-                
+                    lottery_msgs.append_msgs(vec![juno_swap]);
                 Ok(lottery_msgs)},
                     JunoDestinationProject::RacoonBet { game } => {
                         // if we swap straight to usdc then we already have our price estimate ready
@@ -269,7 +272,7 @@ pub fn prefs_to_msgs(
                             &deps.querier, user_addr
                             , project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(), 
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, project_addrs.usdc.clone())?;
-                            
+
                        let mut rac_msgs =  racoon_bet_msgs(
                         &deps.querier,
                         user_addr,
@@ -293,7 +296,7 @@ pub fn prefs_to_msgs(
                             &deps.querier, user_addr
                             , project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(), 
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, project_addrs.usdc.clone())?;
-                            
+
                         let (swap_ops, denom) = project_addrs.destination_projects.white_whale.get_usdc_swap_operations(asset)?;
 
                         let (lsd_swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
@@ -323,7 +326,7 @@ pub fn prefs_to_msgs(
                     JunoDestinationProject::BalanceDao {} => {
                         let (juno_swap, wyndex::pair::SimulationResponse {return_amount: juno_sim, ..}) = simulate_and_swap_wynd_pair(
                             &deps.querier, user_addr
-                            , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(), 
+                            , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(),
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, juno_asset_info.clone())?;
 
                         let mut balance_msgs = balance_dao_msgs(
@@ -333,14 +336,11 @@ pub fn prefs_to_msgs(
                     )?;
 
                     balance_msgs.append_msgs(vec![juno_swap]);
-                
                 Ok(balance_msgs)},
-
                     JunoDestinationProject::MintLsd { lsd_type } => {
-                        
                         let (juno_swap, wyndex::pair::SimulationResponse {return_amount: juno_sim, ..}) = simulate_and_swap_wynd_pair(
                             &deps.querier, user_addr
-                            , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(), 
+                            , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(),
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, juno_asset_info.clone())?;
 
 
@@ -349,9 +349,9 @@ pub fn prefs_to_msgs(
                         lsd_type,
                         juno_sim,
                         project_addrs.destination_projects.juno_lsds.clone(),
-                    )?; 
+                    )?;
                     msgs.append_msgs(vec![juno_swap]);
-                    
+
                     Ok(msgs)
                 },
                     JunoDestinationProject::SparkIbcCampaign { fund } => {
@@ -360,9 +360,9 @@ pub fn prefs_to_msgs(
                         // swap on the usdc pair directly
                         let (usdc_swap,  wyndex::pair::SimulationResponse {return_amount: est_usdc,..}) = simulate_and_swap_wynd_pair(
                             &deps.querier, user_addr
-                            , project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(), 
+                            , project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(),
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, project_addrs.usdc.clone())?;
-                            
+
                         // the helper method will validate that we have enough usdc and what not
                         let mut spark_msgs = spark_ibc_msgs(
                             user_addr,
@@ -386,10 +386,9 @@ pub fn prefs_to_msgs(
                             &deps.querier,
                             user_addr,
                             comp_token_amount,
-                            wynd_asset_info.clone(),                            
+                            wynd_asset_info.clone(),
                             target_asset.clone(),
                             project_addrs.destination_projects.wynd.multihop.to_string(),
-
                         )
                         .map_err(ContractError::Std)?;
 
