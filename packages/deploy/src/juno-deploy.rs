@@ -9,7 +9,7 @@ use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
 use ymos_wyndstake_outpost::msg::ExecuteMsgFns as WyndstakeExecuteMsgFns;
 use ymos_junowwmarket_outpost::msg::{ExecuteMsgFns as JunowwmarketExecuteMsgFns, TerraswapRouteAddresses};
 use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
-use ymos_comp_prefs::{msg::{ExecuteMsgFns as CompPrefExecuteMsgFns, QueryMsgFns as CompPrefQueryMsgFns}, YmosCompPrefsContract};
+use ymos_comp_prefs::{msg::{ExecuteMsgFns as CompPrefExecuteMsgFns}, YmosCompPrefsContract};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeploymentType {
