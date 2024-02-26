@@ -1,21 +1,21 @@
-use cosmwasm_std::{Addr, Coin, StdResult};
+use cosmwasm_std::{Addr, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use outpost_utils::comp_prefs::CompoundPrefs;
+use juno_destinations::comp_prefs::JunoCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, JunostakeCompoundPrefs},
     ContractError,
 };
 
 pub struct OutpostContract(Addr);
 
 impl OutpostContract {
-    pub fn addr(&self) -> &Addr {
+    pub fn _addr(&self) -> &Addr {
         &self.0
     }
 
-    pub fn store_code(app: &mut App) -> u64 {
+    pub fn _store_code(app: &mut App) -> u64 {
         let contract = ContractWrapper::new(execute, instantiate, query);
         app.store_code(Box::new(contract))
     }
@@ -36,7 +36,7 @@ impl OutpostContract {
             code_id,
             sender.clone(),
             &instantiate_msg,
-            &vec![],
+            &[],
             label,
             admin.map(Addr::to_string),
         )
@@ -45,21 +45,22 @@ impl OutpostContract {
     }
 
     #[track_caller]
-    pub fn compound_funds(
+    pub fn _compound_funds(
         &self,
         app: &mut App,
         sender: &Addr,
-        comp_prefs: CompoundPrefs,
+        comp_prefs: JunoCompPrefs,
         delegator_address: String,
     ) -> Result<(), ContractError> {
         app.execute_contract(
             sender.clone(),
             self.0.clone(),
-            &ExecuteMsg::Compound {
+            &ExecuteMsg::Compound(JunostakeCompoundPrefs {
                 comp_prefs,
-                delegator_address,
-            },
-            &vec![],
+                user_address: delegator_address,
+                tax_fee: None,
+            }),
+            &[],
         )
         .map_err(|err| err.downcast::<ContractError>().unwrap())?;
 

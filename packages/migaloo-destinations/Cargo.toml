@@ -1,0 +1,27 @@
+[package]
+name = "migaloo-destinations"
+version = { workspace = true }
+authors = ["Marc <marc@yieldmos.com>"]
+description = "Generalized message generators and compounding preferences used by Yieldmos outpost contracts"
+edition = { workspace = true }
+
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+cosmos-sdk-proto = { workspace = true }
+cw20 = { workspace = true }
+outpost-utils = { workspace = true }
+cw20-stake = { workspace = true }
+cw20-vesting = { workspace = true }
+terraswap-helpers = { workspace = true }
+cw-grant-spec = { workspace = true }
+furnace = { workspace = true }
+# eris = { workspace = true }
+# astroport = { workspace = true }
+sail-destinations = { workspace = true }
+white-whale = { workspace = true }
+bond-router = { workspace = true }

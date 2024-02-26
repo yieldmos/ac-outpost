@@ -5,14 +5,27 @@ authors = ["Marc <marc@yieldmos.com>"]
 description = "Utility functions used by Yieldmos outpost contracts"
 edition = { workspace = true }
 
+[features]
+# osmosis = []
+# juno = ["dep:wyndex", "dep:wyndex-multi-hop", "dep:white-whale"]
+# migaloo = ["dep:white-whale"]
+# sail = ["dep:white-whale"]
+
 [dependencies]
-cosmwasm-std =     { workspace = true }
-cosmwasm-schema =  { workspace = true }
-cw-storage-plus =  { workspace = true }
-schemars =         { workspace = true }
-serde =            { workspace = true }
-thiserror =        { workspace = true }
+osmosis-std = { workspace = true }
+cosmwasm-std = { workspace = true, features = [
+    "stargate",
+    "staking",
+    # "cosmwasm_1_4",
+] }
+cosmwasm-schema = { workspace = true }
+cw-storage-plus = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
 cosmos-sdk-proto = { workspace = true }
-cw20 =             { workspace = true }
-wyndex =           { workspace = true }
-wyndex-multi-hop = {workspace=true}
+cw20 = { workspace = true }
+# wyndex = { workspace = true, optional = true }
+# wyndex-multi-hop = { workspace = true, optional = true }
+# white-whale = { workspace = true, optional = true }
+# withdraw-rewards-tax-grant = { workspace = true }

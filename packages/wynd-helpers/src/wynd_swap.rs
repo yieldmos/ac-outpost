@@ -1,5 +1,9 @@
 use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, cosmwasm::wasm::v1::MsgExecuteContract};
-use cosmwasm_std::{to_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, Decimal, QuerierWrapper, StdError, Uint128};
+use cw_grant_spec::grants::{
+    AuthorizationType, ContractExecutionAuthorizationFilter, ContractExecutionAuthorizationLimit,
+    ContractExecutionSetting, GrantBase, GrantRequirement,
+};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use wyndex::{
     asset::{Asset, AssetInfo, AssetValidated},
@@ -12,7 +16,7 @@ use crate::errors::WyndHelperError;
 /// IMPORTANT: you must provide the pair contract address for the simulation
 pub fn simulate_wynd_pool_swap(
     querier: &QuerierWrapper,
-    pool_address: String,
+    pool_address: &str,
     from_token: &Asset,
     // just for error reporting purposes
     to_denom: String,
@@ -30,7 +34,7 @@ pub fn wynd_pair_swap_msg(
     sender: &Addr,
     offer_asset: Asset,
     ask_asset: AssetInfo,
-    pair_contract_address: String,
+    pair_contract_address: &str,
 ) -> Result<CosmosProtoMsg, WyndHelperError> {
     let swap_msg = match offer_asset.info.clone() {
         AssetInfo::Native(denom) => {
@@ -59,9 +63,9 @@ pub fn wynd_pair_swap_msg(
                 offer_token_address,
                 sender,
                 &cw20::Cw20ExecuteMsg::Send {
-                    contract: pair_contract_address,
+                    contract: pair_contract_address.to_owned(),
                     amount: offer_asset.amount,
-                    msg: to_binary(&wyndex::pair::Cw20HookMsg::Swap {
+                    msg: to_json_binary(&wyndex::pair::Cw20HookMsg::Swap {
                         ask_asset_info: Some(ask_asset),
                         belief_price: None,
                         max_spread: None,
@@ -83,13 +87,13 @@ pub fn wynd_pair_swap_msg(
 pub fn simulate_and_swap_wynd_pair(
     querier: &QuerierWrapper,
     sender: &Addr,
-    pair_contract_address: String,
+    pair_contract_address: &str,
     offer_asset: Asset,
     ask_asset: AssetInfo,
 ) -> Result<(CosmosProtoMsg, SimulationResponse), WyndHelperError> {
     let simulation = simulate_wynd_pool_swap(
         querier,
-        pair_contract_address.clone(),
+        pair_contract_address,
         &offer_asset,
         ask_asset.to_string(),
     )?;
@@ -148,7 +152,7 @@ pub fn create_wyndex_swap_operations(
         operations,
         minimum_receive: None,
         receiver: None,
-        max_spread: Some(Decimal::percent(1)),
+        max_spread: Some(Decimal::percent(2)),
         referral_address: None,
         referral_commission: None,
     }
@@ -192,7 +196,7 @@ pub fn create_wyndex_swap_msg(
                 &cw20::Cw20ExecuteMsg::Send {
                     contract: multihop_address.to_string(),
                     amount: offer_amount,
-                    msg: to_binary(&swap_ops)?,
+                    msg: to_json_binary(&swap_ops)?,
                 },
                 None,
             )?,
@@ -209,6 +213,7 @@ pub fn create_wyndex_swap_msg_with_simulation(
     offer_asset: AssetInfo,
     ask_asset_info: AssetInfo,
     multihop_address: String,
+    swap_operations: Option<wyndex_multi_hop::msg::ExecuteMsg>,
 ) -> Result<(Vec<CosmosProtoMsg>, Uint128), StdError> {
     // no swap to do because the offer and ask tokens are the same
     if offer_asset.eq(&ask_asset_info) {
@@ -217,9 +222,12 @@ pub fn create_wyndex_swap_msg_with_simulation(
 
     // generate the operations for the multihop here that way we can use the same ops for
     // the simulation and the actual swap msg
-    let swap_ops = create_wyndex_swap_operations(offer_asset.clone(), ask_asset_info);
+    let swap_ops = swap_operations.unwrap_or(create_wyndex_swap_operations(
+        offer_asset.clone(),
+        ask_asset_info,
+    ));
 
-    let simulated_swap: wyndex::pair::SimulationResponse;
+    let simulated_swap: wyndex_multi_hop::msg::SimulateSwapOperationsResponse;
 
     if let wyndex_multi_hop::msg::ExecuteMsg::ExecuteSwapOperations { operations, .. } =
         swap_ops.clone()
@@ -237,11 +245,10 @@ pub fn create_wyndex_swap_msg_with_simulation(
         return Err(StdError::generic_err("Could not simulate swap operations"));
     }
 
-    let exec: MsgExecuteContract;
-    match offer_asset {
+    let exec: MsgExecuteContract = match offer_asset {
         AssetInfo::Native(offer_denom) => {
             // multihop swap message when going from a native token
-            exec = create_exec_contract_msg(
+            create_exec_contract_msg(
                 multihop_address,
                 sender,
                 &swap_ops,
@@ -249,25 +256,25 @@ pub fn create_wyndex_swap_msg_with_simulation(
                     amount: offer_amount.to_string(),
                     denom: offer_denom,
                 }]),
-            )?;
+            )?
         }
         AssetInfo::Token(ask_token_contract_address) => {
             // multihop swap message when going from a cw20 token
-            exec = create_exec_contract_msg(
+            create_exec_contract_msg(
                 ask_token_contract_address,
                 sender,
                 &cw20::Cw20ExecuteMsg::Send {
                     contract: multihop_address.to_string(),
                     amount: offer_amount,
-                    msg: to_binary(&swap_ops)?,
+                    msg: to_json_binary(&swap_ops)?,
                 },
                 None,
-            )?;
+            )?
         }
-    }
+    };
     Ok((
         vec![CosmosProtoMsg::ExecuteContract(exec)],
-        simulated_swap.return_amount,
+        simulated_swap.amount,
     ))
 }
 
@@ -297,6 +304,7 @@ pub fn create_wyndex_swaps_with_sims(
                 info.into(),
                 ask_asset.clone(),
                 multihop_address.to_string(),
+                None,
             )
         })
         .collect::<Result<Vec<_>, StdError>>()?;
@@ -315,4 +323,137 @@ pub fn create_wyndex_swaps_with_sims(
         asset: ask_asset,
         simulated_return_amount,
     })
+}
+
+/// Creates the grant requirement being able to do a swap on a specific wyndex pool
+pub fn wynd_pool_swap_grant(
+    GrantBase {
+        granter,
+        grantee,
+        expiration,
+    }: GrantBase,
+
+    pool_address: Addr,
+    offer_asset: AssetInfo,
+    limit: Option<ContractExecutionAuthorizationLimit>,
+) -> Vec<GrantRequirement> {
+    match offer_asset {
+        // cw20 token
+        AssetInfo::Token(cw20_addr) => vec![
+            // permission to call send on the cw20 token itself
+            GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: Addr::unchecked(cw20_addr),
+                        limit: limit
+                            .clone()
+                            .map(|v| match v {
+                                ContractExecutionAuthorizationLimit::MaxFundsLimit { .. } => {
+                                    ContractExecutionAuthorizationLimit::default()
+                                }
+                                ContractExecutionAuthorizationLimit::CombinedLimit {
+                                    calls_remaining: remaining,
+                                    ..
+                                } => {
+                                    ContractExecutionAuthorizationLimit::MaxCallsLimit { remaining }
+                                }
+                                max_calls => max_calls,
+                            })
+                            .unwrap_or_default(),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["send".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            },
+        ],
+        AssetInfo::Native(denom) => {
+            // native token so no cw20 grant needed
+            vec![GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: pool_address,
+                        limit: limit.unwrap_or(
+                            ContractExecutionAuthorizationLimit::single_fund_limit(denom),
+                        ),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["swap".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            }]
+        }
+    }
+}
+
+/// creates the grant requirement for being able to do a swap on the wyndex multihop router
+pub fn wynd_multihop_swap_grant(
+    GrantBase {
+        granter,
+        grantee,
+        expiration,
+    }: GrantBase,
+
+    router_addr: Addr,
+    offer_asset: AssetInfo,
+    limit: Option<ContractExecutionAuthorizationLimit>,
+) -> Vec<GrantRequirement> {
+    match offer_asset {
+        // cw20 token
+        AssetInfo::Token(cw20_addr) => vec![
+            // permission to call send on the cw20 token itself
+            GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: Addr::unchecked(cw20_addr),
+                        limit: limit
+                            .clone()
+                            .map(|v| match v {
+                                ContractExecutionAuthorizationLimit::MaxFundsLimit { .. } => {
+                                    ContractExecutionAuthorizationLimit::default()
+                                }
+                                ContractExecutionAuthorizationLimit::CombinedLimit {
+                                    calls_remaining: remaining,
+                                    ..
+                                } => {
+                                    ContractExecutionAuthorizationLimit::MaxCallsLimit { remaining }
+                                }
+                                max_calls => max_calls,
+                            })
+                            .unwrap_or_default(),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["send".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            },
+        ],
+        AssetInfo::Native(denom) => {
+            vec![GrantRequirement::GrantSpec {
+                grant_type: AuthorizationType::ContractExecutionAuthorization(vec![
+                    ContractExecutionSetting {
+                        contract_addr: router_addr.clone(),
+                        limit: limit.unwrap_or(
+                            ContractExecutionAuthorizationLimit::single_fund_limit(denom),
+                        ),
+                        filter: ContractExecutionAuthorizationFilter::AcceptedMessageKeysFilter {
+                            keys: vec!["execute_swap_operations".to_string()],
+                        },
+                    },
+                ]),
+                granter: granter.clone(),
+                grantee: grantee.clone(),
+                expiration,
+            }]
+        }
+    }
 }

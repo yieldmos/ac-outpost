@@ -35,7 +35,7 @@ pub fn fold_wynd_swap_msgs(
                 *assets
                     .get(&target_asset_info.info)
                     .unwrap_or(&Uint128::from(0u128))
-                    + target_asset_info.amount.clone(),
+                    + target_asset_info.amount,
             );
             (msgs, assets)
         },

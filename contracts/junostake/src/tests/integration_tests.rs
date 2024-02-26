@@ -1,11 +1,10 @@
-use cosmwasm_std::{
-    coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator,
-};
+use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
+use juno_destinations::comp_prefs::DestinationProjectAddresses;
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::InstantiateMsg,
+    msg::{AuthzppAddresses, ContractAddresses, InstantiateMsg},
     tests::multitest::OutpostContract,
 };
 
@@ -19,7 +18,7 @@ fn auctioning_contract() -> Box<dyn Contract<Empty>> {
 fn instantiate_with_defaults() {
     let sender = Addr::unchecked("sender");
 
-    let mut app = App::new(|router, _api, storage| {
+    let mut app = App::new(|_router, _api, _storage| {
         // router.bank
         // .init_balance(storage, &sender, coins(100_000, "ubtc"))
         // .unwrap();
@@ -27,14 +26,23 @@ fn instantiate_with_defaults() {
 
     let contract_id = app.store_code(auctioning_contract());
 
-    let contract = OutpostContract::instantiate(
+    let _contract = OutpostContract::instantiate(
         &mut app,
         contract_id,
         &sender,
         None,
         "Test Outpost",
         // &coins(100_000, "ubtc"),
-        &InstantiateMsg { admin: None },
+        &InstantiateMsg {
+            admin: None,
+            project_addresses: ContractAddresses {
+                staking_denom: "ubtc".to_string(),
+                take_rate_addr: "".to_string(),
+                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+                authzpp: AuthzppAddresses::default(),
+                destination_projects: DestinationProjectAddresses::default(),
+            },
+        },
     )
     .unwrap();
 
@@ -99,13 +107,22 @@ fn validator_only_compounding() {
 
     let contract_id = app.store_code(auctioning_contract());
 
-    let contract = OutpostContract::instantiate(
+    let _contract = OutpostContract::instantiate(
         &mut app,
         contract_id,
         &contract_admin_addr,
         None,
         "Test Outpost",
-        &InstantiateMsg { admin: None },
+        &InstantiateMsg {
+            admin: None,
+            project_addresses: ContractAddresses {
+                staking_denom: "ubtc".to_string(),
+                take_rate_addr: "".to_string(),
+                usdc: wyndex::asset::AssetInfo::Native("".to_string()),
+                authzpp: AuthzppAddresses::default(),
+                destination_projects: DestinationProjectAddresses::default(),
+            },
+        },
     )
     .unwrap();
 
@@ -132,9 +149,7 @@ fn validator_only_compounding() {
 
     assert_eq!(app.wrap().query_all_balances(&delegator_addr).unwrap(), &[]);
     assert_eq!(
-        app.wrap()
-            .query_all_delegations(delegator_addr.clone())
-            .unwrap(),
+        app.wrap().query_all_delegations(delegator_addr.clone()).unwrap(),
         vec![Delegation {
             delegator: delegator_addr.clone(),
             validator: start_validator_addr.to_string(),

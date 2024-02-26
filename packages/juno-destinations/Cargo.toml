@@ -1,0 +1,29 @@
+[package]
+name = "juno-destinations"
+version = { workspace = true }
+authors = ["Marc <marc@yieldmos.com>"]
+description = "Message generators for the Juno blockchain for use by Yieldmos outpost contracts"
+edition = { workspace = true }
+
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+cosmos-sdk-proto = { workspace = true }
+cw20 = { workspace = true }
+outpost-utils = { workspace = true }
+cw20-stake = { workspace = true }
+cw20-vesting = { workspace = true }
+white-whale = { workspace = true }
+wyndex = { workspace = true }
+wyndex-multi-hop = { workspace = true }
+wynd-stake = { workspace = true }
+wynd-helpers = { workspace = true }
+terraswap-helpers = { workspace = true }
+balance-token-swap = { workspace = true }
+bond-router = { workspace = true }
+cw-grant-spec = { workspace = true }
+sail-destinations = { workspace = true }

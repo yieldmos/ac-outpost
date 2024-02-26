@@ -9,8 +9,21 @@ pub enum ContractError {
     #[error("Outpost Utils Error: &{0}")]
     OutpostError(#[from] outpost_utils::errors::OutpostError),
 
+    #[error("Authzpp Withdraw Tax: &{0}")]
+    AuthzppWithdrawTax(#[from] withdraw_rewards_tax_grant::ContractError),
+
     #[error("Wynd Helper Error: &{0}")]
     WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
+
+   
+    #[error("Juno Destinations Error: &{0}")]
+    JunoDestinationError(#[from] juno_destinations::errors::JunoDestinationError),
+
+    #[error("Sail Destinations Error: &{0}")]
+    SailDestinationError(#[from] sail_destinations::errors::SailDestinationError),
+
+    #[error("Universal Destinations Error: &{0}")]
+    UniversalDestinationError(#[from] universal_destinations::errors::UniversalDestinationError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
@@ -23,9 +36,6 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
-
-    #[error("Could not query pendingRewards")]
-    QueryPendingRewardsFailure,
 
     #[error("{0} is not a valid address. Cannot set as authorized address")]
     InvalidAuthorizedAddress(String),

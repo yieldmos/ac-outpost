@@ -1,0 +1,60 @@
+[package]
+name = "deploy"
+version = "0.1.0"
+edition = "2021"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ymos-junowwmarket-outpost = { path = "../../contracts/junowwmarket", features = [
+    "interface",
+] }
+# cw-orch = { git = "https://github.com/AbstractSDK/cw-orchestrator.git", branch = "feature/starship", features = [
+#     "interchain",
+#     "starship",
+# ] }
+cw-orch = { workspace = true }
+ymos-migaloostake-outpost = { path = "../../contracts/migaloostake", features = [
+    "interface",
+] }
+ymos-migaloodca-outpost = { path = "../../contracts/migaloodca", features = [
+    "interface",
+] }
+ymos-junostake-outpost = { path = "../../contracts/junostake", features = [
+    "interface",
+] }
+ymos-junodca-outpost = { path = "../../contracts/junodca", features = [
+    "interface",
+] }
+ymos-wyndstake-outpost = { path = "../../contracts/wyndstake", features = [
+    "interface",
+] }
+ymos-comp-prefs = { path = "../../contracts/comp_prefs", features = [
+    "interface",
+] }
+white-whale = { workspace = true }
+wyndex = { workspace = true }
+outpost-utils = { workspace = true }
+tokio = "1.31.0"
+cosmwasm-std = { workspace = true }
+cw20-base = { version = "0.13.2", features = ["library"] }
+cosmrs = "0.14.0"
+anybuf = "0.1.0"
+juno-destinations = { workspace = true }
+migaloo-destinations = { workspace = true }
+
+# [dev-dependencies]
+# Deps for deployment
+dotenv = { version = "0.15.0" }     # Enables loading of .env files
+env_logger = { version = "0.10.0" } # Enables logging to stdout
+
+
+[[bin]]
+name = "juno-deploy"
+path = "src/juno-deploy.rs"
+
+
+[[bin]]
+name = "migaloo-deploy"
+path = "src/migaloo-deploy.rs"

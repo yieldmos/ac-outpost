@@ -1,0 +1,20 @@
+[package]
+name = "osmosis-helpers"
+version = { workspace = true }
+authors = ["Marc <marc@yieldmos.com>"]
+description = "Utility functions for Osmosis interaction used by Yieldmos outpost contracts"
+edition = { workspace = true }
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+cosmos-sdk-proto = { workspace = true }
+cw20 = { workspace = true }
+outpost-utils = { workspace = true }
+osmosis-std = { workspace = true }
+osmosis-destinations = { workspace = true }
+# swaprouter = { workspace = true }
+cw-grant-spec = { workspace = true }
