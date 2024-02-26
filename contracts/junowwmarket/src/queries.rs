@@ -1,15 +1,15 @@
-use cosmwasm_std::{coin, Addr, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
-    AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
+    ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
 };
 
 use juno_destinations::comp_prefs::{wyndex_asset_info_to_terraswap_asset_info, DaoAddr, JunoDestinationProject, JunoLsd};
 use juno_destinations::grants::{balance_dao_grant, gelotto_lottery_grant, wyndao_staking_grant};
-use terraswap_helpers::terraswap_swap::terraswap_multihop_swap_grant;
+
 use universal_destinations::grants::{native_send_token, native_staking_grant};
-use withdraw_rewards_tax_grant::msg::GrantSpecData;
-use wynd_helpers::wynd_swap::{simulate_wynd_pool_swap, wynd_multihop_swap_grant, wynd_pool_swap_grant};
+
+use wynd_helpers::wynd_swap::{simulate_wynd_pool_swap, wynd_pool_swap_grant};
 use wyndex::{
     asset::{Asset, AssetInfo},
     pair::SimulationResponse,

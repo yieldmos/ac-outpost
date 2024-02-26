@@ -1,13 +1,13 @@
 use cosmwasm_std::{Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use outpost_utils::{
     comp_prefs::DestinationAction,
-    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs, TaxSplitResult},
+    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs, TaxSplitResult},
     msg_gen::create_exec_msg,
 };
 use std::iter;
-use terraswap_helpers::terraswap_swap::{create_terraswap_swap_msg_with_simulation, self};
 
-use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
+
+
 
 use crate::{
     msg::ContractAddrs,
