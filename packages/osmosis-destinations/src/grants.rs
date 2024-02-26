@@ -1,7 +1,6 @@
-use cosmwasm_std::{Addr, Coin, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_grant_spec::grants::{
-    AuthorizationType, GrantBase, GrantRequirement, StakeAuthorizationPolicy,
-    StakeAuthorizationType, StakeAuthorizationValidators,
+    GrantBase, GrantRequirement,
 };
 
 use crate::mars_types::RedBankExecuteMsgs;
@@ -23,7 +22,7 @@ pub fn membrane_deposit_grant(
     base: GrantBase,
     contract_addr: Addr,
     position_id: Uint128,
-    asset: String,
+    _asset: String,
     mbrn_denom: &str,
 ) -> Vec<GrantRequirement> {
     vec![GrantRequirement::contract_exec_messages_auth(

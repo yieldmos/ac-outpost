@@ -1,11 +1,11 @@
 use crate::{
     errors::OsmosisDestinationError,
-    mars_types::{ActionAmount, RedBankAction, RedBankExecuteMsgs},
+    mars_types::{RedBankAction, RedBankExecuteMsgs},
 };
 
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Event, Querier, QuerierWrapper, Storage, Uint128};
+use cosmwasm_std::{Addr, Coin, Event, Uint128};
 use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},

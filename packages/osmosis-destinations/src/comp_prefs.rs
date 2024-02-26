@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Decimal, Uint128};
+use cosmwasm_std::{Addr, Api, Uint128};
 use outpost_utils::comp_prefs::CompoundPrefs;
 
 use crate::{
@@ -330,7 +330,7 @@ pub struct DaoDaoAddresses {}
 #[cw_serde]
 pub struct DaoDaoAddrs {}
 impl DaoDaoAddresses {
-    pub fn validate_addrs(&self, api: &dyn Api) -> Result<DaoDaoAddrs, OsmosisDestinationError> {
+    pub fn validate_addrs(&self, _api: &dyn Api) -> Result<DaoDaoAddrs, OsmosisDestinationError> {
         Ok(DaoDaoAddrs {})
     }
 }
