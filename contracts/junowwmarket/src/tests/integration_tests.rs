@@ -1,6 +1,6 @@
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
-use outpost_utils::juno_comp_prefs::DestinationProjectAddresses;
+use juno_destinations::comp_prefs::DestinationProjectAddresses;
 
 use crate::{
     contract::{execute, instantiate, query},
