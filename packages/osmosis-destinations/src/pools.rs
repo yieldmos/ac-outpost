@@ -81,12 +81,14 @@ impl PoolForEach for UsdcPools {
 }
 
 impl Denoms {
-    fn for_each_denom(&self, each_fn: fn((&str, &str)) -> ()) -> () {
-        self.iter().for_each(|(denom_short_name, denom)| {
-            if let Some(denom) = denom.downcast_ref::<String>() {
-                each_fn((denom_short_name, denom))
-            }
-        })
+    pub fn denoms(&self) -> Vec<(&str, &String)> {
+        self.iter()
+            .filter_map(|(denom_short_name, denom)| {
+                denom
+                    .downcast_ref::<String>()
+                    .map(|denom| (denom_short_name, denom))
+            })
+            .collect()
     }
 }
 

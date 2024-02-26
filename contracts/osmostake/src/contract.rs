@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmostakeCompoundPrefs, QueryMsg};
-use crate::state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS};
+use crate::state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -9,6 +9,7 @@ use cosmwasm_std::{
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
+use osmosis_destinations::pools::PoolForEach;
 use outpost_utils::helpers::CompoundingFrequency;
 use semver::Version;
 
@@ -45,7 +46,32 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
 
     ADMIN.save(deps.storage, &admin_addr)?;
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
-    PROJECT_ADDRS.save(deps.storage, &project_addresses.validate_addrs(deps.api)?)?;
+    let validated_addrs = project_addresses.validate_addrs(deps.api)?;
+    PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
+
+    // store all the denoms in a map
+    validated_addrs
+        .destination_projects
+        .denoms
+        .denoms()
+        .into_iter()
+        .for_each(|(short_name, denom)| {
+            let _ = KNOWN_DENOMS.save(deps.storage, denom, &short_name.to_string());
+        });
+
+    // store all the osmo pools in a map
+    validated_addrs
+        .destination_projects
+        .swap_routes
+        .osmo_pools
+        .store_as_map(deps.storage, KNOWN_OSMO_POOLS);
+
+    // store all the usdc pools in a map
+    validated_addrs
+        .destination_projects
+        .swap_routes
+        .usdc_pools
+        .store_as_map(deps.storage, KNOWN_USDC_POOLS);
 
     Ok(Response::default())
 }
@@ -63,7 +89,38 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         project_addresses: Some(addresses),
     } = msg
     {
-        PROJECT_ADDRS.save(deps.storage, &addresses.validate_addrs(deps.api)?)?
+        let validated_addrs = addresses.validate_addrs(deps.api)?;
+
+        PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
+
+        // clear the state that depends on the addresses data so we can reinitialize it
+        KNOWN_DENOMS.clear(deps.storage);
+        KNOWN_OSMO_POOLS.clear(deps.storage);
+        KNOWN_USDC_POOLS.clear(deps.storage);
+
+        // store all the denoms in a map
+        validated_addrs
+            .destination_projects
+            .denoms
+            .denoms()
+            .into_iter()
+            .for_each(|(short_name, denom)| {
+                let _ = KNOWN_DENOMS.save(deps.storage, denom, &short_name.to_string());
+            });
+
+        // store all the osmo pools in a map
+        validated_addrs
+            .destination_projects
+            .swap_routes
+            .osmo_pools
+            .store_as_map(deps.storage, KNOWN_OSMO_POOLS);
+
+        // store all the usdc pools in a map
+        validated_addrs
+            .destination_projects
+            .swap_routes
+            .usdc_pools
+            .store_as_map(deps.storage, KNOWN_USDC_POOLS);
     }
 
     Ok(Response::default())
