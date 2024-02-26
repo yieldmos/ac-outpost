@@ -2,16 +2,8 @@
 
 Compounding outpost that allows users to specify how they would like to manage OSMO staking rewards by percentage. It is intended to be called on a regular basis by Yieldmos so that delegators can manage their rewards in whatever way they would like.
 
-Care has been taken to made the Destination projects modular and easily extendable when new projects/targets become available
+This contract should be deployed along side an instnace of the `comp_prefs` contract which can store the users' outpost settings and `osmodca` which is another outpost contract.
 
-<!-- ## Available Destination Projects
+## Further Reading
 
-The things you can do with your rewards during any given compounding.
-
-| Destination Project | Status    | Note                                         |
-| ------------------- | --------- | -------------------------------------------- |
-| `Juno Staking`      | `working` | Can specify any validator address            |
-| `Wynd Staking`      | `working` | Can specify any valid unbonding period       |
-| `Neta Staking`      | `working` |                                              |
-| `Token Swap`        | `working` | Can pick any token that's on Wyndex          |
-| `Wyndex LPs`        | `working` | Must specify the given pool contract address | -->
+To learn about the specific destinations that this outpost should support view the [osmosis-destinations](../../packages/osmosis-destinations/README.md) package as that is where the osmosis destination code is meant to be shared.

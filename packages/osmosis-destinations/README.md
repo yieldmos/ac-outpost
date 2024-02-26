@@ -1,5 +1,9 @@
-### Yieldmos Outpost Ju Helpers
+# Osmosis Destinations
 
-This is a set of helper functions to be used by the outpost contracts when interacting with the Juno Network. This should increase ergonomics arounds juno destination projects.
+This is the space to store specific logic related to the individual destinations that should be made accessable exlusively on the Osmosis Outposts.
 
-Please note that this is still a pre-release version and breaking changes are expected to be frequent
+## Current Destinations
+
+- An up to date list of the currently supported destinations can be viewed in the [`OsmosisDestinationProject`](./src/comp_prefs.rs) enum.
+- Implementations of the destination projects (aka `msg gens`) can be seen in all of the different `*-destinations` packages but most notibly [Osmosis `dest_project_gen`](./src/dest_project_gen.rs).
+- Grant generator implementations for the `osmosis-destinations` can be found in [Osmosis `grants`](./src/grants.rs).
