@@ -1,20 +1,19 @@
-use cosmwasm_std::{coin, Addr, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
-    AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
+    GrantBase, GrantRequirement, RevokeRequirement,
 };
 use migaloo_destinations::comp_prefs::MigalooDestinationProject;
 use migaloo_destinations::grants::furnace_grant;
-use terraswap_helpers::terraswap_swap::terraswap_multihop_swap_grant;
+
 use universal_destinations::grants::native_staking_grant;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::{AssetInfo};
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
 
 use crate::msg::{CompPrefsWithAddresses, MigaloostakeCompoundPrefs, QueryMsg};
 use crate::{
     msg::{AuthorizedCompoundersResponse, VersionResponse},
     state::{ADMIN, AUTHORIZED_ADDRS},
-    ContractError,
 };
 
 pub fn query_version() -> VersionResponse {

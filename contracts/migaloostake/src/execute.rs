@@ -1,22 +1,22 @@
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, StdError, SubMsg};
+use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use migaloo_destinations::{
     comp_prefs::{
-        AllianceAsset, AshAction, DaoDaoStakingInfo, LsdMintAction, MUsdcAction, MigalooCompPrefs, MigalooDao,
+        DaoDaoStakingInfo, LsdMintAction, MUsdcAction, MigalooCompPrefs,
         MigalooDestinationProject, MigalooVault,
     },
     dest_project_gen::{
         burn_whale_msgs, deposit_ginkou_usdc_msgs, ecosystem_stake_msgs, eris_amp_vault_msgs, eris_arb_vault_msgs,
-        mint_or_buy_whale_lsd_msgs, mint_whale_lsd_msgs, query_ginkou_musdc_mint,
+        mint_or_buy_whale_lsd_msgs, query_ginkou_musdc_mint,
     },
 };
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
-    msg_gen::{create_exec_msg, CosmosProtoMsg},
+    msg_gen::{create_exec_msg},
 };
 use std::iter;
 use terraswap_helpers::terraswap_swap::{
-    create_terraswap_pool_swap_msg_with_simulation, create_terraswap_swap_msg_with_simulation,
+    create_terraswap_pool_swap_msg_with_simulation,
 };
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
@@ -28,11 +28,9 @@ use crate::{
     ContractError,
 };
 use sail_destinations::{
-    comp_prefs::SparkIbcFund,
     dest_project_gen::{racoon_bet_msgs, spark_ibc_msgs, white_whale_satellite_msgs},
-    errors::SailDestinationError,
 };
-use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, daodao_staking_msg, native_staking_msg};
+use universal_destinations::dest_project_gen::{daodao_staking_msg, native_staking_msg};
 
 pub fn compound(
     deps: DepsMut,
@@ -208,8 +206,8 @@ pub fn prefs_to_msgs(
                     )?),
 
                     MigalooDestinationProject::AllianceStake {
-                        asset,
-                        validator_address,
+                        asset: _,
+                        validator_address: _,
                     } => {
                         // let (swap_msg, asset) = match asset {
                         //     AllianceAsset::AmpLuna =>
@@ -249,7 +247,7 @@ pub fn prefs_to_msgs(
                         game,
                         &project_addrs.destination_projects.projects.racoon_bet,
                     )?),
-                    MigalooDestinationProject::WhiteWhaleSatellite { asset } => {
+                    MigalooDestinationProject::WhiteWhaleSatellite { asset: _ } => {
                         // let (swap_msg, token_denom, est_token) = match asset {
                         //     AssetInfo::NativeToken { denom }
                         //         if denom.eq(&project_addrs.destination_projects.denoms.ampwhale) =>
@@ -453,12 +451,12 @@ pub fn prefs_to_msgs(
                         }
                     }
 
-                    MigalooDestinationProject::TokenSwap { target_denom } => {
+                    MigalooDestinationProject::TokenSwap { target_denom: _ } => {
                         unimplemented!()
                     }
                     MigalooDestinationProject::SendTokens {
-                        denom: target_asset,
-                        address: to_address,
+                        denom: _target_asset,
+                        address: _to_address,
                     } => {
                         unimplemented!();
                         // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
@@ -487,7 +485,7 @@ pub fn prefs_to_msgs(
                         // Ok(send_msgs)
                     }
                     MigalooDestinationProject::GinkouRepayLoan {} => unimplemented!(),
-                    MigalooDestinationProject::GinkouProvideLiquidity { asset, and_then } => unimplemented!(),
+                    MigalooDestinationProject::GinkouProvideLiquidity { asset: _, and_then: _ } => unimplemented!(),
 
                     MigalooDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
