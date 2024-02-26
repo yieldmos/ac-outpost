@@ -1,11 +1,11 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Api, Coin, Decimal, Timestamp};
+use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 
 use osmosis_destinations::comp_prefs::{
     OsmosisCompPrefs, OsmosisDestinationProjectAddresses, OsmosisDestinationProjectAddrs,
 };
-use outpost_utils::helpers::CompoundingFrequency;
+
 
 use crate::ContractError;
 

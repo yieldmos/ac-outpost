@@ -1,6 +1,6 @@
-use std::{iter, str::FromStr};
+use std::{iter};
 
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Uint128};
+use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
     dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
@@ -8,26 +8,26 @@ use osmosis_destinations::{
 };
 use osmosis_helpers::{
     osmosis_lp::{
-        classic_pool_join_single_side_prepratory_swap, gen_join_cl_pool_single_sided_msgs,
-        gen_join_classic_pool_single_sided_msgs, join_osmosis_pool_single_side, SingleSidedJoinSwap,
+        gen_join_cl_pool_single_sided_msgs,
+        gen_join_classic_pool_single_sided_msgs,
     },
     osmosis_swap::{
         generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
-        generate_known_to_unknown_swap_and_sim_msg, generate_swap, pool_swap_with_sim, OsmosisRoutePools,
+        generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
     },
 };
-use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
+
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
-        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins,
-        DestProjectMsgs, TaxSplitResult,
+        calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins,
+        DestProjectMsgs,
     },
     msg_gen::create_exec_msg,
 };
-use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs, spark_ibc_msgs, white_whale_satellite_msgs};
-use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
-use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg, send_tokens_msgs};
+use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs};
+
+use universal_destinations::dest_project_gen::{native_staking_msg, send_tokens_msgs};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
@@ -55,7 +55,7 @@ pub fn compound(
     // validate that the user is authorized to compound
     is_authorized_compounder(deps.as_ref(), &info.sender, &user_addr, ADMIN, AUTHORIZED_ADDRS)?;
 
-    let project_addrs = PROJECT_ADDRS.load(deps.storage)?;
+    let _project_addrs = PROJECT_ADDRS.load(deps.storage)?;
 
     // get the denom of the staking token. this should be "uosmo"
     let staking_denom = project_addresses.staking_denom.clone();

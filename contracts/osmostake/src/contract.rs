@@ -10,7 +10,7 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use osmosis_destinations::pools::PoolForEach;
-use outpost_utils::helpers::CompoundingFrequency;
+
 use semver::Version;
 
 // version info for migration info

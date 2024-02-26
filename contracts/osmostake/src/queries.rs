@@ -2,13 +2,12 @@ use crate::msg::{CompPrefsWithAddresses, OsmostakeCompoundPrefs, QueryMsg};
 use crate::{
     msg::{AuthorizedCompoundersResponse, VersionResponse},
     state::{ADMIN, AUTHORIZED_ADDRS},
-    ContractError,
 };
-use cosmos_sdk_proto::cosmos::mint;
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
+
+use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
-    AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
+    AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement,
 };
 use osmosis_destinations::comp_prefs::{OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings};
 use osmosis_destinations::grants::{membrane_stake_grant, mint_milk_tia_grant, stake_ion_grants};
@@ -18,7 +17,7 @@ use sail_destinations::grants::eris_lsd_grant;
 use universal_destinations::grants::{native_send_token, native_staking_grant};
 use white_whale::pool_network::asset::AssetInfo;
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
-use wyndex::stake;
+
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
@@ -48,7 +47,7 @@ impl Grantable for QueryMsg {
             grant_contract: outpost_contract,
             grant_data:
                 CompPrefsWithAddresses {
-                    comp_prefs: OsmostakeCompoundPrefs { comp_prefs, tax_fee, .. },
+                    comp_prefs: OsmostakeCompoundPrefs { comp_prefs: _, tax_fee, .. },
                     project_addresses,
                 },
             ..
@@ -128,7 +127,7 @@ pub fn gen_comp_pref_grants(
             OsmosisDestinationProject::OsmosisStaking { validator_address } => {
                 native_staking_grant(base, None, Some(vec![validator_address]))
             }
-            OsmosisDestinationProject::TokenSwap { target_asset } => osmosis_swap_grants(base),
+            OsmosisDestinationProject::TokenSwap { target_asset: _ } => osmosis_swap_grants(base),
             OsmosisDestinationProject::SendTokens { address, target_asset } => vec![
                 osmosis_swap_grants(base.clone()),
                 native_send_token(
@@ -181,11 +180,11 @@ pub fn gen_comp_pref_grants(
             .concat(),
 
             OsmosisDestinationProject::OsmosisLiquidityPool {
-                pool_id,
+                pool_id: _,
                 pool_settings: OsmosisPoolSettings::Standard { bond_tokens },
             } => join_classic_pool_grants(base, bond_tokens),
             OsmosisDestinationProject::OsmosisLiquidityPool {
-                pool_id,
+                pool_id: _,
                 pool_settings: OsmosisPoolSettings::ConcentratedLiquidity { .. },
             } => join_cl_pool_grants(base),
         }
