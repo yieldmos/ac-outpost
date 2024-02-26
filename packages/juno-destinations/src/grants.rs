@@ -1,7 +1,6 @@
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::{Addr};
 use cw_grant_spec::grants::{
-    AuthorizationType, GrantBase, GrantRequirement, StakeAuthorizationPolicy,
-    StakeAuthorizationType, StakeAuthorizationValidators,
+    GrantBase, GrantRequirement,
 };
 
 pub fn balance_dao_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
