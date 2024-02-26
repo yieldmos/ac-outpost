@@ -33,7 +33,7 @@ ymos-wyndstake-outpost = { path = "../../contracts/wyndstake", features = [
 ymos-comp-prefs = { path = "../../contracts/comp_prefs", features = [
     "interface",
 ] }
-white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", tag = "v1.4.1" }
+white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", rev = "e7e52be74f8ab5c5bb6442fbea7258b74f802053" }
 wyndex = { workspace = true }
 tokio = "1.31.0"
 cosmwasm-std = { workspace = true }
