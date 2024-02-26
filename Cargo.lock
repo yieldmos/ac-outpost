@@ -5326,7 +5326,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-comp-prefs"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -5343,7 +5343,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-junodca-outpost"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "balance-token-swap",
  "bond-router",
@@ -5377,7 +5377,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-junostake-outpost"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "balance-token-swap",
  "bond-router",
@@ -5412,7 +5412,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-junowwmarket-outpost"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "balance-token-swap",
  "bond-router",
@@ -5447,7 +5447,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-migaloodca-outpost"
-version = "0.2.2"
+version = "0.1.0"
 dependencies = [
  "cosmos-sdk-proto 0.19.0",
  "cosmwasm-schema",
@@ -5476,7 +5476,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-migaloostake-outpost"
-version = "0.2.2"
+version = "0.1.0"
 dependencies = [
  "cosmos-sdk-proto 0.19.0",
  "cosmwasm-schema",
@@ -5505,7 +5505,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-osmodca-outpost"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "cosmos-sdk-proto 0.19.0",
  "cosmwasm-schema",
@@ -5539,7 +5539,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-osmostake-outpost"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "cosmos-sdk-proto 0.19.0",
  "cosmwasm-schema",
@@ -5574,7 +5574,7 @@ dependencies = [
 
 [[package]]
 name = "ymos-wyndstake-outpost"
-version = "0.2.2"
+version = "1.0.0"
 dependencies = [
  "balance-token-swap",
  "bond-router",
