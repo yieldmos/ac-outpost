@@ -1,13 +1,7 @@
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Storage;
 use cw_storage_plus::Map;
 use struct_iterable::Iterable;
-
-#[cw_serde]
-#[derive(Default)]
-pub struct OsmosisKnownPoolListing {
-    pub pool_id: u64,
-    pub out_denom: String,
-}
 
 #[cw_serde]
 #[derive(Default, Iterable)]
@@ -50,27 +44,39 @@ pub struct Denoms {
     pub cdt: String,
 }
 
+#[cw_serde]
+#[derive(Default)]
+pub struct OsmosisKnownPoolListing {
+    pub pool_id: u64,
+    pub out_denom: String,
+}
+
 pub trait PoolForEach {
-    fn for_each_pool(&self, each_fn: fn(&OsmosisKnownPoolListing) -> ()) -> ();
+    fn pools(&self) -> Vec<OsmosisKnownPoolListing>;
+    fn store_as_map(&self, storage: &mut dyn Storage, map: StoredPools) -> () {
+        self.pools()
+            .iter()
+            .for_each(|pool: &OsmosisKnownPoolListing| {
+                map.save(storage, &pool.out_denom, &pool.pool_id);
+            });
+    }
 }
 
 impl PoolForEach for OsmoPools {
-    fn for_each_pool(&self, each_fn: fn(&OsmosisKnownPoolListing) -> ()) {
-        self.iter().for_each(|(_, pool_listing)| {
-            if let Some(listing) = pool_listing.downcast_ref::<OsmosisKnownPoolListing>() {
-                each_fn(listing)
-            }
-        })
+    fn pools(&self) -> Vec<OsmosisKnownPoolListing> {
+        self.iter()
+            .filter_map(|(_, pool_listing)| pool_listing.downcast_ref::<OsmosisKnownPoolListing>())
+            .map(|pool_listing| pool_listing.clone())
+            .collect()
     }
 }
 
 impl PoolForEach for UsdcPools {
-    fn for_each_pool(&self, each_fn: fn(&OsmosisKnownPoolListing) -> ()) {
-        self.iter().for_each(|(_, pool_listing)| {
-            if let Some(listing) = pool_listing.downcast_ref::<OsmosisKnownPoolListing>() {
-                each_fn(listing)
-            }
-        })
+    fn pools(&self) -> Vec<OsmosisKnownPoolListing> {
+        self.iter()
+            .filter_map(|(_, pool_listing)| pool_listing.downcast_ref::<OsmosisKnownPoolListing>())
+            .map(|pool_listing| pool_listing.clone())
+            .collect()
     }
 }
 

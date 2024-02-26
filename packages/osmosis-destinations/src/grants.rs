@@ -6,6 +6,19 @@ use cw_grant_spec::grants::{
 
 use crate::mars_types::RedBankExecuteMsgs;
 
+pub fn membrane_stake_grant(
+    base: GrantBase,
+    contract_addr: Addr,
+    mbrn_denom: &str,
+) -> Vec<GrantRequirement> {
+    vec![GrantRequirement::contract_exec_messages_auth(
+        base,
+        contract_addr,
+        vec![&membrane::staking::ExecuteMsg::Stake { user: None }],
+        Some(mbrn_denom),
+    )]
+}
+
 pub fn membrane_deposit_grant(
     base: GrantBase,
     contract_addr: Addr,

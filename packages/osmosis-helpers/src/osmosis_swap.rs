@@ -3,6 +3,7 @@ use std::str::FromStr;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin as CWCoin, QuerierWrapper, StdResult, Storage, Uint128};
 
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use osmosis_destinations::{
     comp_prefs::{DestProjectSwapRoutes, KnownPairedPoolAsset, TargetAsset},
     pools::{Denoms, MultipleStoredPools, StoredDenoms},
@@ -315,7 +316,7 @@ pub fn generate_known_to_known_swap_and_sim_msg(
     user_addr: &Addr,
     from_asset: &CWCoin,
     to_denom: &str,
-) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
+) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
         user_addr,
@@ -332,7 +333,7 @@ pub fn generate_known_to_unknown_swap_and_sim_msg(
     user_addr: &Addr,
     from_asset: &CWCoin,
     to_asset: TargetAsset,
-) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
+) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
         user_addr,
@@ -349,14 +350,9 @@ pub fn generate_swap_and_sim_msg(
     from_asset: &CWCoin,
     to_denom: String,
     route: Vec<SwapAmountInRoute>,
-) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
+) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     if from_asset.denom == to_denom {
-        return Ok((
-            EstimateSwapExactAmountInResponse {
-                token_out_amount: from_asset.amount.to_string(),
-            },
-            vec![],
-        ));
+        return Ok((from_asset.amount.clone(), vec![]));
     }
 
     let (simulation, routes) = simulate_swap(
@@ -366,6 +362,8 @@ pub fn generate_swap_and_sim_msg(
         to_denom.clone(),
         route.clone(),
     )?;
+
+    let simulation = Uint128::from_str(simulation.token_out_amount.as_str())?;
 
     let swap_msgs = vec![generate_swap(from_asset, user_address, route)];
 
@@ -437,4 +435,11 @@ pub fn pool_swap_with_sim(
                 .as_str(),
         )?,
     ))
+}
+
+pub fn osmosis_swap_grants(base: GrantBase) -> Vec<GrantRequirement> {
+    vec![GrantRequirement::generic_auth(
+        base.clone(),
+        MsgSwapExactAmountIn::TYPE_URL,
+    )]
 }

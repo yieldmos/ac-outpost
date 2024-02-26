@@ -1,6 +1,7 @@
 use cosmwasm_std::Addr;
+use cosmwasm_std::Storage;
 use cw_storage_plus::{Item, Map};
-use osmosis_destinations::pools::{StoredDenoms, StoredPools};
+use osmosis_destinations::pools::{PoolForEach, StoredDenoms, StoredPools};
 
 use crate::msg::ContractAddrs;
 

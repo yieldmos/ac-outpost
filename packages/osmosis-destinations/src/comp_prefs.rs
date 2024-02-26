@@ -52,23 +52,22 @@ pub enum OsmosisDestinationProject {
     },
 
     /// Stake token to a dao
-    DaoDaoStake {
-        dao: OsmosisDao,
-    },
-
+    // DaoDaoStake {
+    //     dao: OsmosisDao,
+    // },
     MembraneStake {},
-    MembraneDeposit {
-        position_id: Uint128,
-        asset: String,
-    },
-    MembraneRepay {
-        asset: String,
-        ltv_ratio_threshold: Decimal,
-    },
-    MarginedRepay {
-        asset: String,
-        ltv_ratio_threshold: Decimal,
-    },
+    // MembraneDeposit {
+    //     position_id: Uint128,
+    //     asset: String,
+    // },
+    // MembraneRepay {
+    //     asset: String,
+    //     ltv_ratio_threshold: Decimal,
+    // },
+    // MarginedRepay {
+    //     asset: String,
+    //     ltv_ratio_threshold: Decimal,
+    // },
     // NolusLendAsset {
     //     asset: String,
     // },
@@ -77,10 +76,10 @@ pub enum OsmosisDestinationProject {
     // /// paid back first. No order is guaranteed when no vector is passed in.
     // /// Eventually there should be an option to pay back the highest cost debt first
     // RedBankPayback(PaybackDenoms),
-    RedBankLendAsset {
-        target_asset: TargetAsset,
-        account_id: String,
-    },
+    // RedBankLendAsset {
+    //     target_asset: TargetAsset,
+    //     account_id: String,
+    // },
     /// Deposit into redbank to potentially gain
     // RedBankFundAccount {
     //     /*
@@ -136,7 +135,9 @@ pub enum OsmosisDestinationProject {
     /// Convert to Ion and stake it
     IonStaking {},
 
-    // Swap to the appropriate pool tokens, join the pool, and lock the tokens for 14 days if desired
+    /// Swap to the appropriate pool tokens, join the pool, and lock the tokens for 14 days if desired
+    /// Classic pools must have a token that is `known`
+    /// CL pools must have a token that is the same as the offer asset
     OsmosisLiquidityPool {
         pool_id: u64,
         pool_settings: OsmosisPoolSettings,
@@ -151,9 +152,9 @@ pub enum OsmosisDestinationProject {
     /// Join the White Whale satellite market
     /// https://app.whitewhale.money/osmosis/dashboard
     // WhiteWhaleSatellite { asset: pool_network::asset::Asset },
-    WhiteWhaleSatellite {
-        asset: String,
-    },
+    // WhiteWhaleSatellite {
+    //     asset: String,
+    // },
     Unallocated {},
 }
 
@@ -170,8 +171,8 @@ pub enum OsmosisPoolSettings {
         bond_tokens: bool,
     },
     ConcentratedLiquidity {
-        lower_tick: Uint128,
-        upper_tick: Uint128,
+        lower_tick: i64,
+        upper_tick: i64,
         token_min_amount_0: Uint128,
         token_min_amount_1: Uint128,
     },
@@ -201,6 +202,7 @@ pub struct OsmosisProjectAddresses {
     pub ion_dao: String,
     pub milky_way_bonding: String,
     pub eris_amposmo_bonding: String,
+    pub membrane: MembraneAddresses,
 }
 #[cw_serde]
 pub struct OsmosisProjectAddrs {
@@ -209,6 +211,7 @@ pub struct OsmosisProjectAddrs {
     pub ion_dao: Addr,
     pub milky_way_bonding: Addr,
     pub eris_amposmo_bonding: Addr,
+    pub membrane: MembraneAddrs,
 }
 impl OsmosisProjectAddresses {
     pub fn validate_addrs(
@@ -221,6 +224,29 @@ impl OsmosisProjectAddresses {
             ion_dao: api.addr_validate(&self.ion_dao)?,
             milky_way_bonding: api.addr_validate(&self.milky_way_bonding)?,
             eris_amposmo_bonding: api.addr_validate(&self.eris_amposmo_bonding)?,
+            membrane: self.membrane.validate_addrs(api)?,
+        })
+    }
+}
+
+#[cw_serde]
+#[derive(Default)]
+pub struct MembraneAddresses {
+    pub cdp: String,
+    pub staking: String,
+}
+
+#[cw_serde]
+pub struct MembraneAddrs {
+    pub cdp: Addr,
+    pub staking: Addr,
+}
+
+impl MembraneAddresses {
+    pub fn validate_addrs(&self, api: &dyn Api) -> Result<MembraneAddrs, OsmosisDestinationError> {
+        Ok(MembraneAddrs {
+            cdp: api.addr_validate(&self.cdp)?,
+            staking: api.addr_validate(&self.staking)?,
         })
     }
 }
