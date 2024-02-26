@@ -9,7 +9,7 @@ use migaloo_destinations::{
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
-        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins,
+        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one,
         DestProjectMsgs, TaxSplitResult,
     },
     msg_gen::create_exec_msg,
@@ -18,7 +18,7 @@ use std::iter;
 use terraswap_helpers::terraswap_swap::create_terraswap_pool_swap_msg_with_simulation;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
+
 
 use crate::{
     msg::{ContractAddrs, DcaPrefs},
@@ -32,7 +32,7 @@ pub fn compound(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    project_addresses: ContractAddrs,
+    _project_addresses: ContractAddrs,
     user_address: String,
     comp_prefs: &DcaPrefs,
     tax_fee: Option<Decimal>,
@@ -206,8 +206,8 @@ pub fn prefs_to_msgs(
                     )?),
 
                     MigalooDestinationProject::AllianceStake {
-                        asset,
-                        validator_address,
+                        asset: _,
+                        validator_address: _,
                     } => {
                         // let (swap_msg, asset) = match asset {
                         //     AllianceAsset::AmpLuna =>
@@ -247,7 +247,7 @@ pub fn prefs_to_msgs(
                         game,
                         &project_addrs.destination_projects.projects.racoon_bet,
                     )?),
-                    MigalooDestinationProject::WhiteWhaleSatellite { asset } => {
+                    MigalooDestinationProject::WhiteWhaleSatellite { asset: _ } => {
                         // let (swap_msg, token_denom, est_token) = match asset {
                         //     AssetInfo::NativeToken { denom }
                         //         if denom.eq(&project_addrs.destination_projects.denoms.ampwhale) =>
@@ -451,12 +451,12 @@ pub fn prefs_to_msgs(
                         }
                     }
 
-                    MigalooDestinationProject::TokenSwap { target_denom } => {
+                    MigalooDestinationProject::TokenSwap { target_denom: _ } => {
                         unimplemented!()
                     }
                     MigalooDestinationProject::SendTokens {
-                        denom: target_asset,
-                        address: to_address,
+                        denom: _target_asset,
+                        address: _to_address,
                     } => {
                         unimplemented!();
                         // let (swap_msgs, sim) = create_wyndex_swap_msg_with_simulation(
@@ -485,7 +485,7 @@ pub fn prefs_to_msgs(
                         // Ok(send_msgs)
                     }
                     MigalooDestinationProject::GinkouRepayLoan {} => unimplemented!(),
-                    MigalooDestinationProject::GinkouProvideLiquidity { asset, and_then } => unimplemented!(),
+                    MigalooDestinationProject::GinkouProvideLiquidity { asset: _, and_then: _ } => unimplemented!(),
 
                     MigalooDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }

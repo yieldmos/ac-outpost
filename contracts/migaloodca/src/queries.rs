@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 use migaloo_destinations::comp_prefs::MigalooDestinationProject;
@@ -86,9 +86,9 @@ impl Grantable for QueryMsg {
             grant_contract: outpost_contract,
             grant_data:
                 CompPrefsWithAddresses {
-                    comp_prefs,
-                    project_addresses,
-                    comp_frequency,
+                    comp_prefs: _,
+                    project_addresses: _,
+                    comp_frequency: _,
                 },
             ..
         } = grant_structure.clone();
@@ -125,7 +125,7 @@ pub fn gen_comp_pref_grants(
             CompPrefsWithAddresses {
                 comp_prefs: MigaloodcaCompoundPrefs { comp_prefs, .. },
                 project_addresses,
-                comp_frequency,
+                comp_frequency: _,
             },
     }: GrantStructure<CompPrefsWithAddresses>,
 ) -> StdResult<Vec<GrantRequirement>> {
