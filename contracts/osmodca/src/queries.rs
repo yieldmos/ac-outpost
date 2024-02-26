@@ -9,8 +9,13 @@ use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantabl
 use cw_grant_spec::grants::{
     AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
 };
-use osmosis_destinations::comp_prefs::OsmosisDestinationProject;
-use universal_destinations::grants::native_staking_grant;
+use osmosis_destinations::comp_prefs::{OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings};
+use osmosis_destinations::grants::{membrane_stake_grant, mint_milk_tia_grant, stake_ion_grants};
+use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
+use osmosis_helpers::osmosis_swap::osmosis_swap_grants;
+use sail_destinations::grants::eris_lsd_grant;
+use universal_destinations::grants::{native_send_token, native_staking_grant};
+use white_whale::pool_network::asset::AssetInfo;
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
@@ -140,85 +145,66 @@ pub fn gen_comp_pref_grants(
                     OsmosisDestinationProject::OsmosisStaking { validator_address } => {
                         native_staking_grant(base, None, Some(vec![validator_address]))
                     }
-                    _ => unimplemented!()
+                    OsmosisDestinationProject::TokenSwap { target_asset } => osmosis_swap_grants(base),
+                    OsmosisDestinationProject::SendTokens { address, target_asset } => vec![
+                        osmosis_swap_grants(base.clone()),
+                        native_send_token(
+                            base,
+                            AssetInfo::NativeToken {
+                                denom: target_asset.denom,
+                            },
+                            address,
+                        ),
+                    ]
+                    .concat(),
 
-                    // OsmosisDestinationProject::DaoStaking(dao) => {
-                    //     let DaoAddr {
-                    //         juno_wyndex_pair, cw20, ..
-                    //     } = dao.get_daos_addresses(&project_addresses.destination_projects.daos);
+                    OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => eris_lsd_grant(
+                        base,
+                        project_addresses.destination_projects.projects.eris_amposmo_bonding.clone(),
+                        AssetInfo::NativeToken {
+                            denom: "uosmo".to_string(),
+                        },
+                    ),
+                    OsmosisDestinationProject::MintLsd {
+                        lsd: OsmosisLsd::MilkyWay,
+                    } => vec![
+                        osmosis_swap_grants(base.clone()),
+                        mint_milk_tia_grant(
+                            base,
+                            project_addresses.destination_projects.projects.milky_way_bonding.clone(),
+                            &project_addresses.destination_projects.denoms.tia,
+                        ),
+                    ]
+                    .concat(),
 
-                    //     let (swap_address, required_key) =
-                    //         // use the pair if possible
-                    //         juno_wyndex_pair.map_or((
-                    //             project_addresses.destination_projects.wynd.multihop.to_string(),
-                    //             "execute_swap_operations".to_string(),
-                    //         ),|pair_add| (pair_add.to_string(), "swap".to_string()));
+                    OsmosisDestinationProject::IonStaking {} => vec![
+                        osmosis_swap_grants(base.clone()),
+                        stake_ion_grants(
+                            base,
+                            project_addresses.destination_projects.projects.ion_dao.clone(),
+                            &project_addresses.destination_projects.denoms.ion,
+                        ),
+                    ]
+                    .concat(),
 
-                    //     vec![
-                    //         // staking permission
-                    //         GrantRequirement::default_contract_exec_auth(base.clone(), cw20, vec!["send"], None),
-                    //         // swap permission
-                    //         GrantRequirement::default_contract_exec_auth(
-                    //             base,
-                    //             Addr::unchecked(swap_address),
-                    //             vec![required_key],
-                    //             Some("ujuno"),
-                    //         ),
-                    //     ]
-                    // }
+                    OsmosisDestinationProject::MembraneStake {} => vec![
+                        osmosis_swap_grants(base.clone()),
+                        membrane_stake_grant(
+                            base.clone(),
+                            project_addresses.destination_projects.projects.membrane.staking.clone(),
+                            &project_addresses.destination_projects.denoms.mbrn,
+                        ),
+                    ]
+                    .concat(),
 
-                    // OsmosisDestinationProject::SendTokens { denom, address } => [
-                    //     // general multihop swap
-                    //     match denom.clone() {
-                    //         AssetInfo::Native(token_denom) if token_denom.eq("ujuno") => vec![],
-                    //         _ => wynd_multihop_swap_grant(
-                    //             base.clone(),
-                    //             project_addresses.destination_projects.wynd.multihop.clone(),
-                    //             AssetInfo::Native("ujuno".to_string()),
-                    //             Some(ContractExecutionAuthorizationLimit::single_fund_limit("ujuno")),
-                    //         ),
-                    //     },
-                    //     // send to the given user
-                    //     vec![match denom {
-                    //         // if it's a native denom we need a send authorization
-                    //         AssetInfo::Native(denom) => GrantRequirement::GrantSpec {
-                    //             grant_type: AuthorizationType::SendAuthorization {
-                    //                 spend_limit: Some(vec![coin(u128::MAX, denom)]),
-                    //                 allow_list: Some(vec![Addr::unchecked(address)]),
-                    //             },
-                    //             granter: granter.clone(),
-                    //             grantee: grantee.clone(),
-                    //             expiration,
-                    //         },
-                    //         // if it's a cw20 then we need a contract execution authorization on the cw20 contract
-                    //         AssetInfo::Token(contract_addr) => GrantRequirement::default_contract_exec_auth(
-                    //             base,
-                    //             Addr::unchecked(contract_addr),
-                    //             vec!["transfer"],
-                    //             None,
-                    //         ),
-                    //     }],
-                    // ]
-                    // .concat(),
-                    // OsmosisDestinationProject::MintLsd { lsd_type } => vec![GrantRequirement::default_contract_exec_auth(
-                    //     base,
-                    //     lsd_type.get_mint_address(&project_addresses.destination_projects.juno_lsds),
-                    //     vec![match lsd_type {
-                    //         JunoLsd::StakeEasySe => "stake",
-                    //         JunoLsd::StakeEasyB => "stake_for_bjuno",
-                    //         JunoLsd::Wynd | JunoLsd::Backbone | JunoLsd::Eris => "bond",
-                    //     }],
-                    //     Some("ujuno"),
-                    // )],
-
-                    // OsmosisDestinationProject::TokenSwap {
-                    //     target_denom: _target_denom,
-                    // } => wynd_multihop_swap_grant(
-                    //     base,
-                    //     project_addresses.destination_projects.wynd.multihop.clone(),
-                    //     AssetInfo::Native("ujuno".to_string()),
-                    //     None,
-                    // ),
+                    OsmosisDestinationProject::OsmosisLiquidityPool {
+                        pool_id,
+                        pool_settings: OsmosisPoolSettings::Standard { bond_tokens },
+                    } => join_classic_pool_grants(base, bond_tokens),
+                    OsmosisDestinationProject::OsmosisLiquidityPool {
+                        pool_id,
+                        pool_settings: OsmosisPoolSettings::ConcentratedLiquidity { .. },
+                    } => join_cl_pool_grants(base),
                 }
             });
 
