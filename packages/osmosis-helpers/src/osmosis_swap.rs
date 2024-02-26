@@ -10,11 +10,10 @@ use osmosis_destinations::{
 };
 use osmosis_std::types::cosmos::base::v1beta1::Coin;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
-    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
+    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
     MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
 };
-use outpost_utils::{helpers::DestProjectMsgs, msg_gen::CosmosProtoMsg};
+use outpost_utils::{msg_gen::CosmosProtoMsg};
 
 use crate::errors::OsmosisHelperError;
 
@@ -292,10 +291,10 @@ pub fn unsafe_generate_known_to_known_route(
 /// Returns both the swap simulation and the queried swap route
 pub fn simulate_swap(
     querier: &QuerierWrapper,
-    user_addr: &Addr,
+    _user_addr: &Addr,
     from_denom: &str,
     // just for error reporting purposes
-    to_denom: String,
+    _to_denom: String,
     route: Vec<SwapAmountInRoute>,
 ) -> StdResult<(EstimateSwapExactAmountInResponse, Vec<SwapAmountInRoute>)> {
     let estimate = EstimateSwapExactAmountInRequest {
@@ -355,7 +354,7 @@ pub fn generate_swap_and_sim_msg(
         return Ok((from_asset.amount.clone(), vec![]));
     }
 
-    let (simulation, routes) = simulate_swap(
+    let (simulation, _routes) = simulate_swap(
         querier,
         user_address,
         &from_asset.denom,
