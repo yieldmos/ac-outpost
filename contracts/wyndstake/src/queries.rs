@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Addr, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 
