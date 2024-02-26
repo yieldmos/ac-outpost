@@ -5,10 +5,9 @@ use crate::{
         CompPref, CompoundingFrequency, EndType, InactiveStatus, StoreSettings,
         UnverifiedUserCompPref, UserCompPref,
     },
-    ContractError,
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, Addr, Decimal, StdError, Timestamp, Uint64};
+use cosmwasm_std::{to_json_binary, Addr, Decimal, Timestamp, Uint64};
 use cw_orch::{anyhow, prelude::*};
 
 #[cw_serde]

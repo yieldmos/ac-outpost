@@ -1,4 +1,3 @@
-use cosmwasm_std::Uint128;
 use osmosis_destinations::{
     comp_prefs::DestProjectSwapRoutes,
     pools::{Denoms, OsmoPools, OsmosisKnownPoolListing, UsdcPools},

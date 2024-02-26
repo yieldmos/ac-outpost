@@ -57,7 +57,7 @@ pub trait PoolForEach {
         self.pools()
             .iter()
             .for_each(|pool: &OsmosisKnownPoolListing| {
-                map.save(storage, &pool.out_denom, &pool.pool_id);
+                let _ = map.save(storage, &pool.out_denom, &pool.pool_id);
             });
     }
 }
