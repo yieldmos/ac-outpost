@@ -1,22 +1,18 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Storage, Uint128};
-
-use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin,
-    osmosis::poolmanager::v1beta1::{
-        EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
-        EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse,
-        MsgSwapExactAmountIn, MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
-    },
-};
+use cosmwasm_std::{Addr, Coin as CWCoin, QuerierWrapper, StdResult, Storage, Uint128};
 
 use osmosis_destinations::{
     comp_prefs::{DestProjectSwapRoutes, KnownPairedPoolAsset, TargetAsset},
     pools::{Denoms, MultipleStoredPools, StoredDenoms},
 };
-use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
+use osmosis_std::types::cosmos::base::v1beta1::Coin;
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
+    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
+    MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
+};
 use outpost_utils::{helpers::DestProjectMsgs, msg_gen::CosmosProtoMsg};
 
 use crate::errors::OsmosisHelperError;
@@ -43,97 +39,6 @@ pub struct KnownRoutePools {
     pub to_token_usdc_pool: Option<u64>,
 }
 
-// /// Queries the swaprouter's state to get a valid route from `from_denom` to `to_denom`
-// pub fn query_swap_in_routes(
-//     querier: &QuerierWrapper,
-//     from_token: &str,
-//     // just for error reporting purposes
-//     to_denom: String,
-//     swap_router_address: String,
-// ) -> StdResult<Vec<SwapAmountInRoute>> {
-//     let route_response: GetRouteResponse = querier.query_wasm_smart(
-//         swap_router_address,
-//         &GetRoute {
-//             input_denom: from_token.to_string(),
-//             output_denom: to_denom,
-//         },
-//     )?;
-
-//     let route: Vec<SwapAmountInRoute> = route_response
-//         .pool_route
-//         .iter()
-//         .map(|route| SwapAmountInRoute {
-//             pool_id: route.pool_id,
-//             token_out_denom: route.token_out_denom.clone(),
-//         })
-//         .collect();
-
-//     Ok(route)
-// }
-
-// /// Queries the swaprouter's state to get a valid route from `from_denom` to `to_denom`
-// pub fn query_swap_out_routes(
-//     querier: &QuerierWrapper,
-//     from_token: &str,
-//     // just for error reporting purposes
-//     to_denom: String,
-//     swap_router_address: String,
-// ) -> StdResult<Vec<SwapAmountOutRoute>> {
-//     let route_response: GetRouteResponse = querier.query_wasm_smart(
-//         swap_router_address,
-//         &GetRoute {
-//             input_denom: from_token.to_string(),
-//             output_denom: to_denom,
-//         },
-//     )?;
-
-//     let route: Vec<SwapAmountOutRoute> = route_response
-//         .pool_route
-//         .iter()
-//         .map(|route| SwapAmountOutRoute {
-//             pool_id: route.pool_id,
-//             // this is likely wrong and shouldn't be an out denom
-//             token_in_denom: route.token_out_denom.clone(),
-//         })
-//         .collect();
-
-//     Ok(route)
-// }
-
-// pub fn simulate_exact_out_swap(
-//     querier: &QuerierWrapper,
-//     _delegator_address: &Addr,
-//     from_denom: String,
-//     to_token: Coin,
-//     swap_router_address: String,
-// ) -> StdResult<(EstimateSwapExactAmountOutResponse, Vec<SwapAmountOutRoute>)> {
-//     if from_denom == to_token.denom {
-//         return Ok((
-//             EstimateSwapExactAmountOutResponse {
-//                 token_in_amount: to_token.amount,
-//             },
-//             vec![],
-//         ));
-//     }
-
-//     let swap_route: Vec<SwapAmountOutRoute> = query_swap_out_routes(
-//         querier,
-//         &from_denom.clone(),
-//         to_token.denom.clone(),
-//         swap_router_address,
-//     )?;
-
-//     let estimate = EstimateSwapExactAmountOutRequest {
-//         // sender: delegator_address.to_string(),
-//         pool_id: swap_route.clone().first().unwrap().pool_id,
-//         token_out: to_token.denom,
-//         routes: swap_route.clone(),
-//     }
-//     .query(querier)?;
-
-//     Ok((estimate, swap_route))
-// }
-
 pub fn generate_exact_out_swap_msg_from_sim(
     delegator_address: &Addr,
     from_denom: String,
@@ -157,10 +62,10 @@ pub fn generate_exact_out_swap_msg_from_sim(
 
 /// The base data needed to be able to construct routes
 pub struct OsmosisRoutePools<'a> {
-    stored_denoms: StoredDenoms<'a>,
-    stored_pools: MultipleStoredPools<'a>,
-    pools: DestProjectSwapRoutes,
-    denoms: Denoms,
+    pub stored_denoms: StoredDenoms<'a>,
+    pub stored_pools: MultipleStoredPools<'a>,
+    pub pools: DestProjectSwapRoutes,
+    pub denoms: Denoms,
 }
 
 /// Generated a route for a swap the resolves to a `TargetAsset` which
@@ -387,7 +292,7 @@ pub fn unsafe_generate_known_to_known_route(
 pub fn simulate_swap(
     querier: &QuerierWrapper,
     user_addr: &Addr,
-    from_token: Coin,
+    from_denom: &str,
     // just for error reporting purposes
     to_denom: String,
     route: Vec<SwapAmountInRoute>,
@@ -395,7 +300,7 @@ pub fn simulate_swap(
     let estimate = EstimateSwapExactAmountInRequest {
         // sender: delegator_address.to_string(),
         pool_id: route.clone().first().unwrap().pool_id,
-        token_in: from_token.denom,
+        token_in: from_denom.to_string(),
         routes: route.clone(),
     }
     .query(querier)?;
@@ -408,19 +313,32 @@ pub fn generate_known_to_known_swap_and_sim_msg(
     store: &dyn Storage,
     pool_routes: OsmosisRoutePools,
     user_addr: &Addr,
-    from_denom: &str,
+    from_asset: &CWCoin,
     to_denom: &str,
-    from_token_amount: &Uint128,
 ) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
         user_addr,
-        Coin {
-            denom: from_denom.to_string(),
-            amount: from_token_amount.to_string(),
-        },
+        from_asset,
         to_denom.to_string(),
-        generate_known_to_known_route(store, pool_routes, from_denom, to_denom)?,
+        generate_known_to_known_route(store, pool_routes, &from_asset.denom, to_denom)?,
+    )
+}
+
+pub fn generate_known_to_unknown_swap_and_sim_msg(
+    querier: &QuerierWrapper,
+    store: &dyn Storage,
+    pool_routes: OsmosisRoutePools,
+    user_addr: &Addr,
+    from_asset: &CWCoin,
+    to_asset: TargetAsset,
+) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
+    generate_swap_and_sim_msg(
+        querier,
+        user_addr,
+        from_asset,
+        to_asset.denom.clone(),
+        generate_known_to_unknown_route(store, pool_routes, &from_asset.denom, to_asset)?,
     )
 }
 
@@ -428,14 +346,14 @@ pub fn generate_known_to_known_swap_and_sim_msg(
 pub fn generate_swap_and_sim_msg(
     querier: &QuerierWrapper,
     user_address: &Addr,
-    from_token: Coin,
+    from_asset: &CWCoin,
     to_denom: String,
     route: Vec<SwapAmountInRoute>,
 ) -> Result<(EstimateSwapExactAmountInResponse, Vec<CosmosProtoMsg>), OsmosisHelperError> {
-    if from_token.denom == to_denom {
+    if from_asset.denom == to_denom {
         return Ok((
             EstimateSwapExactAmountInResponse {
-                token_out_amount: from_token.amount,
+                token_out_amount: from_asset.amount.to_string(),
             },
             vec![],
         ));
@@ -444,30 +362,41 @@ pub fn generate_swap_and_sim_msg(
     let (simulation, routes) = simulate_swap(
         querier,
         user_address,
-        from_token.clone(),
+        &from_asset.denom,
         to_denom.clone(),
-        route,
+        route.clone(),
     )?;
 
-    let swap_msg = CosmosProtoMsg::OsmosisSwapExactAmountIn(MsgSwapExactAmountIn {
-        token_in: Some(from_token),
-        sender: user_address.to_string(),
-        routes,
-        token_out_min_amount: simulation.clone().token_out_amount,
-    });
+    let swap_msgs = vec![generate_swap(from_asset, user_address, route)];
 
-    Ok((simulation, vec![swap_msg]))
+    Ok((simulation, swap_msgs))
+}
+
+pub fn generate_swap(
+    from_asset: &CWCoin,
+    user_addr: &Addr,
+    routes: Vec<SwapAmountInRoute>,
+) -> CosmosProtoMsg {
+    CosmosProtoMsg::OsmosisSwapExactAmountIn(MsgSwapExactAmountIn {
+        token_in: Some(Coin {
+            denom: from_asset.denom.to_string(),
+            amount: from_asset.amount.to_string(),
+        }),
+        sender: user_addr.to_string(),
+        routes,
+        token_out_min_amount: "0".to_string(),
+    })
 }
 
 pub fn simulate_pool_swap(
     querier: &QuerierWrapper,
     pool_id: &u64,
-    offer_asset: &Coin,
+    offer_asset: &str,
     token_out_denom: &str,
 ) -> Result<EstimateSwapExactAmountInResponse, OsmosisHelperError> {
     let simulation = EstimateSwapExactAmountInRequest {
         pool_id: pool_id.clone(),
-        token_in: offer_asset.denom.clone(),
+        token_in: offer_asset.to_string(),
         routes: vec![SwapAmountInRoute {
             pool_id: *pool_id,
             token_out_denom: token_out_denom.to_string(),
@@ -485,7 +414,7 @@ pub fn pool_swap_with_sim(
     offer_asset: cosmwasm_std::Coin,
     token_out_denom: &str,
 ) -> Result<(Vec<CosmosProtoMsg>, Uint128), OsmosisHelperError> {
-    let offer_coin = OsmosisCoin {
+    let offer_coin = Coin {
         denom: offer_asset.denom.to_string(),
         amount: offer_asset.amount.to_string(),
     };
@@ -503,7 +432,7 @@ pub fn pool_swap_with_sim(
             },
         )],
         Uint128::from_str(
-            simulate_pool_swap(querier, pool_id, &offer_coin, token_out_denom)?
+            simulate_pool_swap(querier, pool_id, &offer_coin.denom, token_out_denom)?
                 .token_out_amount
                 .as_str(),
         )?,

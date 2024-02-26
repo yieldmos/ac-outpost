@@ -1,11 +1,16 @@
-use std::iter;
+use std::{iter, str::FromStr};
 
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
+use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Uint128};
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
     dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
+    pools::MultipleStoredPools,
 };
-use osmosis_helpers::osmosis_swap::pool_swap_with_sim;
+use osmosis_helpers::osmosis_swap::{
+    generate_known_to_unknown_route, generate_known_to_unknown_swap_and_sim_msg, generate_swap, pool_swap_with_sim,
+    OsmosisRoutePools,
+};
+use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
@@ -22,7 +27,7 @@ use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::Simulate
 
 use crate::{
     msg::ContractAddrs,
-    state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS},
+    state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS},
     ContractError,
 };
 
@@ -163,20 +168,66 @@ pub fn prefs_to_msgs(
                             amount: comp_token_amount,
                         },
                     )?),
-                    OsmosisDestinationProject::TokenSwap { target_asset } => {
-                        // Ok(DestProjectMsgs {
-                        //     msgs: wynd_helpers::wynd_swap::create_wyndex_swap_msg(
-                        //         user_addr,
-                        //         comp_token_amount,
-                        //         AssetInfo::Native(dca_denom.clone()),
-                        //         target_denom,
-                        //         project_addrs.destination_projects.wynd.multihop.to_string(),
-                        //     )
-                        //     .map_err(ContractError::Std)?,
-                        //     sub_msgs: vec![],
-                        //     events: vec![],
-                        // })
-                        unimplemented!()
+                    OsmosisDestinationProject::TokenSwap { target_asset } => Ok(DestProjectMsgs {
+                        msgs: vec![generate_swap(
+                            &coin(comp_token_amount.u128(), "uosmo"),
+                            user_addr,
+                            generate_known_to_unknown_route(
+                                deps.storage,
+                                OsmosisRoutePools {
+                                    stored_denoms: KNOWN_DENOMS,
+                                    stored_pools: MultipleStoredPools {
+                                        osmo: KNOWN_OSMO_POOLS,
+                                        usdc: KNOWN_USDC_POOLS,
+                                    },
+                                    pools: project_addrs.destination_projects.swap_routes.clone(),
+                                    denoms: project_addrs.destination_projects.denoms.clone(),
+                                },
+                                "uosmo",
+                                target_asset.clone(),
+                            )?,
+                        )],
+                        sub_msgs: vec![],
+                        events: vec![Event::new("token_swap").add_attribute("target_asset", target_asset.to_string())],
+                    }),
+                    OsmosisDestinationProject::SendTokens {
+                        address: to_address,
+                        target_asset,
+                    } => {
+                        let (sim, swap_msgs) = generate_known_to_unknown_swap_and_sim_msg(
+                            &deps.querier,
+                            deps.storage,
+                            OsmosisRoutePools {
+                                stored_denoms: KNOWN_DENOMS,
+                                stored_pools: MultipleStoredPools {
+                                    osmo: KNOWN_OSMO_POOLS,
+                                    usdc: KNOWN_USDC_POOLS,
+                                },
+                                pools: project_addrs.destination_projects.swap_routes.clone(),
+                                denoms: project_addrs.destination_projects.denoms.clone(),
+                            },
+                            user_addr,
+                            &coin(comp_token_amount.u128(), "uosmo"),
+                            target_asset.clone(),
+                        )?;
+
+                        let sim = Uint128::from_str(&sim.token_out_amount)?;
+
+                        // after the swap we can send the estimated funds to the target address
+                        let mut send_msgs = send_tokens_msgs(
+                            user_addr,
+                            &deps.api.addr_validate(&to_address)?,
+                            Asset {
+                                info: AssetInfo::NativeToken {
+                                    denom: target_asset.denom,
+                                },
+                                amount: sim,
+                            },
+                        )?;
+
+                        send_msgs.append_msgs(swap_msgs);
+
+                        Ok(send_msgs)
                     }
                     OsmosisDestinationProject::MintLsd { lsd: OsmosisLsd::Eris } => Ok(mint_eris_lsd_msgs(
                         user_addr,

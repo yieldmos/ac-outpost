@@ -23,6 +23,16 @@ pub struct TargetAsset {
     pub paired_asset: KnownPairedPoolAsset,
 }
 
+impl std::fmt::Display for TargetAsset {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "TargetAsset {{ denom: {}, exit_pool_id: {}, paired_asset: {:?} }}",
+            self.denom, self.exit_pool_id, self.paired_asset
+        )
+    }
+}
+
 #[cw_serde]
 pub enum OsmosisDestinationProject {
     /// Stake the tokens to a given validator
