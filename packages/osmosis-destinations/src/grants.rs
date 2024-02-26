@@ -63,3 +63,16 @@ pub fn red_bank_repay_grant(
         Some(repay_denom),
     )]
 }
+
+pub fn stake_ion_grants(
+    base: GrantBase,
+    contract_addr: Addr,
+    ion_denom: &str,
+) -> Vec<GrantRequirement> {
+    vec![GrantRequirement::default_contract_exec_auth(
+        base,
+        contract_addr,
+        vec!["stake"],
+        Some(ion_denom),
+    )]
+}

@@ -388,7 +388,6 @@ pub fn prefs_to_msgs(
                     //     &project_addrs.destination_projects.projects.white_whale_satellite,
                     //     comp_token_amount,
                     // )?),
-                    // OsmosisDestinationProject::MembraneStake {} => Ok(DestProjectMsgs::default()),
                     // OsmosisDestinationProject::MembraneRepay {
                     //     asset,
                     //     ltv_ratio_threshold,

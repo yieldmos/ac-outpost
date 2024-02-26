@@ -619,3 +619,16 @@ pub enum GelottoExecute {
         seed: u32,
     },
 }
+
+pub fn wyndex_asset_info_to_terraswap_asset_info(
+    asset_info: AssetInfo,
+) -> white_whale::pool_network::asset::AssetInfo {
+    match asset_info {
+        AssetInfo::Native(denom) => {
+            white_whale::pool_network::asset::AssetInfo::NativeToken { denom }
+        }
+        AssetInfo::Token(contract_addr) => {
+            white_whale::pool_network::asset::AssetInfo::Token { contract_addr }
+        }
+    }
+}

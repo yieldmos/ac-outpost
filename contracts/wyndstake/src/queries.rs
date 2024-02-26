@@ -2,9 +2,10 @@ use cosmwasm_std::{coin, Addr, Deps, QuerierWrapper, StdResult, Timestamp, Uint1
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 
-use juno_destinations::comp_prefs::{DaoAddr, JunoDestinationProject, JunoLsd};
-use juno_destinations::grants::{balance_dao_grant, gelotto_lottery_grant, native_staking_grant, wyndao_staking_grant};
+use juno_destinations::comp_prefs::{wyndex_asset_info_to_terraswap_asset_info, DaoAddr, JunoDestinationProject, JunoLsd};
+use juno_destinations::grants::{balance_dao_grant, gelotto_lottery_grant, wyndao_staking_grant};
 use terraswap_helpers::terraswap_swap::terraswap_multihop_grant;
+use universal_destinations::grants::{native_send_token, native_staking_grant};
 use wynd_helpers::wynd_swap::{simulate_wynd_pool_swap, wynd_multihop_swap_grant, wynd_pool_swap_grant};
 use wyndex::{
     asset::{Asset, AssetInfo},
@@ -228,22 +229,7 @@ pub fn gen_comp_pref_grants(
                     ),
                 },
                 // send to the given user
-                vec![match denom {
-                    // if it's a native denom we need a send authorization
-                    AssetInfo::Native(denom) => GrantRequirement::GrantSpec {
-                        grant_type: AuthorizationType::SendAuthorization {
-                            spend_limit: Some(vec![coin(u128::MAX, denom)]),
-                            allow_list: Some(vec![Addr::unchecked(address)]),
-                        },
-                        granter: granter.clone(),
-                        grantee: grantee.clone(),
-                        expiration,
-                    },
-                    // if it's a cw20 then we need a contract execution authorization on the cw20 contract
-                    AssetInfo::Token(contract_addr) => {
-                        GrantRequirement::default_contract_exec_auth(base, Addr::unchecked(contract_addr), vec!["transfer"], None)
-                    }
-                }],
+                native_send_token(base, wyndex_asset_info_to_terraswap_asset_info(denom), address),
             ]
             .concat(),
             JunoDestinationProject::MintLsd { lsd_type } => [
