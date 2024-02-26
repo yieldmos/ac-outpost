@@ -1,13 +1,11 @@
 use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
-use cw_grant_spec::grants::{
-    GrantBase, GrantRequirement, RevokeRequirement,
-};
+use cw_grant_spec::grants::{GrantBase, GrantRequirement, RevokeRequirement};
 use migaloo_destinations::comp_prefs::MigalooDestinationProject;
 use migaloo_destinations::grants::furnace_grant;
 
 use universal_destinations::grants::native_staking_grant;
-use white_whale::pool_network::asset::{AssetInfo};
+use white_whale::pool_network::asset::AssetInfo;
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
 
 use crate::msg::{CompPrefsWithAddresses, MigaloostakeCompoundPrefs, QueryMsg};

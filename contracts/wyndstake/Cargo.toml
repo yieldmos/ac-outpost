@@ -1,8 +1,8 @@
 [package]
 name = "ymos-wyndstake-outpost"
 authors = ["Marc <marc@yieldmos.com>"]
-version = { workspace = true }
-edition = { workspace = true }
+version = "1.0.0"
+edition = "2021"
 description = "Yieldmos Wynd Staking Outpost"
 
 exclude = [

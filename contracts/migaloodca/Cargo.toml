@@ -1,8 +1,8 @@
 [package]
 name = "ymos-migaloodca-outpost"
 authors = ["Marc <marc@yieldmos.com>"]
-version = { workspace = true }
-edition = { workspace = true }
+version = "0.1.0"
+edition = "2021"
 description = "Yieldmos Migaloo DCAing Outpost"
 
 exclude = [

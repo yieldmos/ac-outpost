@@ -1,13 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Api, Decimal, Timestamp};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
-use outpost_utils::{
-    helpers::CompoundingFrequency,
-
-};
+use juno_destinations::comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
+use outpost_utils::helpers::CompoundingFrequency;
 use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
 use wyndex::asset::AssetInfo;
-use juno_destinations::comp_prefs::{DestinationProjectAddresses, DestinationProjectAddrs, JunoCompPrefs};
 
 use crate::ContractError;
 
@@ -191,19 +188,12 @@ impl TerraswapRouteAddresses {
 #[derive(Default)]
 pub struct AuthzppAddresses {
     pub withdraw_tax: String,
-    // pub allowlist_send: String,
 }
 
 #[cw_serde]
-pub struct AuthzppAddrs {
-    // pub withdraw_tax: Addr,
-    // pub allowlist_send: Addr,
-}
+pub struct AuthzppAddrs {}
 impl AuthzppAddresses {
     pub fn validate_addrs(&self, _api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
-        Ok(AuthzppAddrs {
-            // withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
-            // allowlist_send: api.addr_validate(&self.allowlist_send)?,
-        })
+        Ok(AuthzppAddrs {})
     }
 }

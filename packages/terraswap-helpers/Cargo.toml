@@ -1,9 +1,9 @@
 [package]
 name = "terraswap-helpers"
-version = { workspace = true }
+version = "1.0.0"
 authors = ["Marc <marc@yieldmos.com>"]
 description = "Utility functions for Terraswap interaction used by Yieldmos outpost contracts"
-edition = { workspace = true }
+edition = "2021"
 
 [dependencies]
 cosmwasm-std = { workspace = true }

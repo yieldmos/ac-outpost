@@ -14,7 +14,6 @@ pub enum ContractError {
 
     // #[error("Juno Helper Error: &{0}")]
     // JunoHelperError(#[from] juno_helpers::errors::HelperError),
-
     #[error("Juno Destinations Error: &{0}")]
     JunoDestinationError(#[from] juno_destinations::errors::JunoDestinationError),
 

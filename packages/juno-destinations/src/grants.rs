@@ -1,7 +1,5 @@
-use cosmwasm_std::{Addr};
-use cw_grant_spec::grants::{
-    GrantBase, GrantRequirement,
-};
+use cosmwasm_std::Addr;
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 
 pub fn balance_dao_grant(base: GrantBase, contract_addr: Addr) -> Vec<GrantRequirement> {
     vec![GrantRequirement::default_contract_exec_auth(

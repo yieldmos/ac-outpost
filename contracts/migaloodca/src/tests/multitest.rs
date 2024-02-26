@@ -1,11 +1,9 @@
 use cosmwasm_std::{Addr, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use migaloo_destinations::comp_prefs::MigalooCompPrefs;
 
 use crate::{
     contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg, MigaloodcaCompoundPrefs},
-    ContractError,
+    msg::InstantiateMsg,
 };
 
 pub struct OutpostContract(Addr);

@@ -1,10 +1,9 @@
 use cosmwasm_std::{coin, Addr, Coin, Event, QuerierWrapper, StdError, Storage, Uint128};
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 
-
 use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::MsgCreatePosition;
+use osmosis_std::types::osmosis::gamm::v1beta1::MsgJoinSwapExternAmountIn;
 use osmosis_std::types::osmosis::gamm::v1beta1::Pool;
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgJoinSwapExternAmountIn};
 use osmosis_std::types::osmosis::lockup::MsgLockTokens;
 
 use osmosis_std::types::{
@@ -14,8 +13,8 @@ use outpost_utils::{helpers::DestProjectMsgs, msg_gen::CosmosProtoMsg};
 
 use crate::errors::OsmosisHelperError;
 use crate::osmosis_swap::{
-    generate_known_to_known_swap_and_sim_msg,
-    osmosis_swap_grants, pool_swap_with_sim, OsmosisRoutePools,
+    generate_known_to_known_swap_and_sim_msg, osmosis_swap_grants, pool_swap_with_sim,
+    OsmosisRoutePools,
 };
 
 pub fn query_pool_info(

@@ -6,7 +6,6 @@ use osmosis_destinations::comp_prefs::{
     OsmosisCompPrefs, OsmosisDestinationProjectAddresses, OsmosisDestinationProjectAddrs,
 };
 
-
 use crate::ContractError;
 
 #[cw_serde]
@@ -90,19 +89,16 @@ pub struct ContractAddresses {
 #[derive(Default)]
 pub struct AuthzppAddresses {
     pub withdraw_tax: String,
-    // pub allowlist_send: String,
 }
 
 #[cw_serde]
 pub struct AuthzppAddrs {
     pub withdraw_tax: Addr,
-    // pub allowlist_send: Addr,
 }
 impl AuthzppAddresses {
     pub fn validate_addrs(&self, api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
         Ok(AuthzppAddrs {
             withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
-            // allowlist_send: api.addr_validate(&self.allowlist_send)?,
         })
     }
 }

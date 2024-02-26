@@ -1,8 +1,8 @@
 [package]
 name = "ymos-junostake-outpost"
 authors = ["Marc <marc@yieldmos.com>"]
-version = { workspace = true }
-edition = { workspace = true }
+version = "1.0.0"
+edition = "2021"
 description = "Yieldmos Juno Staking Outpost"
 
 exclude = [
@@ -38,9 +38,9 @@ interface = ["dep:cw-orch"]
 withdraw-rewards-tax-grant = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true, features = [
-    "stargate",
-    "staking",
-    "cosmwasm_1_4",
+  "stargate",
+  "staking",
+  "cosmwasm_1_4",
 ] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }

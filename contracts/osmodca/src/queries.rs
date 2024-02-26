@@ -5,9 +5,7 @@ use crate::{
 };
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
-use cw_grant_spec::grants::{
-    AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement,
-};
+use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 use osmosis_destinations::comp_prefs::{OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings};
 use osmosis_destinations::grants::{membrane_stake_grant, mint_milk_tia_grant, stake_ion_grants};
 use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
