@@ -1,6 +1,6 @@
 [package]
 name = "juno-destinations"
-version = { workspace = true }
+version = "1.0.0"
 authors = ["Marc <marc@yieldmos.com>"]
 description = "Message generators for the Juno blockchain for use by Yieldmos outpost contracts"
 edition = "2021"
