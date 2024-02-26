@@ -5,7 +5,7 @@ use crate::comp_prefs::{
 use crate::errors::MigalooDestinationError;
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmos_sdk_proto::cosmos::staking::v1beta1::MsgDelegate;
-use cosmwasm_std::{to_json_binary, Addr, Event, Querier, QuerierWrapper, Uint128};
+use cosmwasm_std::{to_json_binary, Addr, Event, QuerierWrapper, Uint128};
 use outpost_utils::helpers::csdk_coins;
 use outpost_utils::{
     helpers::DestProjectMsgs,
