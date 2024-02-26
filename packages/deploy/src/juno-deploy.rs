@@ -8,7 +8,7 @@ use cw_orch::{
 
 use juno_destinations::comp_prefs::DaoAddress;
 use tokio::runtime::Runtime;
-use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
+use white_whale_std::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
 use ymos_comp_prefs::{msg::ExecuteMsgFns as CompPrefExecuteMsgFns, YmosCompPrefsContract};
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;

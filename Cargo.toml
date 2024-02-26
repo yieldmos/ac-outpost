@@ -51,7 +51,7 @@ osmosis-std = "0.21.0"
 osmosis-helpers = { path = "./packages/osmosis-helpers" }
 # mars-types = { git = "https://github.com/mars-protocol/contracts.git", version = "2.0.0" }
 
-white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", tag = "v1.4.1" }
+white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", tag = "v1.4.0-juno-1-token_factory-hotfix" }
 cw-grant-spec = { git = "https://github.com/kakucodes/authzpp", version = "0.3.2" }
 withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", version = "0.3.0", features = [
     "library",

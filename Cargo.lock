@@ -530,36 +530,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "classic-bindings"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5997c062dff68c15b541917f7e9a754d4b2710442449ca23031c2a1f4cba460a"
-dependencies = [
- "classic-rust",
- "cosmwasm-schema",
- "cosmwasm-std",
- "prost 0.11.9",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "classic-rust"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d86286dfe6e1a77f005cbf0d32eaa93e173adba1ec67cd3e6d007ac56b94d17"
-dependencies = [
- "chrono",
- "cosmwasm-std",
- "osmosis-std-derive 0.20.1",
- "prost 0.11.9",
- "prost-types 0.11.9",
- "schemars",
- "serde",
- "serde-cw-value",
-]
-
-[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1568,7 +1538,7 @@ dependencies = [
  "migaloo-destinations",
  "outpost-utils",
  "tokio",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?rev=e7e52be74f8ab5c5bb6442fbea7258b74f802053)",
+ "white-whale",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
  "ymos-comp-prefs",
  "ymos-junodca-outpost",
@@ -2555,7 +2525,7 @@ dependencies = [
  "serde",
  "terraswap-helpers",
  "thiserror",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "wynd-helpers",
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
@@ -2682,7 +2652,7 @@ dependencies = [
  "serde",
  "terraswap-helpers",
  "thiserror",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
 ]
 
 [[package]]
@@ -3642,7 +3612,7 @@ dependencies = [
  "serde",
  "terraswap-helpers",
  "thiserror",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "wynd-helpers",
 ]
 
@@ -4357,7 +4327,7 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
 ]
 
 [[package]]
@@ -4773,7 +4743,7 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
 ]
 
 [[package]]
@@ -4962,32 +4932,13 @@ checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 [[package]]
 name = "white-whale"
 version = "1.1.1"
-source = "git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1#68ed98257de1a874faa85d3a12c8707811f684a5"
-dependencies = [
- "classic-bindings",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw2 1.1.2",
- "cw20 1.1.2",
- "osmosis-std-derive 0.15.3",
- "prost 0.11.9",
- "prost-types 0.11.9",
- "protobuf",
- "schemars",
- "serde",
- "uint 0.9.5",
-]
-
-[[package]]
-name = "white-whale"
-version = "1.1.1"
-source = "git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?rev=e7e52be74f8ab5c5bb6442fbea7258b74f802053#e7e52be74f8ab5c5bb6442fbea7258b74f802053"
+source = "git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.0-juno-1-token_factory-hotfix#f1d564c4789b5920eb86432570160fdc566c3169"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw2 1.1.2",
- "cw20 1.1.2",
- "osmosis-std-derive 0.15.3",
+ "cw2 0.15.1",
+ "cw20 0.15.1",
+ "osmosis-std-derive 0.13.2",
  "prost 0.11.9",
  "prost-types 0.11.9",
  "protobuf",
@@ -5417,7 +5368,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "wynd-helpers",
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
@@ -5451,7 +5402,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "withdraw-rewards-tax-grant",
  "wynd-helpers",
  "wynd-stake",
@@ -5486,7 +5437,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "withdraw-rewards-tax-grant",
  "wynd-helpers",
  "wynd-stake",
@@ -5519,7 +5470,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "withdraw-rewards-tax-grant",
 ]
 
@@ -5548,7 +5499,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "withdraw-rewards-tax-grant",
 ]
 
@@ -5579,7 +5530,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "wynd-helpers",
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",
@@ -5613,7 +5564,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "withdraw-rewards-tax-grant",
  "wynd-helpers",
  "wynd-stake",
@@ -5648,7 +5599,7 @@ dependencies = [
  "terraswap-helpers",
  "thiserror",
  "universal-destinations",
- "white-whale 1.1.1 (git+https://github.com/White-Whale-Defi-Platform/white-whale-core.git?tag=v1.4.1)",
+ "white-whale",
  "wynd-helpers",
  "wynd-stake",
  "wyndex 2.2.0 (git+https://github.com/wynddao/wynddex.git?tag=v2.2.0)",

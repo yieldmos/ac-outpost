@@ -11,7 +11,7 @@ use migaloo_destinations::comp_prefs::{
     WhaleLsdAddresses, WhaleRoutes,
 };
 use tokio::runtime::Runtime;
-use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
+use white_whale_std::pool_network::{asset::AssetInfo, router::SwapOperation};
 
 use ymos_comp_prefs::{msg::ExecuteMsgFns as CompPrefExecuteMsgFns, YmosCompPrefsContract};
 use ymos_migaloodca_outpost::msg::ExecuteMsgFns as MigaloodcaExecuteMsgFns;
