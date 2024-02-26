@@ -3,14 +3,14 @@ use std::iter;
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
-    dest_project_gen::{fund_red_bank_acct_msgs, mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
+    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
     pools::MultipleStoredPools,
 };
 use osmosis_helpers::{
     osmosis_lp::{gen_join_cl_pool_single_sided_msgs, gen_join_classic_pool_single_sided_msgs},
     osmosis_swap::{
         generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
-        generate_known_to_unknown_swap_and_sim_msg, generate_swap, pool_swap_with_sim, OsmosisRoutePools,
+        generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
     },
 };
 use outpost_utils::{
@@ -21,9 +21,9 @@ use outpost_utils::{
     },
     msg_gen::create_exec_msg,
 };
-use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs, spark_ibc_msgs, white_whale_satellite_msgs};
-use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
-use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg, send_tokens_msgs};
+use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs};
+
+use universal_destinations::dest_project_gen::{send_tokens_msgs};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::{
