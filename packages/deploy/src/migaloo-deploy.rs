@@ -2,7 +2,7 @@ use cosmwasm_std::Uint64;
 use cw_orch::{
     anyhow,
     daemon::{
-        networks::{juno::JUNO_NETWORK, migaloo::MIGALOO_NETWORK},
+        networks::{migaloo::MIGALOO_NETWORK},
         ChainInfo, ChainKind, DaemonBuilder,
     },
     prelude::*,
@@ -17,14 +17,14 @@ use tokio::runtime::Runtime;
 use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
 
 use ymos_comp_prefs::{
-    msg::{ExecuteMsgFns as CompPrefExecuteMsgFns, QueryMsgFns as CompPrefQueryMsgFns},
+    msg::{ExecuteMsgFns as CompPrefExecuteMsgFns},
     YmosCompPrefsContract,
 };
 use ymos_migaloodca_outpost::{
-    msg::ExecuteMsgFns as MigaloodcaExecuteMsgFns, YmosMigaloodcaOutpost,
+    msg::ExecuteMsgFns as MigaloodcaExecuteMsgFns,
 };
 use ymos_migaloostake_outpost::{
-    msg::ExecuteMsgFns as MigaloostakeExecuteMsgFns, YmosMigaloostakeOutpost,
+    msg::ExecuteMsgFns as MigaloostakeExecuteMsgFns,
 };
 
 const YMOS_CONDUCTOR: &str = "migaloo1f49xq0rmah39sk58aaxq6gnqcvupee7jne0wep";
@@ -198,7 +198,7 @@ pub fn main() -> anyhow::Result<()> {
         migaloo_chain.clone(),
     );
 
-    let migaloostake = ymos_migaloostake_outpost::YmosMigaloostakeOutpost::new(
+    let _migaloostake = ymos_migaloostake_outpost::YmosMigaloostakeOutpost::new(
         "Yieldmos Migaloostake Outpost",
         migaloo_chain.clone(),
     );
