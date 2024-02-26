@@ -4,7 +4,7 @@ use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use outpost_utils::msg_gen::{create_exec_contract_msg, CosmosProtoMsg};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo},
-    pair::{ExecuteMsg as PairExecuteMsg, QueryMsg as PairQueryMsg, SimulationResponse},
+    pair::{ExecuteMsg as PairExecuteMsg, SimulationResponse},
     router::{ExecuteMsg, SimulateSwapOperationsResponse, SwapOperation},
 };
 
