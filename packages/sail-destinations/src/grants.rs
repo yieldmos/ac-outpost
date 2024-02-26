@@ -1,7 +1,6 @@
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::{Addr};
 use cw_grant_spec::grants::{
-    AuthorizationType, GrantBase, GrantRequirement, StakeAuthorizationPolicy,
-    StakeAuthorizationType, StakeAuthorizationValidators,
+    GrantBase, GrantRequirement,
 };
 use white_whale::pool_network::asset::AssetInfo;
 
