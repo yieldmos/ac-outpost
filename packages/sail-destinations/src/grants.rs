@@ -1,7 +1,5 @@
-use cosmwasm_std::{Addr};
-use cw_grant_spec::grants::{
-    GrantBase, GrantRequirement,
-};
+use cosmwasm_std::Addr;
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use white_whale::pool_network::asset::AssetInfo;
 
 pub fn eris_lsd_grant(base: GrantBase, lsd_addr: Addr, asset: AssetInfo) -> Vec<GrantRequirement> {

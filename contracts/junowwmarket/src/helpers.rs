@@ -1,5 +1,3 @@
-
-
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use outpost_utils::{
     helpers::{calc_tax_split, TaxSplitResult},

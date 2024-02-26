@@ -1,22 +1,23 @@
 use std::iter;
 
 use cosmwasm_std::{Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
+use juno_destinations::comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao};
+use juno_destinations::dest_project_gen::{
+    balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs,
+};
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
         calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs,
         TaxSplitResult,
     },
-
     msg_gen::create_exec_msg,
 };
+use sail_destinations::dest_project_gen::{spark_ibc_msgs, white_whale_satellite_msgs};
 use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
+use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg};
 use wynd_helpers::wynd_swap::{create_wyndex_swap_msg_with_simulation, simulate_and_swap_wynd_pair, wynd_pair_swap_msg};
 use wyndex::asset::{Asset, AssetInfo};
-use juno_destinations::comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao};
-use juno_destinations::dest_project_gen::{balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs};
-use sail_destinations::dest_project_gen::{spark_ibc_msgs, white_whale_satellite_msgs};
-use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg};
 
 use crate::{
     msg::{ContractAddrs, DcaPrefs},
@@ -167,9 +168,11 @@ pub fn prefs_to_msgs(
                         if let StakingDao::Kleomedes = dao {
                             let mut noop_resp = DestProjectMsgs::default();
 
-                            noop_resp.events.push(Event::new("dao_stake")
-                                .add_attribute("dao", dao.to_string())
-                                .add_attribute("status", "disabled"));
+                            noop_resp.events.push(
+                                Event::new("dao_stake")
+                                    .add_attribute("dao", dao.to_string())
+                                    .add_attribute("status", "disabled"),
+                            );
 
                             return Ok(noop_resp);
                         }
@@ -197,7 +200,7 @@ pub fn prefs_to_msgs(
                                 AssetInfo::Native(dca_denom.clone()),
                                 AssetInfo::Token(dao_addresses.cw20.to_string()),
                                 project_addrs.destination_projects.wynd.multihop.to_string(),
-                                None
+                                None,
                             )?
                         };
 
@@ -249,14 +252,7 @@ pub fn prefs_to_msgs(
                         sub_msgs: vec![],
                         events: vec![],
                     }),
-                    JunoDestinationProject::WyndLp {
-                        ..
-                        // contract_address,
-                        // bonding_period,
-                    } => {
-                      
-                        Ok(DestProjectMsgs::default())
-                    }
+                    JunoDestinationProject::WyndLp { .. } => Ok(DestProjectMsgs::default()),
                     JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => Ok(gelotto_lottery_msgs(
                         user_addr,
                         project_addrs.take_rate_addr.clone(),
@@ -277,7 +273,10 @@ pub fn prefs_to_msgs(
                         &project_addrs.destination_projects.racoon_bet.game,
                     )?),
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
-                        let (swap_ops, denom) = project_addrs.destination_projects.white_whale.get_juno_swap_operations(asset)?;
+                        let (swap_ops, denom) = project_addrs
+                            .destination_projects
+                            .white_whale
+                            .get_juno_swap_operations(asset)?;
 
                         let (swap_msgs, sim) = create_terraswap_swap_msg_with_simulation(
                             &deps.querier,
@@ -322,7 +321,8 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             compounding_asset.info,
                             project_addrs.usdc.clone(),
-                            project_addrs.destination_projects.wynd.multihop.to_string(),None
+                            project_addrs.destination_projects.wynd.multihop.to_string(),
+                            None,
                         )?;
 
                         let mut spark_msgs = spark_ibc_msgs(
@@ -349,7 +349,8 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             AssetInfo::Native(dca_denom.clone()),
                             target_asset.clone(),
-                            project_addrs.destination_projects.wynd.multihop.to_string(),None
+                            project_addrs.destination_projects.wynd.multihop.to_string(),
+                            None,
                         )
                         .map_err(ContractError::Std)?;
 
@@ -369,7 +370,6 @@ pub fn prefs_to_msgs(
                     }
                     JunoDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
-            
             },
         )
         .collect::<Result<Vec<_>, ContractError>>()?;

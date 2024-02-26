@@ -15,7 +15,6 @@ pub enum ContractError {
     #[error("Wynd Helper Error: &{0}")]
     WyndHelperError(#[from] wynd_helpers::errors::WyndHelperError),
 
-   
     #[error("Juno Destinations Error: &{0}")]
     JunoDestinationError(#[from] juno_destinations::errors::JunoDestinationError),
 

@@ -9,16 +9,14 @@ use migaloo_destinations::{
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{
-        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one,
-        DestProjectMsgs, TaxSplitResult,
+        calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs,
+        TaxSplitResult,
     },
     msg_gen::create_exec_msg,
 };
 use std::iter;
 use terraswap_helpers::terraswap_swap::create_terraswap_pool_swap_msg_with_simulation;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-
-
 
 use crate::{
     msg::{ContractAddrs, DcaPrefs},

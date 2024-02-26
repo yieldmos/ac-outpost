@@ -1,10 +1,7 @@
-
-use cosmwasm_std::{Addr};
-use cw_grant_spec::grants::{
-    GrantBase, GrantRequirement,
-};
+use cosmwasm_std::Addr;
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use sail_destinations::grants::eris_lsd_grant;
-use white_whale::pool_network::asset::{AssetInfo};
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::comp_prefs::{AshAction, MigalooProjectAddrs};
 

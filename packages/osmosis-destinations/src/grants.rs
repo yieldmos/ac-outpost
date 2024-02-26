@@ -1,7 +1,5 @@
 use cosmwasm_std::{Addr, Uint128};
-use cw_grant_spec::grants::{
-    GrantBase, GrantRequirement,
-};
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 
 use crate::mars_types::RedBankExecuteMsgs;
 

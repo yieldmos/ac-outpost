@@ -1,10 +1,7 @@
 use cosmwasm_std::Uint64;
 use cw_orch::{
     anyhow,
-    daemon::{
-        networks::{migaloo::MIGALOO_NETWORK},
-        ChainInfo, ChainKind, DaemonBuilder,
-    },
+    daemon::{networks::migaloo::MIGALOO_NETWORK, ChainInfo, ChainKind, DaemonBuilder},
     prelude::*,
 };
 
@@ -16,16 +13,9 @@ use migaloo_destinations::comp_prefs::{
 use tokio::runtime::Runtime;
 use white_whale::pool_network::{asset::AssetInfo, router::SwapOperation};
 
-use ymos_comp_prefs::{
-    msg::{ExecuteMsgFns as CompPrefExecuteMsgFns},
-    YmosCompPrefsContract,
-};
-use ymos_migaloodca_outpost::{
-    msg::ExecuteMsgFns as MigaloodcaExecuteMsgFns,
-};
-use ymos_migaloostake_outpost::{
-    msg::ExecuteMsgFns as MigaloostakeExecuteMsgFns,
-};
+use ymos_comp_prefs::{msg::ExecuteMsgFns as CompPrefExecuteMsgFns, YmosCompPrefsContract};
+use ymos_migaloodca_outpost::msg::ExecuteMsgFns as MigaloodcaExecuteMsgFns;
+use ymos_migaloostake_outpost::msg::ExecuteMsgFns as MigaloostakeExecuteMsgFns;
 
 const YMOS_CONDUCTOR: &str = "migaloo1f49xq0rmah39sk58aaxq6gnqcvupee7jne0wep";
 const YMOS_FEE_SHARE_COLLECTOR: &str = "migaloo1ewdttrv2ph7762egx4n2309h3m9r4z9pxsg48n";

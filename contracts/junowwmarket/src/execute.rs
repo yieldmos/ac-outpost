@@ -6,20 +6,20 @@ use outpost_utils::{
 };
 use std::iter;
 
-
-
-
 use crate::{
+    helpers::{asset_to_coin, query_and_generate_ww_market_reward_msgs, terraswap_assetinfo_to_wyndex_assetinfo},
     msg::ContractAddrs,
     state::{ADMIN, AUTHORIZED_ADDRS},
-    ContractError, helpers::{query_and_generate_ww_market_reward_msgs, asset_to_coin, terraswap_assetinfo_to_wyndex_assetinfo},
+    ContractError,
 };
-use wynd_helpers::wynd_swap::{create_wyndex_swap_msg_with_simulation, simulate_and_swap_wynd_pair, wynd_pair_swap_msg};
-use wyndex::asset::{Asset, AssetInfo};
 use juno_destinations::comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao};
-use juno_destinations::dest_project_gen::{balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs};
+use juno_destinations::dest_project_gen::{
+    balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs,
+};
 use sail_destinations::dest_project_gen::{spark_ibc_msgs, white_whale_satellite_msgs};
 use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg};
+use wynd_helpers::wynd_swap::{create_wyndex_swap_msg_with_simulation, simulate_and_swap_wynd_pair, wynd_pair_swap_msg};
+use wyndex::asset::{Asset, AssetInfo};
 
 pub fn compound(
     deps: DepsMut,
@@ -39,17 +39,19 @@ pub fn compound(
     // validate that the user is authorized to compound
     is_authorized_compounder(deps.as_ref(), &info.sender, &delegator, ADMIN, AUTHORIZED_ADDRS)?;
 
-   let TaxSplitResult {
+    let TaxSplitResult {
         remaining_rewards,
         tax_amount,
         claim_and_tax_msgs,
     } = query_and_generate_ww_market_reward_msgs(
-        tax_fee.unwrap_or(Decimal::percent(5)), 
-        &delegator, &project_addresses.take_rate_addr.clone(), 
-        &project_addresses.destination_projects.white_whale.rewards.clone(), 
+        tax_fee.unwrap_or(Decimal::percent(5)),
+        &delegator,
+        &project_addresses.take_rate_addr.clone(),
+        &project_addresses.destination_projects.white_whale.rewards.clone(),
         &project_addresses.destination_projects.white_whale.market.clone(),
         &project_addresses.terraswap_routes.whale_asset.to_string(),
-        &deps.querier)?;
+        &deps.querier,
+    )?;
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
@@ -83,7 +85,6 @@ pub fn compound(
 
     let resp = Response::default()
         .add_attribute("action", "outpost compound")
-        
         .add_event(amount_automated_event)
         // .add_attribute("amount_automated", to_json_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
@@ -131,84 +132,84 @@ pub fn prefs_to_msgs(
         comp_prefs.relative,
     );
 
-    let terraswap_multihop_addr = project_addrs.destination_projects.white_whale.terraswap_multihop_router.clone();
-   
+    let terraswap_multihop_addr = project_addrs
+        .destination_projects
+        .white_whale
+        .terraswap_multihop_router
+        .clone();
+
     // generate the list of individual msgs to compound the user's rewards
     let compounding_msgs: Vec<DestProjectMsgs> = compound_token_amounts
         .map(
             |(comp_token_amount, DestinationAction { destination, .. })| -> Result<DestProjectMsgs, ContractError> {
-                
-
                 match destination {
                     JunoDestinationProject::JunoStaking { validator_address } => {
-                        let (swap_msg, simulated_juno) = 
-                            project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                                comp_token_amount, 
-                                "ujuno", 
-                                &terraswap_multihop_addr, 
-                                &deps.querier)?;
-                        
-                        let mut staking_msgs = native_staking_msg(
-                            &validator_address,
+                        let (swap_msg, simulated_juno) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
                             delegator_addr,
-                            &asset_to_coin(simulated_juno)?,
+                            comp_token_amount,
+                            "ujuno",
+                            &terraswap_multihop_addr,
+                            &deps.querier,
                         )?;
 
-                    
+                        let mut staking_msgs =
+                            native_staking_msg(&validator_address, delegator_addr, &asset_to_coin(simulated_juno)?)?;
 
-                    staking_msgs.append_msgs(vec![swap_msg]);
-                    
-                    Ok(staking_msgs)
-                },
+                        staking_msgs.append_msgs(vec![swap_msg]);
+
+                        Ok(staking_msgs)
+                    }
 
                     JunoDestinationProject::DaoStaking(dao) => {
                         if let StakingDao::Kleomedes = dao {
                             let mut noop_resp = DestProjectMsgs::default();
 
-                            noop_resp.events.push(Event::new("dao_stake")
-                                .add_attribute("dao", dao.to_string())
-                                .add_attribute("status", "disabled"));
+                            noop_resp.events.push(
+                                Event::new("dao_stake")
+                                    .add_attribute("dao", dao.to_string())
+                                    .add_attribute("status", "disabled"),
+                            );
 
                             return Ok(noop_resp);
                         }
 
-
                         let dao_addresses = dao.get_daos_addresses(&project_addrs.destination_projects.daos);
 
-                        let (terraswap_swap_msg, simulated_juno) = 
-                            project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                                comp_token_amount, 
-                                "ujuno", 
-                                &terraswap_multihop_addr, 
-                                &deps.querier)?;
+                        let (terraswap_swap_msg, simulated_juno) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            "ujuno",
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
-                        let (wyndex_swap_msgs, expected_dao_token_amount) = if let Some(pair_addr) = dao_addresses.juno_wyndex_pair
-                        {
-                            // if there's a direct juno & staking denom pair, then we can swap directly
-                            let (swap_msg, swap_sim) = simulate_and_swap_wynd_pair(
-                                &deps.querier,
-                                delegator_addr,
-                                pair_addr.as_ref(),
-                                wyndex::asset::Asset {
-                                    info: terraswap_assetinfo_to_wyndex_assetinfo(simulated_juno.info),
-                                    amount: simulated_juno.amount,
-                                },
-                                AssetInfo::Token(dao_addresses.cw20.to_string()),
-                            )?;
+                        let (wyndex_swap_msgs, expected_dao_token_amount) =
+                            if let Some(pair_addr) = dao_addresses.juno_wyndex_pair {
+                                // if there's a direct juno & staking denom pair, then we can swap directly
+                                let (swap_msg, swap_sim) = simulate_and_swap_wynd_pair(
+                                    &deps.querier,
+                                    delegator_addr,
+                                    pair_addr.as_ref(),
+                                    wyndex::asset::Asset {
+                                        info: terraswap_assetinfo_to_wyndex_assetinfo(simulated_juno.info),
+                                        amount: simulated_juno.amount,
+                                    },
+                                    AssetInfo::Token(dao_addresses.cw20.to_string()),
+                                )?;
 
-                            (vec![swap_msg], swap_sim.return_amount)
-                        } else {
-                            // otherwise we need to use the wyndex router to swap
-                            create_wyndex_swap_msg_with_simulation(
-                                &deps.querier,
-                                delegator_addr,
-                                comp_token_amount,
-                                AssetInfo::Native("ujuno".to_string()),
-                                AssetInfo::Token(dao_addresses.cw20.to_string()),
-                                project_addrs.destination_projects.wynd.multihop.to_string(),
-                                None
-                            )?
-                        };
+                                (vec![swap_msg], swap_sim.return_amount)
+                            } else {
+                                // otherwise we need to use the wyndex router to swap
+                                create_wyndex_swap_msg_with_simulation(
+                                    &deps.querier,
+                                    delegator_addr,
+                                    comp_token_amount,
+                                    AssetInfo::Native("ujuno".to_string()),
+                                    AssetInfo::Token(dao_addresses.cw20.to_string()),
+                                    project_addrs.destination_projects.wynd.multihop.to_string(),
+                                    None,
+                                )?
+                            };
 
                         let mut stake_msgs = daodao_cw20_staking_msg(
                             dao.to_string(),
@@ -231,12 +232,13 @@ pub fn prefs_to_msgs(
                         let juno_wynd_pair = project_addrs.destination_projects.wynd.juno_wynd_pair.to_string();
 
                         // swap uwhale for juno
-                        let (juno_swap_msg, simulated_juno) = 
-                            project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                                comp_token_amount, 
-                                "ujuno", 
-                                &terraswap_multihop_addr, 
-                                &deps.querier)?;
+                        let (juno_swap_msg, simulated_juno) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            "ujuno",
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
                         // swap juno for wynd
                         let wynd_swap_msg = wynd_pair_swap_msg(
@@ -264,26 +266,22 @@ pub fn prefs_to_msgs(
                             comp_token_amount,
                             &target_denom.to_string(),
                             &terraswap_multihop_addr,
-                        )?],                        
+                        )?],
                         sub_msgs: vec![],
                         events: vec![],
                     }),
-                    JunoDestinationProject::WyndLp {
-                        ..
-                        // contract_address,
-                        // bonding_period,
-                    } => Ok(DestProjectMsgs::default()),
-                        JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => {
-                            
-                            // swap uwhale for juno
-                            let (juno_swap_msg, simulated_juno) = 
-                            project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                                comp_token_amount, 
-                                "ujuno", 
-                                &terraswap_multihop_addr, 
-                                &deps.querier)?;
+                    JunoDestinationProject::WyndLp { .. } => Ok(DestProjectMsgs::default()),
+                    JunoDestinationProject::GelottoLottery { lottery, lucky_phrase } => {
+                        // swap uwhale for juno
+                        let (juno_swap_msg, simulated_juno) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            "ujuno",
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
-                            let mut lottery_msgs = gelotto_lottery_msgs(
+                        let mut lottery_msgs = gelotto_lottery_msgs(
                             delegator_addr,
                             project_addrs.take_rate_addr.clone(),
                             lottery,
@@ -295,39 +293,40 @@ pub fn prefs_to_msgs(
                         lottery_msgs.prepend_msgs(vec![juno_swap_msg]);
 
                         Ok(lottery_msgs)
-                    },
+                    }
                     JunoDestinationProject::RacoonBet { game } => {
                         // swap uwhale for usdc
-                        let (usdc_swap_msg, simulated_usdc) = 
-                            project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                                comp_token_amount, 
-                                project_addrs.usdc.to_string().as_str(), 
-                                &terraswap_multihop_addr, 
-                                &deps.querier)?;
-                        
-                        
-                        let mut game_msgs = racoon_bet_msgs(
-                        &deps.querier,
-                        delegator_addr,
-                        // dont pass the wyndex pair in because we are passing in usdc and can skip the query
-                        None,
-                        asset_to_coin(simulated_usdc)?,
-                        game,
-                        &project_addrs.destination_projects.racoon_bet.game,
-                    )?;
+                        let (usdc_swap_msg, simulated_usdc) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            project_addrs.usdc.to_string().as_str(),
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
-                    game_msgs.prepend_msgs(vec![usdc_swap_msg]);
-                    
-                    Ok(game_msgs)
-                    },
+                        let mut game_msgs = racoon_bet_msgs(
+                            &deps.querier,
+                            delegator_addr,
+                            // dont pass the wyndex pair in because we are passing in usdc and can skip the query
+                            None,
+                            asset_to_coin(simulated_usdc)?,
+                            game,
+                            &project_addrs.destination_projects.racoon_bet.game,
+                        )?;
+
+                        game_msgs.prepend_msgs(vec![usdc_swap_msg]);
+
+                        Ok(game_msgs)
+                    }
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
                         // swap uwhale for the lsd via it's pair
-                        let (lsd_swap_msg, simulated_asset) = 
-                        project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                            comp_token_amount, 
-                            asset.to_string().as_str(), 
-                            &terraswap_multihop_addr, 
-                            &deps.querier)?;   
+                        let (lsd_swap_msg, simulated_asset) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            asset.to_string().as_str(),
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
                         // now just bond it to the satellite
                         let mut bond_msgs = white_whale_satellite_msgs(
@@ -341,62 +340,61 @@ pub fn prefs_to_msgs(
                         Ok(bond_msgs)
                     }
                     JunoDestinationProject::BalanceDao {} => {
-                         // swap uwhale for juno
-                         let (juno_swap_msg, simulated_juno) = 
-                         project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                             comp_token_amount, 
-                             "ujuno", 
-                             &terraswap_multihop_addr, 
-                             &deps.querier)?;
-                        
-                        let mut  balance_msgs = balance_dao_msgs(
-                        delegator_addr,
-                        &project_addrs.destination_projects.balance_dao,
-                        simulated_juno.amount,
-                    )?;
+                        // swap uwhale for juno
+                        let (juno_swap_msg, simulated_juno) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            "ujuno",
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
-                    balance_msgs.prepend_msgs(vec![juno_swap_msg]);
-                
-                    Ok(balance_msgs)
-                    },
+                        let mut balance_msgs = balance_dao_msgs(
+                            delegator_addr,
+                            &project_addrs.destination_projects.balance_dao,
+                            simulated_juno.amount,
+                        )?;
+
+                        balance_msgs.prepend_msgs(vec![juno_swap_msg]);
+
+                        Ok(balance_msgs)
+                    }
 
                     JunoDestinationProject::MintLsd { lsd_type } => {
-                       // swap uwhale for juno
-                       let (juno_swap_msg, simulated_juno) = 
-                       project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                           comp_token_amount, 
-                           "ujuno", 
-                           &terraswap_multihop_addr, 
-                           &deps.querier)?;
+                        // swap uwhale for juno
+                        let (juno_swap_msg, simulated_juno) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
+                            delegator_addr,
+                            comp_token_amount,
+                            "ujuno",
+                            &terraswap_multihop_addr,
+                            &deps.querier,
+                        )?;
 
                         let mut mint_msgs = mint_juno_lsd_msgs(
-                        delegator_addr,
-                        lsd_type,
-                        simulated_juno.amount,
-                        project_addrs.destination_projects.juno_lsds.clone(),
-                    )?;
+                            delegator_addr,
+                            lsd_type,
+                            simulated_juno.amount,
+                            project_addrs.destination_projects.juno_lsds.clone(),
+                        )?;
 
-                    mint_msgs.prepend_msgs(vec![juno_swap_msg]);
-                
-                    Ok(mint_msgs)
-                    },
+                        mint_msgs.prepend_msgs(vec![juno_swap_msg]);
+
+                        Ok(mint_msgs)
+                    }
                     JunoDestinationProject::SparkIbcCampaign { fund } => {
                         let spark_addr = project_addrs.destination_projects.spark_ibc.fund.clone();
 
                         // swap uwhale for usdc
-                        let (usdc_swap_msg, simulated_usdc) = 
-                            project_addrs.terraswap_routes.gen_whale_swap_with_sim(delegator_addr, 
-                                comp_token_amount, 
-                                project_addrs.usdc.to_string().as_str(), 
-                                &terraswap_multihop_addr, 
-                                &deps.querier)?;
-
-                        let mut spark_msgs = spark_ibc_msgs(
+                        let (usdc_swap_msg, simulated_usdc) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
                             delegator_addr,
-                            &spark_addr,
-                            asset_to_coin(simulated_usdc)?,
-                            fund,
+                            comp_token_amount,
+                            project_addrs.usdc.to_string().as_str(),
+                            &terraswap_multihop_addr,
+                            &deps.querier,
                         )?;
+
+                        let mut spark_msgs =
+                            spark_ibc_msgs(delegator_addr, &spark_addr, asset_to_coin(simulated_usdc)?, fund)?;
 
                         spark_msgs.prepend_msgs(vec![usdc_swap_msg]);
 
@@ -408,15 +406,12 @@ pub fn prefs_to_msgs(
                     } => {
                         // swap uwhale for the target asset
                         let (swap_msg, sim) = project_addrs.terraswap_routes.gen_whale_swap_with_sim(
-                            
                             delegator_addr,
                             comp_token_amount,
                             &target_asset.to_string(),
                             &terraswap_multihop_addr,
                             &deps.querier,
                         )?;
-
-
 
                         // after the swap we can send the estimated funds to the target address
                         let mut send_msgs = send_tokens_msgs(
@@ -434,17 +429,8 @@ pub fn prefs_to_msgs(
                     }
                     JunoDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
-            
             },
         )
         .collect::<Result<Vec<_>, ContractError>>()?;
-    // .map(|msgs_list|
-    //     msgs_list.into_iter().flatten().collect());
-
-    // withdraw_rewards_msgs.append(&mut compounding_msgs?);
-
-    // Ok(withdraw_rewards_msgs)
-    // Ok(vec![])
-
     Ok(compounding_msgs)
 }

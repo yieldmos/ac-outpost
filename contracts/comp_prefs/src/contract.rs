@@ -289,7 +289,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
             Ok(to_json_binary(&user_prefs)?)
         }
-        QueryMsg::StrategyPreferencesByPubkey { pubkey: _, status: _ } => {
+        QueryMsg::StrategyPreferencesByPubkey {
+            pubkey: _,
+            status: _,
+        } => {
             let user_prefs: Vec<CompPref> = vec![];
             // look up the pubkey in state
             // PREFS_BY_PUBKEY.prefix(&pubkey.as_str()).range(deps.storage, None, None, Order::Ascending).filter_map(|strat_keys|

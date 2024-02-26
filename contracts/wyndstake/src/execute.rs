@@ -1,21 +1,23 @@
 use std::iter;
 
 use cosmwasm_std::{Addr, Attribute, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Uint128};
+use juno_destinations::comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao};
+use juno_destinations::dest_project_gen::{
+    balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs,
+};
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs, RewardSplit},
     msg_gen::create_exec_msg,
 };
+use sail_destinations::dest_project_gen::{spark_ibc_msgs, white_whale_satellite_msgs};
 use terraswap_helpers::terraswap_swap::create_terraswap_swap_msg_with_simulation;
+use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg};
 use wynd_helpers::wynd_swap::simulate_and_swap_wynd_pair;
 use wyndex::asset::{Asset, AssetInfo};
-use juno_destinations::comp_prefs::{JunoCompPrefs, JunoDestinationProject, StakingDao};
-use juno_destinations::dest_project_gen::{balance_dao_msgs, gelotto_lottery_msgs, mint_juno_lsd_msgs, racoon_bet_msgs, send_tokens_msgs, wynd_staking_msgs};
-use sail_destinations::dest_project_gen::{spark_ibc_msgs, white_whale_satellite_msgs};
-use universal_destinations::dest_project_gen::{daodao_cw20_staking_msg, native_staking_msg};
 
 use crate::{
-    helpers::{query_and_generate_wynd_reward_msgs, wynd_wyndex_multihop_swap, },
+    helpers::{query_and_generate_wynd_reward_msgs, wynd_wyndex_multihop_swap},
     msg::ContractAddrs,
     state::{ADMIN, AUTHORIZED_ADDRS, PROJECT_ADDRS},
     ContractError,
@@ -224,11 +226,11 @@ pub fn prefs_to_msgs(
                                 (vec![swap], sim.return_amount)
                             }
                             _ => wynd_wyndex_multihop_swap(
-                                &deps.querier,                                
+                                &deps.querier,
                                  user_addr,
                                  comp_token_amount,
                                   wynd_asset_info.clone(),
-                                   target_denom.clone(), 
+                                   target_denom.clone(),
                                    project_addrs.destination_projects.wynd.multihop.to_string()
                             )?
                         };
@@ -269,8 +271,9 @@ pub fn prefs_to_msgs(
                     JunoDestinationProject::RacoonBet { game } => {
                         // if we swap straight to usdc then we already have our price estimate ready
                         let (swap, usdc_sim) = simulate_and_swap_wynd_pair(
-                            &deps.querier, user_addr
-                            , project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(), 
+                            &deps.querier,
+                            user_addr,
+                            project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(),
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, project_addrs.usdc.clone())?;
 
                        let mut rac_msgs =  racoon_bet_msgs(
@@ -293,9 +296,11 @@ pub fn prefs_to_msgs(
                     JunoDestinationProject::WhiteWhaleSatellite { asset } => {
                         // if we swap our wynd to usdc we have a shorter in wyndex we'll have a shorter path in terraswap to get the lsds
                         let (usdc_swap,  wyndex::pair::SimulationResponse {return_amount: est_usdc,..}) = simulate_and_swap_wynd_pair(
-                            &deps.querier, user_addr
-                            , project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(), 
-                            Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, project_addrs.usdc.clone())?;
+                            &deps.querier,
+                            user_addr,
+                            project_addrs.destination_projects.wynd.wynd_usdc_pair.as_ref(),
+                            Asset { info: wynd_asset_info.clone(), amount: comp_token_amount },
+                            project_addrs.usdc.clone())?;
 
                         let (swap_ops, denom) = project_addrs.destination_projects.white_whale.get_usdc_swap_operations(asset)?;
 
@@ -342,7 +347,6 @@ pub fn prefs_to_msgs(
                             &deps.querier, user_addr
                             , project_addrs.destination_projects.wynd.juno_wynd_pair.as_ref(),
                             Asset { info: wynd_asset_info.clone(), amount: comp_token_amount }, juno_asset_info.clone())?;
-
 
                         let mut msgs = mint_juno_lsd_msgs(
                         user_addr,
@@ -411,6 +415,5 @@ pub fn prefs_to_msgs(
             },
         )
         .collect::<Result<Vec<_>, ContractError>>()?;
-
     Ok(compounding_msgs)
 }

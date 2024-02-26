@@ -21,9 +21,9 @@ use outpost_utils::{
     },
     msg_gen::create_exec_msg,
 };
-use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs};
+use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
 
-use universal_destinations::dest_project_gen::{send_tokens_msgs};
+use universal_destinations::dest_project_gen::send_tokens_msgs;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::{

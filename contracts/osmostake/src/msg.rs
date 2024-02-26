@@ -6,7 +6,6 @@ use osmosis_destinations::comp_prefs::{
     OsmosisCompPrefs, OsmosisDestinationProjectAddresses, OsmosisDestinationProjectAddrs,
 };
 
-
 use crate::ContractError;
 
 #[cw_serde]

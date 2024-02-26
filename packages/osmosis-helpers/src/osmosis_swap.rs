@@ -10,10 +10,11 @@ use osmosis_destinations::{
 };
 use osmosis_std::types::cosmos::base::v1beta1::Coin;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
-    MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
+    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
+    EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn, MsgSwapExactAmountOut,
+    SwapAmountInRoute, SwapAmountOutRoute,
 };
-use outpost_utils::{msg_gen::CosmosProtoMsg};
+use outpost_utils::msg_gen::CosmosProtoMsg;
 
 use crate::errors::OsmosisHelperError;
 

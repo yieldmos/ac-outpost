@@ -1,9 +1,6 @@
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use migaloo_destinations::{
-    comp_prefs::{
-        DaoDaoStakingInfo, LsdMintAction, MUsdcAction, MigalooCompPrefs,
-        MigalooDestinationProject, MigalooVault,
-    },
+    comp_prefs::{DaoDaoStakingInfo, LsdMintAction, MUsdcAction, MigalooCompPrefs, MigalooDestinationProject, MigalooVault},
     dest_project_gen::{
         burn_whale_msgs, deposit_ginkou_usdc_msgs, ecosystem_stake_msgs, eris_amp_vault_msgs, eris_arb_vault_msgs,
         mint_or_buy_whale_lsd_msgs, query_ginkou_musdc_mint,
@@ -12,12 +9,10 @@ use migaloo_destinations::{
 use outpost_utils::{
     comp_prefs::DestinationAction,
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
-    msg_gen::{create_exec_msg},
+    msg_gen::create_exec_msg,
 };
 use std::iter;
-use terraswap_helpers::terraswap_swap::{
-    create_terraswap_pool_swap_msg_with_simulation,
-};
+use terraswap_helpers::terraswap_swap::create_terraswap_pool_swap_msg_with_simulation;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
@@ -27,9 +22,7 @@ use crate::{
     state::{ADMIN, AUTHORIZED_ADDRS},
     ContractError,
 };
-use sail_destinations::{
-    dest_project_gen::{racoon_bet_msgs, spark_ibc_msgs, white_whale_satellite_msgs},
-};
+use sail_destinations::dest_project_gen::{racoon_bet_msgs, spark_ibc_msgs, white_whale_satellite_msgs};
 use universal_destinations::dest_project_gen::{daodao_staking_msg, native_staking_msg};
 
 pub fn compound(
