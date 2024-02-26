@@ -188,19 +188,12 @@ impl TerraswapRouteAddresses {
 #[derive(Default)]
 pub struct AuthzppAddresses {
     pub withdraw_tax: String,
-    // pub allowlist_send: String,
 }
 
 #[cw_serde]
-pub struct AuthzppAddrs {
-    // pub withdraw_tax: Addr,
-    // pub allowlist_send: Addr,
-}
+pub struct AuthzppAddrs {}
 impl AuthzppAddresses {
     pub fn validate_addrs(&self, _api: &dyn Api) -> Result<AuthzppAddrs, ContractError> {
-        Ok(AuthzppAddrs {
-            // withdraw_tax: api.addr_validate(&self.withdraw_tax)?,
-            // allowlist_send: api.addr_validate(&self.allowlist_send)?,
-        })
+        Ok(AuthzppAddrs {})
     }
 }
