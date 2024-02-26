@@ -1,7 +1,7 @@
-use cosmwasm_std::{coin, Addr, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, Deps, QuerierWrapper, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{
-    AuthorizationType, ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
+    ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement, RevokeRequirement,
 };
 
 use juno_destinations::comp_prefs::{wyndex_asset_info_to_terraswap_asset_info, DaoAddr, JunoDestinationProject, JunoLsd};
