@@ -5,6 +5,7 @@ use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 use osmosis_destinations::comp_prefs::{
     OsmosisCompPrefs, OsmosisDestinationProjectAddresses, OsmosisDestinationProjectAddrs,
 };
+use outpost_utils::comp_prefs::TakeRate;
 
 
 use crate::ContractError;
@@ -17,11 +18,21 @@ pub struct InstantiateMsg {
 
     /// All of the addresses that the compounder can interact with
     pub project_addresses: ContractAddresses,
+
+    /// The maximum tax fee that can be charged to users of the contract
+    pub max_tax_fee: Decimal,
+
+    /// The address that the take rate should be sent to
+    pub take_rate_address: String,
 }
 
 #[cw_serde]
 pub struct MigrateMsg {
     pub project_addresses: Option<ContractAddresses>,
+
+    pub max_tax_fee: Decimal,
+
+    pub take_rate_address: String,
 }
 
 #[cw_serde]
@@ -76,6 +87,7 @@ pub struct OsmostakeCompoundPrefs {
 pub struct CompPrefsWithAddresses {
     pub comp_prefs: OsmostakeCompoundPrefs,
     pub project_addresses: ContractAddrs,
+    pub take_rate: TakeRate,
 }
 
 #[cw_serde]

@@ -41,8 +41,14 @@ cosmwasm-std = { workspace = true }
 cw20-base = { version = "0.13.2", features = ["library"] }
 cosmrs = "0.14.0"
 anybuf = "0.1.0"
+<<<<<<< Updated upstream
 juno-destinations = { workspace = true }
 migaloo-destinations = { workspace = true }
+=======
+white-whale = { workspace = true }
+wyndex = { workspace = true }
+cosmwasm-std = { workspace = true }
+>>>>>>> Stashed changes
 
 # [dev-dependencies]
 # Deps for deployment
