@@ -4,11 +4,6 @@ use cw_orch::{anyhow, daemon::{DaemonBuilder, ChainInfo, ChainKind, networks::ju
 
 use juno_destinations::comp_prefs::DaoAddress;
 use tokio::runtime::Runtime;
-<<<<<<< Updated upstream
-=======
-use white_whale::pool_network::{asset::AssetInfo as WWAssetInfo, router::SwapOperation};
-use ymos_comp_prefs::{msg::ExecuteMsgFns as CompPrefExecuteMsgFns, YmosCompPrefsContract};
->>>>>>> Stashed changes
 use ymos_junodca_outpost::msg::ExecuteMsgFns as JunodcaExecuteMsgFns;
 use ymos_junostake_outpost::msg::ExecuteMsgFns as JunostakeExecuteMsgFns;
 use ymos_wyndstake_outpost::msg::ExecuteMsgFns as WyndstakeExecuteMsgFns;
