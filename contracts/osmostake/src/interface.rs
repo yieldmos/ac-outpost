@@ -3,13 +3,13 @@ use cw_orch::{interface, prelude::*};
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 #[interface(InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg)]
-pub struct YmosOsmosisdcaOutpost;
+pub struct YmosOsmosisstakeOutpost;
 
-impl<Chain: CwEnv> Uploadable for YmosOsmosisdcaOutpost<Chain> {
+impl<Chain: CwEnv> Uploadable for YmosOsmosisstakeOutpost<Chain> {
     /// Return the path to the wasm file corresponding to the contract
     fn wasm(&self) -> WasmPath {
         artifacts_dir_from_workspace!()
-            .find_wasm_path("ymos_osmosisdca_outpost")
+            .find_wasm_path("ymos_osmosisstake_outpost")
             .unwrap()
     }
     /// Returns a CosmWasm contract wrapper

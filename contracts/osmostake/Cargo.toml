@@ -70,4 +70,7 @@ withdraw-rewards-tax-grant = { workspace = true }
 
 
 [dev-dependencies]
+cw-orch = { workspace = true }
 cw-multi-test = { workspace = true }
+ymos-osmostake-outpost = { path = ".", features = ["interface"] }
+withdraw-rewards-tax-grant = { workspace = true, features = ["interface"] }
