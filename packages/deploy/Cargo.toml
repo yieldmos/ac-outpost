@@ -44,7 +44,6 @@ anybuf = "0.1.0"
 juno-destinations = { workspace = true }
 migaloo-destinations = { workspace = true }
 
-
 # [dev-dependencies]
 # Deps for deployment
 dotenv = { version = "0.15.0" }     # Enables loading of .env files

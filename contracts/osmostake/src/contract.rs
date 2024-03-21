@@ -49,6 +49,7 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
 
     ADMIN.save(deps.storage, &admin_addr)?;
 
+    // Store the outpost take rate
     TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address)?)?;
 
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
@@ -101,6 +102,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
         PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
 
+        // update the take rate
         TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address)?)?;
 
         // clear the state that depends on the addresses data so we can reinitialize it
@@ -186,12 +188,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         ExecuteMsg::Compound(OsmostakeCompoundPrefs {
             user_address,
             comp_prefs,
-            tax_fee,
+            tax_fee: fee_to_charge,
         }) => {
-            let addresses = PROJECT_ADDRS.load(deps.storage)?;
+            let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
             let take_rate = TAKE_RATE.load(deps.storage)?;
 
-            execute::compound(deps, env, info, addresses, user_address, comp_prefs, tax_fee, take_rate)
+            execute::compound(
+                deps,
+                env,
+                info,
+                project_addresses,
+                user_address,
+                comp_prefs,
+                fee_to_charge,
+                take_rate,
+            )
         }
     }
 }
