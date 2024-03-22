@@ -9,7 +9,7 @@ use crate::{
 pub struct OutpostContract(Addr);
 
 impl OutpostContract {
-    pub fn _addr(&self) -> &Addr {
+    pub fn addr(&self) -> &Addr {
         &self.0
     }
 

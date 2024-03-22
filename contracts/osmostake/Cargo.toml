@@ -39,7 +39,6 @@ cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true, features = [
   "stargate",
   # "staking",
-  "cosmwasm_1_4",
 ] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
@@ -70,4 +69,7 @@ withdraw-rewards-tax-grant = { workspace = true }
 
 
 [dev-dependencies]
+cw-orch = { workspace = true }
 cw-multi-test = { workspace = true }
+ymos-osmostake-outpost = { path = ".", features = ["interface"] }
+withdraw-rewards-tax-grant = { workspace = true, features = ["interface"] }

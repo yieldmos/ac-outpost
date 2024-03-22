@@ -106,7 +106,7 @@ pub fn stake_mbrn_msgs(
         msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
             membrane_staking_contract_addr,
             staker_addr,
-            &membrane::staking::ExecuteMsg::Stake { user: None },
+            &MembraneExecuteMsg::Stake { user: None },
             Some(vec![cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
                 denom: mbrn_to_stake.denom.to_string(),
                 amount: mbrn_to_stake.amount.to_string(),
@@ -115,4 +115,19 @@ pub fn stake_mbrn_msgs(
         sub_msgs: vec![],
         events: vec![Event::new("stake_mbrn").add_attribute("amount", mbrn_to_stake.to_string())],
     })
+}
+
+#[cw_serde]
+pub enum MembraneExecuteMsg {
+    Stake {
+        user: Option<String>,
+    },
+    CdpDeposit {
+        /// Position ID to deposit into.
+        /// If the user wants to create a new/separate position, no position id is passed.
+        position_id: Option<Uint128>,
+        /// Position owner.
+        /// Defaults to the sender.
+        position_owner: Option<String>,
+    },
 }

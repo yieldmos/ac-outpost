@@ -18,7 +18,7 @@ cosmwasm-std = { version = "1.5.0", default-features = false, features = [
     # "cosmwasm_1_4",
 ] }
 cosmwasm-storage = "1.5.0"
-cw-orch = { version = "0.19.1", features = ["daemon"] }
+cw-orch = { version = "0.19.1", features = ["daemon", "osmosis-test-tube"] }
 cw-storage-plus = "1.2.0"
 cw-multi-test = "0.20.0"
 cw2 = "1.0.1"
@@ -77,7 +77,7 @@ juno-destinations = { path = "./packages/juno-destinations" }
 migaloo-destinations = { path = "./packages/migaloo-destinations" }
 sail-destinations = { path = "./packages/sail-destinations" }
 osmosis-destinations = { path = "./packages/osmosis-destinations" }
-membrane = { git = "https://github.com/MembraneFinance/membrane-core.git", version = "0.1.0" }
+# membrane = { git = "https://github.com/MembraneFinance/membrane-core.git", version = "0.1.0" }
 struct_iterable = "0.1.1"
 
 

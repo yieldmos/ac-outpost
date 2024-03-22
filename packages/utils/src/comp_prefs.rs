@@ -1,5 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Decimal;
+use cosmwasm_std::{Addr, Api, Decimal};
+
+use crate::errors::OutpostError;
 
 #[cw_serde]
 pub struct CompoundPrefs<DestProjects> {
@@ -19,4 +21,23 @@ pub struct DestinationAction<DestProjects> {
 pub struct ValidatorSelection {
     pub validator_address: String,
     pub percent: Decimal,
+}
+
+#[cw_serde]
+pub struct TakeRate {
+    pub max_tax_fee: Decimal,
+    pub take_rate_addr: Addr,
+}
+
+impl TakeRate {
+    pub fn new(
+        api: &dyn Api,
+        max_tax_fee: Decimal,
+        take_rate_address: &str,
+    ) -> Result<Self, OutpostError> {
+        Ok(TakeRate {
+            max_tax_fee,
+            take_rate_addr: api.addr_validate(take_rate_address)?,
+        })
+    }
 }

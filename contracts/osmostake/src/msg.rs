@@ -5,7 +5,7 @@ use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 use osmosis_destinations::comp_prefs::{
     OsmosisCompPrefs, OsmosisDestinationProjectAddresses, OsmosisDestinationProjectAddrs,
 };
-
+use outpost_utils::comp_prefs::TakeRate;
 
 use crate::ContractError;
 
@@ -17,11 +17,20 @@ pub struct InstantiateMsg {
 
     /// All of the addresses that the compounder can interact with
     pub project_addresses: ContractAddresses,
+
+    /// The maximum tax fee that can be charged to users of the contract
+    pub max_tax_fee: Decimal,
+
+    /// The address that the take rate should be sent to
+    pub take_rate_address: String,
 }
 
 #[cw_serde]
 pub struct MigrateMsg {
     pub project_addresses: Option<ContractAddresses>,
+
+    pub max_tax_fee: Decimal,
+    pub take_rate_address: String,
 }
 
 #[cw_serde]
@@ -76,12 +85,12 @@ pub struct OsmostakeCompoundPrefs {
 pub struct CompPrefsWithAddresses {
     pub comp_prefs: OsmostakeCompoundPrefs,
     pub project_addresses: ContractAddrs,
+    pub take_rate: TakeRate,
 }
 
 #[cw_serde]
 pub struct ContractAddresses {
     pub staking_denom: String,
-    pub take_rate_addr: String,
     pub authzpp: AuthzppAddresses,
     pub destination_projects: OsmosisDestinationProjectAddresses,
 }
@@ -110,7 +119,6 @@ impl AuthzppAddresses {
 #[cw_serde]
 pub struct ContractAddrs {
     pub staking_denom: String,
-    pub take_rate_addr: Addr,
     pub authzpp: AuthzppAddrs,
     pub destination_projects: OsmosisDestinationProjectAddrs,
 }
@@ -119,7 +127,6 @@ impl ContractAddresses {
     pub fn validate_addrs(&self, api: &dyn Api) -> Result<ContractAddrs, ContractError> {
         Ok(ContractAddrs {
             staking_denom: self.staking_denom.clone(),
-            take_rate_addr: api.addr_validate(&self.take_rate_addr)?,
             authzpp: self.authzpp.validate_addrs(api)?,
             destination_projects: self.destination_projects.validate_addrs(api)?,
         })

@@ -6,9 +6,7 @@ use crate::{
 
 use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
-use cw_grant_spec::grants::{
-    AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement,
-};
+use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 use osmosis_destinations::comp_prefs::{OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings};
 use osmosis_destinations::grants::{membrane_stake_grant, mint_milk_tia_grant, stake_ion_grants};
 use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
@@ -17,7 +15,6 @@ use sail_destinations::grants::eris_lsd_grant;
 use universal_destinations::grants::{native_send_token, native_staking_grant};
 use white_whale::pool_network::asset::AssetInfo;
 use withdraw_rewards_tax_grant::msg::GrantSpecData;
-
 
 pub fn query_version() -> VersionResponse {
     VersionResponse {
@@ -47,8 +44,9 @@ impl Grantable for QueryMsg {
             grant_contract: outpost_contract,
             grant_data:
                 CompPrefsWithAddresses {
-                    comp_prefs: OsmostakeCompoundPrefs { comp_prefs: _, tax_fee, .. },
+                    comp_prefs: OsmostakeCompoundPrefs { comp_prefs: _, .. },
                     project_addresses,
+                    take_rate,
                 },
             ..
         } = grant_structure.clone();
@@ -60,8 +58,8 @@ impl Grantable for QueryMsg {
                 expiration,
                 grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
                 grant_data: GrantSpecData {
-                    taxation_addr: Addr::unchecked(project_addresses.take_rate_addr),
-                    max_fee_percentage: tax_fee.unwrap_or(Decimal::MAX),
+                    taxation_addr: take_rate.take_rate_addr,
+                    max_fee_percentage: take_rate.max_tax_fee,
                 },
             },
             current_timestamp,
