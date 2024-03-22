@@ -14,7 +14,7 @@ use osmosis_helpers::{
     },
 };
 use outpost_utils::{
-    comp_prefs::DestinationAction,
+    comp_prefs::{DestinationAction, TakeRate},
     helpers::{
         calc_additional_tax_split, calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, DestProjectMsgs,
         TaxSplitResult,
@@ -40,6 +40,10 @@ pub fn compound(
     user_address: String,
     comp_prefs: &DcaPrefs,
     tax_fee: Option<Decimal>,
+    TakeRate {
+        max_tax_fee,
+        take_rate_addr,
+    }: TakeRate,
 ) -> Result<Response, ContractError> {
     let DcaPrefs {
         compound_token,
@@ -47,7 +51,7 @@ pub fn compound(
     } = comp_prefs;
 
     // validate that the preference quantites sum to 1
-    let _ = !prefs_sum_to_one(compound_preferences)?;
+    let _ = prefs_sum_to_one(compound_preferences)?;
 
     // check that the delegator address is valid
     let user_addr: Addr = deps.api.addr_validate(&user_address)?;
@@ -64,9 +68,9 @@ pub fn compound(
         claim_and_tax_msgs: tax_store_msg,
     } = calc_additional_tax_split(
         compound_token,
-        tax_fee.unwrap_or(Decimal::percent(1)),
+        tax_fee.unwrap_or(max_tax_fee),
         user_address,
-        project_addrs.take_rate_addr.to_string(),
+        take_rate_addr.to_string(),
     );
 
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs

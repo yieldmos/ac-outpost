@@ -5,7 +5,13 @@ use crate::{
 };
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
-use osmosis_destinations::comp_prefs::OsmosisDestinationProjectAddresses;
+use osmosis_destinations::{
+    comp_prefs::{
+        DaoDaoAddresses, DestProjectSwapRoutes, MembraneAddresses, OsmosisDestinationProjectAddresses,
+        OsmosisProjectAddresses, RedbankAddresses,
+    },
+    pools::{Denoms, OsmoPools, OsmosisKnownPoolListing, UsdcPools},
+};
 
 fn auctioning_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(execute, instantiate, query);
@@ -35,10 +41,25 @@ fn instantiate_with_defaults() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
-                take_rate_addr: "".to_string(),
-
-                authzpp: AuthzppAddresses::default(),
-                destination_projects: OsmosisDestinationProjectAddresses::default(),
+                take_rate_addr: "takerate_addr".to_string(),
+                authzpp: AuthzppAddresses {},
+                destination_projects: OsmosisDestinationProjectAddresses {
+                    denoms: Denoms::default(),
+                    swap_routes: DestProjectSwapRoutes::default(),
+                    projects: OsmosisProjectAddresses {
+                        daodao: DaoDaoAddresses {},
+                        redbank: RedbankAddresses {
+                            credit_manager: "redbank_credit_manager".to_string(),
+                        },
+                        ion_dao: "ion_dao".to_string(),
+                        milky_way_bonding: "milky_way_bonding".to_string(),
+                        eris_amposmo_bonding: "eris_amposmo_bonding".to_string(),
+                        membrane: MembraneAddresses {
+                            cdp: "membrane_cdp".to_string(),
+                            staking: "mbrn_staking".to_string(),
+                        },
+                    },
+                },
             },
         },
     )
@@ -114,10 +135,25 @@ fn validator_only_compounding() {
         &InstantiateMsg {
             admin: None,
             project_addresses: ContractAddresses {
-                take_rate_addr: "".to_string(),
-
-                authzpp: AuthzppAddresses::default(),
-                destination_projects: OsmosisDestinationProjectAddresses::default(),
+                take_rate_addr: "takerate_addr".to_string(),
+                authzpp: AuthzppAddresses {},
+                destination_projects: OsmosisDestinationProjectAddresses {
+                    denoms: Denoms::default(),
+                    swap_routes: DestProjectSwapRoutes::default(),
+                    projects: OsmosisProjectAddresses {
+                        daodao: DaoDaoAddresses {},
+                        redbank: RedbankAddresses {
+                            credit_manager: "redbank_credit_manager".to_string(),
+                        },
+                        ion_dao: "ion_dao".to_string(),
+                        milky_way_bonding: "milky_way_bonding".to_string(),
+                        eris_amposmo_bonding: "eris_amposmo_bonding".to_string(),
+                        membrane: MembraneAddresses {
+                            cdp: "membrane_cdp".to_string(),
+                            staking: "mbrn_staking".to_string(),
+                        },
+                    },
+                },
             },
         },
     )

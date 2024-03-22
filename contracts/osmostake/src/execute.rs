@@ -15,7 +15,7 @@ use osmosis_helpers::{
 };
 
 use outpost_utils::{
-    comp_prefs::DestinationAction,
+    comp_prefs::{DestinationAction, TakeRate},
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
     msg_gen::create_exec_msg,
 };
@@ -38,18 +38,20 @@ pub fn compound(
     project_addresses: ContractAddrs,
     user_address: String,
     comp_prefs: OsmosisCompPrefs,
-    tax_fee: Option<Decimal>,
+    fee_to_charge: Option<Decimal>,
+    TakeRate {
+        max_tax_fee,
+        take_rate_addr,
+    }: TakeRate,
 ) -> Result<Response, ContractError> {
     // validate that the preference quantites sum to 1
-    let _ = !prefs_sum_to_one(&comp_prefs)?;
+    let _ = prefs_sum_to_one(&comp_prefs)?;
 
     // check that the delegator address is valid
     let user_addr: Addr = deps.api.addr_validate(&user_address)?;
 
     // validate that the user is authorized to compound
     is_authorized_compounder(deps.as_ref(), &info.sender, &user_addr, ADMIN, AUTHORIZED_ADDRS)?;
-
-    let _project_addrs = PROJECT_ADDRS.load(deps.storage)?;
 
     // get the denom of the staking token. this should be "uosmo"
     let staking_denom = project_addresses.staking_denom.clone();
@@ -64,7 +66,7 @@ pub fn compound(
         // withdraw delegator rewards wasm message
         withdraw_msg,
     ) = WithdrawRewardsTaxClient::new(&project_addresses.authzpp.withdraw_tax, &user_addr)
-        .simulate_with_contract_execute(deps.querier, tax_fee)?;
+        .simulate_with_contract_execute(deps.querier, fee_to_charge)?;
 
     let total_rewards = sum_coins(&staking_denom, &delegator_rewards);
 

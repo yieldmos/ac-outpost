@@ -14,4 +14,4 @@ pub use crate::error::ContractError;
 #[cfg(feature = "interface")]
 mod interface;
 #[cfg(feature = "interface")]
-pub use crate::interface::YmosJunodcaOutpost;
+pub use crate::interface::YmosOsmosisdcaOutpost;

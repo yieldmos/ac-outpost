@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmostakeCompoundPrefs, QueryMsg};
-use crate::state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS};
+use crate::state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, TAKE_RATE};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -11,6 +11,7 @@ use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
 use osmosis_destinations::pools::PoolForEach;
 
+use outpost_utils::comp_prefs::TakeRate;
 use semver::Version;
 
 // version info for migration info
@@ -34,6 +35,8 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
     let InstantiateMsg {
         admin,
         project_addresses,
+        max_tax_fee,
+        take_rate_address,
     } = msg;
 
     let admin_addr = match admin {
@@ -45,6 +48,10 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
     };
 
     ADMIN.save(deps.storage, &admin_addr)?;
+
+    // Store the outpost take rate
+    TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address)?)?;
+
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
     let validated_addrs = project_addresses.validate_addrs(deps.api)?;
     PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
@@ -87,11 +94,16 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     if let MigrateMsg {
         project_addresses: Some(addresses),
+        max_tax_fee,
+        take_rate_address,
     } = msg
     {
         let validated_addrs = addresses.validate_addrs(deps.api)?;
 
         PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
+
+        // update the take rate
+        TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address)?)?;
 
         // clear the state that depends on the addresses data so we can reinitialize it
         KNOWN_DENOMS.clear(deps.storage);
@@ -176,11 +188,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
         ExecuteMsg::Compound(OsmostakeCompoundPrefs {
             user_address,
             comp_prefs,
-            tax_fee,
+            tax_fee: fee_to_charge,
         }) => {
-            let addresses = PROJECT_ADDRS.load(deps.storage)?;
+            let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
+            let take_rate = TAKE_RATE.load(deps.storage)?;
 
-            execute::compound(deps, env, info, addresses, user_address, comp_prefs, tax_fee)
+            execute::compound(
+                deps,
+                env,
+                info,
+                project_addresses,
+                user_address,
+                comp_prefs,
+                fee_to_charge,
+                take_rate,
+            )
         }
     }
 }
@@ -193,6 +215,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::AuthorizedCompounders {} => to_json_binary(&queries::query_authorized_compounders(deps)),
         QueryMsg::GrantSpec { comp_prefs, expiration } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
+            let take_rate = TAKE_RATE.load(deps.storage)?;
+
             to_json_binary(&QueryMsg::query_grants(
                 GrantStructure {
                     grantee: env.contract.address.clone(),
@@ -202,6 +226,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     grant_data: CompPrefsWithAddresses {
                         comp_prefs,
                         project_addresses,
+                        take_rate,
                     },
                 },
                 env.block.time,
@@ -209,6 +234,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::RevokeSpec { comp_prefs } => {
             let project_addresses = PROJECT_ADDRS.load(deps.storage)?;
+            let take_rate = TAKE_RATE.load(deps.storage)?;
+
             to_json_binary(&QueryMsg::query_revokes(GrantStructure {
                 grantee: env.contract.address.clone(),
                 granter: deps.api.addr_validate(&comp_prefs.user_address)?,
@@ -217,6 +244,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 grant_data: CompPrefsWithAddresses {
                     comp_prefs,
                     project_addresses,
+                    take_rate,
                 },
             })?)
         }

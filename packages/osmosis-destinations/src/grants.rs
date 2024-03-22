@@ -1,9 +1,7 @@
 use cosmwasm_std::{Addr, Uint128};
-use cw_grant_spec::grants::{
-    GrantBase, GrantRequirement,
-};
+use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 
-use crate::mars_types::RedBankExecuteMsgs;
+use crate::{dest_project_gen::MembraneExecuteMsg, mars_types::RedBankExecuteMsgs};
 
 pub fn membrane_stake_grant(
     base: GrantBase,
@@ -13,7 +11,7 @@ pub fn membrane_stake_grant(
     vec![GrantRequirement::contract_exec_messages_auth(
         base,
         contract_addr,
-        vec![&membrane::staking::ExecuteMsg::Stake { user: None }],
+        vec![&MembraneExecuteMsg::Stake { user: None }],
         Some(mbrn_denom),
     )]
 }
@@ -28,7 +26,7 @@ pub fn membrane_deposit_grant(
     vec![GrantRequirement::contract_exec_messages_auth(
         base,
         contract_addr,
-        vec![&membrane::cdp::ExecuteMsg::Deposit {
+        vec![&MembraneExecuteMsg::CdpDeposit {
             position_id: Some(position_id),
             position_owner: None,
         }],
