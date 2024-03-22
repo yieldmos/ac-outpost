@@ -49,7 +49,7 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
 
     ADMIN.save(deps.storage, &admin_addr)?;
     // Store the outpost take rate address
-    TAKE_RATE.save(deps.storage, &TakeRate::new(depss.api, max_tax_fee, &take_rate_address))?;
+    TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address)?)?;
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
     let validated_addrs = project_addresses.validate_addrs(deps.api)?;
     PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
@@ -101,7 +101,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
 
         // update the take rate
-        TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address))?;
+        TAKE_RATE.save(deps.storage, &TakeRate::new(deps.api, max_tax_fee, &take_rate_address)?)?;
 
         // clear the state that depends on the addresses data so we can reinitialize it
         KNOWN_DENOMS.clear(deps.storage);

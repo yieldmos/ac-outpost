@@ -1,11 +1,14 @@
 use crate::{
     contract::{execute, instantiate, query},
     msg::{AuthzppAddresses, ContractAddresses, InstantiateMsg},
-    tests::multitest::OutpostContract,
+    tests::{multitest::OutpostContract, staking::Staking},
 };
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, CosmosMsg, Decimal, Delegation, Empty, Validator};
 use cw_multi_test::{next_block, App, Contract, ContractWrapper, StakingInfo};
-use cw_orch::osmosis_test_tube::OsmosisTestTube;
+use cw_orch::osmosis_test_tube::{
+    osmosis_test_tube::{Gamm, Module},
+    OsmosisTestTube,
+};
 use cw_orch::prelude::*;
 use osmosis_destinations::{
     comp_prefs::{
@@ -21,15 +24,34 @@ use ymos_osmostake_outpost::YmosOsmosisstakeOutpost;
 fn instantiate_with_defaults() {
     let mut chain = OsmosisTestTube::new(coins(1_000_000_000_000, "uosmo"));
 
-    let account = chain.init_account(coins(100_000_000_000, "uosmo")).unwrap();
+    let admin = chain.init_account(coins(100_000_000_000, "uosmo")).unwrap();
+    // let user = chain.init_account(coins(1_000_000_000, "uosmo")).unwrap();
+    // let treasury = chain.init_account(coins(0, "uosmo")).unwrap();
 
-    let osmostake_contract = YmosOsmosisstakeOutpost::new("1", chain.clone());
+    let osmostake_contract = YmosOsmosisstakeOutpost::new("osmostake_contract", chain.clone());
 
-    assert_eq!(osmostake_contract.code_id().unwrap(), 3u64);
+    let upload_resp = osmostake_contract.upload();
+    assert!(upload_resp.is_ok(), "Upload osmostake failed");
 
-    // withdraw_rewards_tax_grant::WithdrawRewardsTaxGrant::new(contract_id, chain)
+    // let withdraw_tax_contract = withdraw_rewards_tax_grant::WithdrawRewardsTaxGrant::new("withdraw_tax_contract", chain);
 
-    // let withdraw_rewards_contract = withdraw_rewards_tax_grant::WithdrawRewardsTaxGrant::new(contract_id, chain);
+    // withdraw_tax_contract
+    //     .call_as(&admin)
+    //     .upload("../../vendor_wasm/withdraw_rewards_tax_grant.wasm")
+    //     .unwrap();
+
+    // withdraw_tax_contract.call_as(&admin).instantiate().unwrap();
+
+    // let existing_validators = staking
+    //     .query_validators(&QueryValidatorsRequest {
+    //         status: "".to_string(),
+    //         pagination: None,
+    //     })
+    //     .unwrap();
+
+    // // set aside the first validator for testing
+    // let validator = existing_validators.validators.first().unwrap().clone();
+
     // let sender = Addr::unchecked("sender");
 
     // let mut app = App::new(|_router, _api, _storage| {

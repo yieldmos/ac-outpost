@@ -39,7 +39,6 @@ cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true, features = [
   "stargate",
   # "staking",
-  "cosmwasm_1_4",
 ] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }

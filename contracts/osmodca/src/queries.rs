@@ -5,13 +5,12 @@ use crate::{
 };
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, StdResult, Timestamp, Uint128};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
-use cw_grant_spec::grants::{
-    AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement,
-};
+use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 use osmosis_destinations::comp_prefs::{OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings};
 use osmosis_destinations::grants::{membrane_stake_grant, mint_milk_tia_grant, stake_ion_grants};
 use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
 use osmosis_helpers::osmosis_swap::osmosis_swap_grants;
+use outpost_utils::comp_prefs::TakeRate;
 use sail_destinations::grants::eris_lsd_grant;
 use universal_destinations::grants::{native_send_token, native_staking_grant};
 use white_whale::pool_network::asset::AssetInfo;
@@ -45,14 +44,18 @@ impl Grantable for QueryMsg {
             grant_data:
                 CompPrefsWithAddresses {
                     comp_frequency,
-                    comp_prefs: OsmodcaCompoundPrefs { comp_prefs, tax_fee, .. },
+                    comp_prefs: OsmodcaCompoundPrefs { comp_prefs, .. },
                     project_addresses,
+                    take_rate:
+                        TakeRate {
+                            max_tax_fee,
+                            take_rate_addr,
+                        },
                 },
             ..
         } = grant_structure.clone();
 
         let iteration_count: Uint128 = comp_frequency.iteration_count(current_timestamp, expiration).into();
-        let fee = tax_fee.unwrap_or(Decimal::percent(1));
 
         let taxation_grants = vec![GrantRequirement::GrantSpec {
             grant_type: AuthorizationType::SendAuthorization {
@@ -63,12 +66,12 @@ impl Grantable for QueryMsg {
                         .map(|DcaPrefs { compound_token, .. }| compound_token)
                         // estimate the amount of tokens that will be received
                         .map(|Coin { amount, denom }| Coin {
-                            amount: (amount * iteration_count) * fee,
+                            amount: (amount * iteration_count) * max_tax_fee,
                             denom,
                         })
                         .collect(),
                 ),
-                allow_list: Some(vec![project_addresses.take_rate_addr.clone()]),
+                allow_list: Some(vec![take_rate_addr.clone()]),
             },
             granter,
             grantee: outpost_contract,

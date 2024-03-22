@@ -77,7 +77,7 @@ juno-destinations = { path = "./packages/juno-destinations" }
 migaloo-destinations = { path = "./packages/migaloo-destinations" }
 sail-destinations = { path = "./packages/sail-destinations" }
 osmosis-destinations = { path = "./packages/osmosis-destinations" }
-membrane = { git = "https://github.com/MembraneFinance/membrane-core.git", version = "0.1.0" }
+# membrane = { git = "https://github.com/MembraneFinance/membrane-core.git", version = "0.1.0" }
 struct_iterable = "0.1.1"
 
 
