@@ -21,9 +21,9 @@ use outpost_utils::{
     },
     msg_gen::create_exec_msg,
 };
-use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs};
+use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
 
-use universal_destinations::dest_project_gen::{send_tokens_msgs};
+use universal_destinations::dest_project_gen::send_tokens_msgs;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::{
@@ -218,7 +218,7 @@ pub fn prefs_to_msgs(
                             },
                         )?;
 
-                        send_msgs.append_msgs(swap_msgs);
+                        send_msgs.prepend_msgs(swap_msgs);
 
                         Ok(send_msgs)
                     }
@@ -256,7 +256,7 @@ pub fn prefs_to_msgs(
                             coin(est_tia.u128(), project_addrs.destination_projects.denoms.tia.clone()),
                         )?;
 
-                        mint_milk_tia.append_msgs(swap_to_tia_msgs);
+                        mint_milk_tia.prepend_msgs(swap_to_tia_msgs);
 
                         Ok(mint_milk_tia)
                     }

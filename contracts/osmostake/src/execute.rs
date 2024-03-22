@@ -1,4 +1,4 @@
-use std::{iter};
+use std::iter;
 
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
 use osmosis_destinations::{
@@ -7,10 +7,7 @@ use osmosis_destinations::{
     pools::MultipleStoredPools,
 };
 use osmosis_helpers::{
-    osmosis_lp::{
-        gen_join_cl_pool_single_sided_msgs,
-        gen_join_classic_pool_single_sided_msgs,
-    },
+    osmosis_lp::{gen_join_cl_pool_single_sided_msgs, gen_join_classic_pool_single_sided_msgs},
     osmosis_swap::{
         generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
         generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
@@ -19,13 +16,10 @@ use osmosis_helpers::{
 
 use outpost_utils::{
     comp_prefs::DestinationAction,
-    helpers::{
-        calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins,
-        DestProjectMsgs,
-    },
+    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
     msg_gen::create_exec_msg,
 };
-use sail_destinations::dest_project_gen::{mint_eris_lsd_msgs};
+use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
 
 use universal_destinations::dest_project_gen::{native_staking_msg, send_tokens_msgs};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -229,7 +223,7 @@ pub fn prefs_to_msgs(
                             },
                         )?;
 
-                        send_msgs.append_msgs(swap_msgs);
+                        send_msgs.prepend_msgs(swap_msgs);
 
                         Ok(send_msgs)
                     }
@@ -267,7 +261,7 @@ pub fn prefs_to_msgs(
                             coin(est_tia.u128(), project_addrs.destination_projects.denoms.tia.clone()),
                         )?;
 
-                        mint_milk_tia.append_msgs(swap_to_tia_msgs);
+                        mint_milk_tia.prepend_msgs(swap_to_tia_msgs);
 
                         Ok(mint_milk_tia)
                     }
