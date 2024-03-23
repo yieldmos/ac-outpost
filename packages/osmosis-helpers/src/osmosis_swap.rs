@@ -301,16 +301,13 @@ pub fn unsafe_generate_known_to_known_route(
 /// Returns both the swap simulation and the queried swap route
 pub fn simulate_swap(
     querier: &QuerierWrapper,
-    _user_addr: &Addr,
-    from_denom: &str,
-    // just for error reporting purposes
-    _to_denom: String,
+    from_token: &CWCoin,
     route: Vec<SwapAmountInRoute>,
 ) -> StdResult<(EstimateSwapExactAmountInResponse, Vec<SwapAmountInRoute>)> {
     let estimate = EstimateSwapExactAmountInRequest {
         // sender: delegator_address.to_string(),
         pool_id: route.clone().first().unwrap().pool_id,
-        token_in: from_denom.to_string(),
+        token_in: format!("{}{}", from_token.amount, from_token.denom),
         routes: route.clone(),
     }
     .query(querier)?;
@@ -369,13 +366,7 @@ pub fn generate_swap_and_sim_msg(
         return Ok((from_asset.amount.clone(), vec![]));
     }
 
-    let (simulation, _routes) = simulate_swap(
-        querier,
-        user_address,
-        &from_asset.denom.clone(),
-        to_denom.clone(),
-        route.clone(),
-    )?;
+    let (simulation, _routes) = simulate_swap(querier, from_asset, route.clone())?;
 
     let simulation = Uint128::from_str(simulation.token_out_amount.as_str())?;
 
