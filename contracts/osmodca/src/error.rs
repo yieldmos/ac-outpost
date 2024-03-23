@@ -53,6 +53,9 @@ pub enum ContractError {
 
     #[error("Could not encode msg as any: {0}")]
     EncodeError(#[from] cosmos_sdk_proto::prost::EncodeError),
+
+    #[error("Contract Migration Version Mismatch: expected higher than {expected}, receieved {received}")]
+    MigrationVersionMismatch { expected: String, received: String },
 }
 
 impl From<semver::Error> for ContractError {

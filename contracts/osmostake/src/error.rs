@@ -59,6 +59,9 @@ pub enum ContractError {
 
     #[error("Empty staking denom")]
     EmptyStakingDenom,
+
+    #[error("Contract Migration Version Mismatch: expected higher than {expected}, receieved {received}")]
+    MigrationVersionMismatch { expected: String, received: String },
 }
 
 impl From<semver::Error> for ContractError {

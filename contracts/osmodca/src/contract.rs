@@ -88,6 +88,11 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     if storage_version < version {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    } else {
+        return Err(ContractError::MigrationVersionMismatch {
+            expected: storage_version.to_string(),
+            received: version.to_string(),
+        });
     }
 
     if let MigrateMsg {
