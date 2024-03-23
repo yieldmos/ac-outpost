@@ -75,21 +75,28 @@ impl Grantable for QueryMsg {
             granter,
             expiration,
             grant_contract: outpost_contract,
+            grant_data:
+                CompPrefsWithAddresses {
+                    take_rate,
+                    project_addresses,
+                    ..
+                },
             ..
         } = grant_structure.clone();
-        let taxation_revoke: Vec<RevokeRequirement> = vec![GrantRequirement::GrantSpec {
-            grant_type: AuthorizationType::SendAuthorization {
-                spend_limit: None,
-                allow_list: None,
-            },
+
+        let withdraw_tax_revokes = withdraw_rewards_tax_grant::msg::QueryMsg::query_revokes(GrantStructure {
             granter,
             grantee: outpost_contract,
             expiration,
-        }
-        .into()];
+            grant_contract: Addr::unchecked(project_addresses.authzpp.withdraw_tax),
+            grant_data: GrantSpecData {
+                taxation_addr: Addr::unchecked(take_rate.take_rate_addr),
+                max_fee_percentage: take_rate.max_tax_fee,
+            },
+        })?;
 
         Ok([
-            taxation_revoke,
+            withdraw_tax_revokes,
             gen_comp_pref_grants(grant_structure)?
                 .into_iter()
                 .map(|grant| -> RevokeRequirement { grant.into() })
