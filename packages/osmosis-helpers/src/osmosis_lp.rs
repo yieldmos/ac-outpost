@@ -1,21 +1,24 @@
-use cosmwasm_std::{coin, Addr, Coin, Event, QuerierWrapper, StdError, Storage, Uint128};
+use cosmwasm_std::{
+    coin, Addr, Coin, Event, QuerierWrapper, StdError, Storage, Timestamp, Uint128,
+};
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 
-
 use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::MsgCreatePosition;
+use osmosis_std::types::osmosis::gamm::v1beta1::MsgJoinSwapExternAmountIn;
 use osmosis_std::types::osmosis::gamm::v1beta1::Pool;
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgJoinSwapExternAmountIn};
 use osmosis_std::types::osmosis::lockup::MsgLockTokens;
 
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin as OsmosisCoin, osmosis::poolmanager::v1beta1::PoolmanagerQuerier,
 };
 use outpost_utils::{helpers::DestProjectMsgs, msg_gen::CosmosProtoMsg};
 
 use crate::errors::OsmosisHelperError;
+use crate::osmosis_swap::estimate_token_out_min_amount;
 use crate::osmosis_swap::{
-    generate_known_to_known_swap_and_sim_msg,
-    osmosis_swap_grants, pool_swap_with_sim, OsmosisRoutePools,
+    generate_known_to_known_swap_and_sim_msg, osmosis_swap_grants, pool_swap_with_sim,
+    OsmosisRoutePools,
 };
 
 pub fn query_pool_info(
@@ -48,6 +51,7 @@ pub fn classic_pool_join_single_side_prepratory_swap(
     pool_id: u64,
     offer_asset: &Coin,
     pool_routes: OsmosisRoutePools,
+    current_timestamp: Timestamp,
 ) -> Result<SingleSidedJoinSwap, OsmosisHelperError> {
     let pool_tokens = query_pool_info(PoolmanagerQuerier::new(querier), pool_id)?
         .pool_assets
@@ -83,6 +87,7 @@ pub fn classic_pool_join_single_side_prepratory_swap(
                 user_addr,
                 offer_asset,
                 &target_pool_target.denom,
+                current_timestamp,
             )?;
             return Ok(SingleSidedJoinSwap {
                 join_asset: coin(sim.u128(), target_pool_target.denom.clone()),
@@ -137,7 +142,7 @@ pub fn join_osmosis_cl_pool_single_side(
     upper_tick: i64,
     token_min_amount0: Uint128,
     token_min_amount1: Uint128,
-    // alternative_denoms
+    current_timestamp: Timestamp,
 ) -> Result<Vec<CosmosProtoMsg>, OsmosisHelperError> {
     let pool_querier = PoolmanagerQuerier::new(querier);
 
@@ -178,6 +183,16 @@ pub fn join_osmosis_cl_pool_single_side(
                 offer_asset.denom.clone(),
             ),
             &coin_b.denom,
+            estimate_token_out_min_amount(
+                querier,
+                &vec![SwapAmountInRoute {
+                    pool_id,
+                    token_out_denom: coin_b.denom.clone(),
+                }],
+                offer_asset.denom.clone(),
+                offer_asset.amount,
+                current_timestamp,
+            )?,
         )?;
 
         pre_swap.push(CosmosProtoMsg::OsomsisCLJoinPool(MsgCreatePosition {
@@ -218,6 +233,7 @@ pub fn gen_join_cl_pool_single_sided_msgs(
     upper_tick: i64,
     token_min_amount0: Uint128,
     token_min_amount1: Uint128,
+    current_time: Timestamp,
 ) -> Result<DestProjectMsgs, OsmosisHelperError> {
     let join_pool_msgs = join_osmosis_cl_pool_single_side(
         querier,
@@ -228,6 +244,7 @@ pub fn gen_join_cl_pool_single_sided_msgs(
         upper_tick,
         token_min_amount0,
         token_min_amount1,
+        current_time,
     )?;
 
     Ok(DestProjectMsgs {
@@ -247,6 +264,7 @@ pub fn gen_join_classic_pool_single_sided_msgs(
     pool_id: u64,
     offer_token: &Coin,
     bond_tokens: bool,
+    current_timestamp: Timestamp,
 ) -> Result<DestProjectMsgs, OsmosisHelperError> {
     let SingleSidedJoinSwap {
         join_asset,
@@ -258,6 +276,7 @@ pub fn gen_join_classic_pool_single_sided_msgs(
         pool_id,
         offer_token,
         route_pools,
+        current_timestamp,
     )?;
 
     let join_pool_msgs =

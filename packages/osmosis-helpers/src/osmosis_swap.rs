@@ -1,19 +1,29 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin as CWCoin, QuerierWrapper, StdResult, Storage, Uint128};
+use cosmwasm_std::{
+    Addr, BlockInfo, Coin as CWCoin, Decimal, QuerierWrapper, StdResult, Storage, Timestamp,
+    Uint128,
+};
 
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 use osmosis_destinations::{
     comp_prefs::{DestProjectSwapRoutes, KnownPairedPoolAsset, TargetAsset},
     pools::{Denoms, MultipleStoredPools, StoredDenoms},
 };
-use osmosis_std::types::cosmos::base::v1beta1::Coin;
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
-    MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
+use osmosis_std::types::{cosmos::base::v1beta1::Coin, osmosis::twap::v1beta1::TwapQuerier};
+use osmosis_std::{
+    shim,
+    types::osmosis::{
+        poolmanager::v1beta1::{
+            EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
+            EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn, MsgSwapExactAmountOut,
+            SwapAmountInRoute, SwapAmountOutRoute,
+        },
+        twap::v1beta1::ArithmeticTwapToNowResponse,
+    },
 };
-use outpost_utils::{msg_gen::CosmosProtoMsg};
+use outpost_utils::msg_gen::CosmosProtoMsg;
 
 use crate::errors::OsmosisHelperError;
 
@@ -315,6 +325,7 @@ pub fn generate_known_to_known_swap_and_sim_msg(
     user_addr: &Addr,
     from_asset: &CWCoin,
     to_denom: &str,
+    current_time: Timestamp,
 ) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
@@ -322,6 +333,7 @@ pub fn generate_known_to_known_swap_and_sim_msg(
         from_asset,
         to_denom.to_string(),
         generate_known_to_known_route(store, pool_routes, &from_asset.denom, to_denom)?,
+        current_time,
     )
 }
 
@@ -332,6 +344,7 @@ pub fn generate_known_to_unknown_swap_and_sim_msg(
     user_addr: &Addr,
     from_asset: &CWCoin,
     to_asset: TargetAsset,
+    current_time: Timestamp,
 ) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
@@ -339,6 +352,7 @@ pub fn generate_known_to_unknown_swap_and_sim_msg(
         from_asset,
         to_asset.denom.clone(),
         generate_known_to_unknown_route(store, pool_routes, &from_asset.denom, to_asset)?,
+        current_time,
     )
 }
 
@@ -349,30 +363,77 @@ pub fn generate_swap_and_sim_msg(
     from_asset: &CWCoin,
     to_denom: String,
     route: Vec<SwapAmountInRoute>,
+    current_time: Timestamp,
 ) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
-    if from_asset.denom == to_denom {
+    if from_asset.denom.eq(&to_denom) {
         return Ok((from_asset.amount.clone(), vec![]));
     }
 
     let (simulation, _routes) = simulate_swap(
         querier,
         user_address,
-        &from_asset.denom,
+        &from_asset.denom.clone(),
         to_denom.clone(),
         route.clone(),
     )?;
 
     let simulation = Uint128::from_str(simulation.token_out_amount.as_str())?;
 
-    let swap_msgs = vec![generate_swap(from_asset, user_address, route)];
+    let swap_msgs = vec![generate_swap(
+        from_asset,
+        user_address,
+        route.clone(),
+        estimate_token_out_min_amount(
+            querier,
+            &route,
+            from_asset.denom.clone(),
+            from_asset.amount,
+            current_time,
+        )?,
+    )];
 
     Ok((simulation, swap_msgs))
+}
+
+pub fn estimate_token_out_min_amount(
+    querier: &QuerierWrapper,
+    route: &Vec<SwapAmountInRoute>,
+    denom_in: String,
+    amount_in: Uint128,
+    current_time: Timestamp,
+) -> Result<Uint128, OsmosisHelperError> {
+    let twap = TwapQuerier::new(querier);
+
+    let mut in_denom = denom_in;
+    let mut token_out_min_amount = amount_in;
+    for route_section in route.iter() {
+        let twap_start = current_time.minus_seconds(60u64);
+        // get the twap for this section of the multihop route
+        let resp = twap.arithmetic_twap_to_now(
+            route_section.pool_id,
+            in_denom,
+            route_section.token_out_denom.clone(),
+            Some(shim::Timestamp {
+                seconds: i64::try_from(twap_start.seconds())?,
+                nanos: 0,
+            }),
+        )?;
+
+        // update the in denom for the next section
+        in_denom = route_section.token_out_denom.clone();
+        // calculate the minimum amount of the next token to receive
+        token_out_min_amount = amount_in * Decimal::from_str(&resp.arithmetic_twap)?;
+    }
+
+    // return 99% of the calculated amount to account for fluctuation in the past minute plus swap fees
+    Ok(token_out_min_amount * Decimal::percent(99u64))
 }
 
 pub fn generate_swap(
     from_asset: &CWCoin,
     user_addr: &Addr,
     routes: Vec<SwapAmountInRoute>,
+    token_out_min_amount: Uint128,
 ) -> CosmosProtoMsg {
     CosmosProtoMsg::OsmosisSwapExactAmountIn(MsgSwapExactAmountIn {
         token_in: Some(Coin {
@@ -381,7 +442,7 @@ pub fn generate_swap(
         }),
         sender: user_addr.to_string(),
         routes,
-        token_out_min_amount: "0".to_string(),
+        token_out_min_amount: token_out_min_amount.to_string(),
     })
 }
 
@@ -410,6 +471,7 @@ pub fn pool_swap_with_sim(
     pool_id: &u64,
     offer_asset: cosmwasm_std::Coin,
     token_out_denom: &str,
+    token_out_min_amount: Uint128,
 ) -> Result<(Vec<CosmosProtoMsg>, Uint128), OsmosisHelperError> {
     let offer_coin = Coin {
         denom: offer_asset.denom.to_string(),
@@ -421,7 +483,7 @@ pub fn pool_swap_with_sim(
             MsgSwapExactAmountIn {
                 token_in: Some(offer_coin.clone()),
                 sender: user_addr.to_string(),
-                token_out_min_amount: "0".to_string(),
+                token_out_min_amount: token_out_min_amount.to_string(),
                 routes: vec![SwapAmountInRoute {
                     pool_id: *pool_id,
                     token_out_denom: token_out_denom.to_string(),

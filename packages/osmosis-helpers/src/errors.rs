@@ -9,6 +9,9 @@ pub enum OsmosisHelperError {
     #[error("Divide by zero error: {0}")]
     DivideByZeroError(#[from] DivideByZeroError),
 
+    #[error("Failed to convert int: {0}")]
+    TryFromIntError(#[from] std::num::TryFromIntError),
+
     #[error("Invalid swap denom {denom}. {label}")]
     InvalidRouteDenom { denom: String, label: String },
 

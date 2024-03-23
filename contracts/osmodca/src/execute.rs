@@ -1,6 +1,6 @@
 use std::iter;
 
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg};
+use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Timestamp};
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
     dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
@@ -9,7 +9,7 @@ use osmosis_destinations::{
 use osmosis_helpers::{
     osmosis_lp::{gen_join_cl_pool_single_sided_msgs, gen_join_classic_pool_single_sided_msgs},
     osmosis_swap::{
-        generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
+        estimate_token_out_min_amount, generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
         generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
     },
 };
@@ -80,6 +80,7 @@ pub fn compound(
         remaining_rewards.clone(),
         compound_preferences.clone(),
         deps.as_ref(),
+        env.block.time,
     )?;
 
     let combined_msgs = all_msgs.iter().fold(
@@ -144,6 +145,7 @@ pub fn prefs_to_msgs(
     total_rewards: cosmwasm_std::Coin,
     comp_prefs: OsmosisCompPrefs,
     deps: Deps,
+    current_timestamp: Timestamp,
 ) -> Result<Vec<DestProjectMsgs>, ContractError> {
     let dca_denom = total_rewards.denom.clone();
 
@@ -167,28 +169,39 @@ pub fn prefs_to_msgs(
                 };
 
                 match destination {
-                    OsmosisDestinationProject::TokenSwap { target_asset } => Ok(DestProjectMsgs {
-                        msgs: vec![generate_swap(
-                            &coin(comp_token_amount.u128(), "uosmo"),
-                            user_addr,
-                            generate_known_to_unknown_route(
-                                deps.storage,
-                                OsmosisRoutePools {
-                                    stored_denoms: KNOWN_DENOMS,
-                                    stored_pools: MultipleStoredPools {
-                                        osmo: KNOWN_OSMO_POOLS,
-                                        usdc: KNOWN_USDC_POOLS,
-                                    },
-                                    pools: project_addrs.destination_projects.swap_routes.clone(),
-                                    denoms: project_addrs.destination_projects.denoms.clone(),
+                    OsmosisDestinationProject::TokenSwap { target_asset } => {
+                        let route = generate_known_to_unknown_route(
+                            deps.storage,
+                            OsmosisRoutePools {
+                                stored_denoms: KNOWN_DENOMS,
+                                stored_pools: MultipleStoredPools {
+                                    osmo: KNOWN_OSMO_POOLS,
+                                    usdc: KNOWN_USDC_POOLS,
                                 },
-                                "uosmo",
-                                target_asset.clone(),
-                            )?,
-                        )],
-                        sub_msgs: vec![],
-                        events: vec![Event::new("token_swap").add_attribute("target_asset", target_asset.to_string())],
-                    }),
+                                pools: project_addrs.destination_projects.swap_routes.clone(),
+                                denoms: project_addrs.destination_projects.denoms.clone(),
+                            },
+                            "uosmo",
+                            target_asset.clone(),
+                        )?;
+
+                        Ok(DestProjectMsgs {
+                            msgs: vec![generate_swap(
+                                &coin(comp_token_amount.u128(), "uosmo"),
+                                user_addr,
+                                route.clone(),
+                                estimate_token_out_min_amount(
+                                    &deps.querier,
+                                    &route,
+                                    "uosmo".to_string(),
+                                    comp_token_amount,
+                                    current_timestamp,
+                                )?,
+                            )],
+                            sub_msgs: vec![],
+                            events: vec![Event::new("token_swap").add_attribute("target_asset", target_asset.to_string())],
+                        })
+                    }
                     OsmosisDestinationProject::SendTokens {
                         address: to_address,
                         target_asset,
@@ -208,6 +221,7 @@ pub fn prefs_to_msgs(
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
                             target_asset.clone(),
+                            current_timestamp.clone(),
                         )?;
 
                         // after the swap we can send the estimated funds to the target address
@@ -251,6 +265,7 @@ pub fn prefs_to_msgs(
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
                             &project_addrs.destination_projects.denoms.tia,
+                            current_timestamp.clone(),
                         )?;
 
                         // Mint milkTIA
@@ -281,6 +296,7 @@ pub fn prefs_to_msgs(
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
                             &project_addrs.destination_projects.denoms.ion,
+                            current_timestamp.clone(),
                         )?;
 
                         let mut staking_msg =
@@ -307,6 +323,7 @@ pub fn prefs_to_msgs(
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
                             &project_addrs.destination_projects.denoms.mbrn,
+                            current_timestamp.clone(),
                         )?;
 
                         // can't stake less than 1 MBRN
@@ -350,6 +367,7 @@ pub fn prefs_to_msgs(
                         pool_id,
                         &coin(comp_token_amount.u128(), "uosmo"),
                         bond_tokens,
+                        current_timestamp.clone(),
                     )?),
                     // Entering a CL pool
                     OsmosisDestinationProject::OsmosisLiquidityPool {
@@ -370,6 +388,7 @@ pub fn prefs_to_msgs(
                         upper_tick,
                         token_min_amount_0,
                         token_min_amount_1,
+                        current_timestamp.clone(),
                     )?),
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                     _ => unimplemented!(),
