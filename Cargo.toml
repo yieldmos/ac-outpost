@@ -18,7 +18,7 @@ cosmwasm-std = { version = "1.5.0", default-features = false, features = [
     # "cosmwasm_1_4",
 ] }
 cosmwasm-storage = "1.5.0"
-cw-orch = { version = "0.19.1", features = ["daemon", "osmosis-test-tube"] }
+cw-orch = { version = "0.21.2", features = ["daemon", "osmosis-test-tube"] }
 cw-storage-plus = "1.2.0"
 cw-multi-test = "0.20.0"
 cw2 = "1.0.1"
@@ -26,7 +26,7 @@ schemars = "0.8.10"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 semver = "1"
-cosmos-sdk-proto = { version = "0.19", default-features = false, features = [
+cosmos-sdk-proto = { version = "0.21.1", default-features = false, features = [
     "cosmwasm",
 ] }
 cw20 = "1.0.1"

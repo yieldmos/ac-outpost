@@ -36,14 +36,14 @@ pub enum CosmosProtoMsg {
 impl TryFrom<&CosmosProtoMsg> for Any {
     fn try_from(proto: &CosmosProtoMsg) -> Result<Self, Self::Error> {
         match proto {
-            CosmosProtoMsg::Send(msg) => msg.to_any(),
-            CosmosProtoMsg::WithdrawDelegatorReward(msg) => msg.to_any(),
-            CosmosProtoMsg::Delegate(msg) => msg.to_any(),
+            CosmosProtoMsg::Send(msg) => Any::from_msg(msg),
+            CosmosProtoMsg::WithdrawDelegatorReward(msg) => Any::from_msg(msg),
+            CosmosProtoMsg::Delegate(msg) => Any::from_msg(msg),
             CosmosProtoMsg::AllianceDelegate(msg) => Ok(Any {
                 type_url: "/alliance.alliance.MsgDelegate".to_string(),
                 value: msg.clone().encode_to_vec(),
             }),
-            CosmosProtoMsg::ExecuteContract(msg) => msg.to_any(),
+            CosmosProtoMsg::ExecuteContract(msg) => Any::from_msg(msg),
             CosmosProtoMsg::OsmosisSwapExactAmountIn(msg) => {
                 let any = msg.to_any();
                 Ok(Any {
