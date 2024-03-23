@@ -126,7 +126,11 @@ pub struct ContractAddrs {
 impl ContractAddresses {
     pub fn validate_addrs(&self, api: &dyn Api) -> Result<ContractAddrs, ContractError> {
         Ok(ContractAddrs {
-            staking_denom: self.staking_denom.clone(),
+            staking_denom: if self.staking_denom.len().gt(&0) {
+                Ok(self.staking_denom.clone())
+            } else {
+                Err(ContractError::EmptyStakingDenom)
+            }?,
             authzpp: self.authzpp.validate_addrs(api)?,
             destination_projects: self.destination_projects.validate_addrs(api)?,
         })

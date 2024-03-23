@@ -56,6 +56,9 @@ pub enum ContractError {
 
     #[error("Could not encode msg as any: {0}")]
     EncodeError(#[from] cosmos_sdk_proto::prost::EncodeError),
+
+    #[error("Empty staking denom")]
+    EmptyStakingDenom,
 }
 
 impl From<semver::Error> for ContractError {
