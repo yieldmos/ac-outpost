@@ -234,12 +234,14 @@ impl OsmosisProjectAddresses {
 pub struct MembraneAddresses {
     pub cdp: String,
     pub staking: String,
+    pub stability_pool: String,
 }
 
 #[cw_serde]
 pub struct MembraneAddrs {
     pub cdp: Addr,
     pub staking: Addr,
+    pub stability_pool: Addr,
 }
 
 impl MembraneAddresses {
@@ -247,6 +249,7 @@ impl MembraneAddresses {
         Ok(MembraneAddrs {
             cdp: api.addr_validate(&self.cdp)?,
             staking: api.addr_validate(&self.staking)?,
+            stability_pool: api.addr_validate(&self.stability_pool)?,
         })
     }
 }

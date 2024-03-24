@@ -24,5 +24,5 @@ bond-router = { workspace = true, optional = true }
 cw-grant-spec = { workspace = true }
 osmosis-std = { workspace = true }
 sail-destinations = { workspace = true }
-# membrane = { workspace = true }
+membrane = { git = "https://github.com/MembraneFinance/membrane-core.git", version = "0.1.0" }
 struct_iterable = { workspace = true }
