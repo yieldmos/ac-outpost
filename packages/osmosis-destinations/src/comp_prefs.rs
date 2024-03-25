@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Uint128};
+use cosmwasm_std::{Addr, Api, Decimal, Uint128};
 use outpost_utils::comp_prefs::CompoundPrefs;
 
 use crate::{
@@ -59,28 +59,19 @@ pub enum OsmosisDestinationProject {
     /// Stake as MBRN
     MembraneStake {},
 
-    /// Deposit asset(s) into the CDP
-    MembraneDepositCollateral {
-        position_id: Uint128,
-        /// optionally swap the input asset(s) to the desired asset before depositing
-        as_asset: Option<String>,
-        and_then: Option<MembraneDepositCollateralAction>,
+    DepositCollateral {
+        /// swap the input asset(s) to the desired asset before depositing
+        as_asset: String,
+        protocol: OsmosisDepositCollateral,
     },
 
-    /// Swap for CDT and repay debt
-    MembraneRepay {
+    RepayDebt {
         /// repayment conditional based on the ltv ratio
         /// if None then repay the debt regardless of the ltv ratio
         /// if the repay threshold is hit the WHOLE compounding amount will be used to repay the debt
         ltv_ratio_threshold: Option<RepayThreshold>,
+        protocol: OsmosisRepayDebt,
     },
-    // MarginedRepay {
-    //     asset: String,
-    //     ltv_ratio_threshold: Decimal,
-    // },
-    // NolusLendAsset {
-    //     asset: String,
-    // },
 
     // /// Pay back borrowed balance. Currently the first denom strings specified in the vector will be
     // /// paid back first. No order is guaranteed when no vector is passed in.
@@ -155,7 +146,8 @@ pub enum OsmosisDestinationProject {
 
     MintLsd {
         lsd: OsmosisLsd,
-    }, // RedBankVault {
+    },
+    // RedBankVault {
     //     vault_address: String,
     //     leverage_amount: u64,
     // },
@@ -169,9 +161,33 @@ pub enum OsmosisDestinationProject {
 }
 
 #[cw_serde]
+pub enum OsmosisDepositCollateral {
+    /// Deposit asset(s) into the CDP
+    Membrane {
+        position_id: Uint128,
+        and_then: Option<MembraneDepositCollateralAction>,
+    },
+    // RedBankDepositCollateral {
+    //     account_id: String,
+    //     deposit_denom: String,
+    // },
+}
+
+#[cw_serde]
+pub enum OsmosisRepayDebt {
+    // RedBank,
+    // MarginedRepay {
+    //     // asset to repay as
+    //     asset: String,
+    // },
+    /// repaid as CDT
+    Membrane { position_id: Uint128 },
+}
+
+#[cw_serde]
 pub enum MembraneDepositCollateralAction {
     /// mint cdt up to the desired_ltv then leave it liquid
-    MintCDT { desired_ltv: Decimal },
+    MintCdt { desired_ltv: Decimal },
 
     /// Mint CDT and deposit it into the stability pool contract
     EnterStabilityPool { desired_ltv: Decimal },
@@ -187,7 +203,7 @@ pub enum MembraneDepositCollateralAction {
 #[cw_serde]
 pub struct RepayThreshold {
     ltv_ratio: Decimal,
-    otherwise: OsmosisDestinationProject,
+    otherwise: Box<OsmosisDestinationProject>,
 }
 
 #[cw_serde]
@@ -216,6 +232,7 @@ pub enum OsmosisLsd {
     Eris,
     // https://app.milkyway.zone/
     MilkyWay,
+    // Stride
 }
 
 // #[cw_serde]
