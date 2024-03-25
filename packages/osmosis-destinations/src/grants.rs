@@ -18,7 +18,7 @@ pub fn membrane_stake_grant(
     )]
 }
 
-pub fn membrane_deposit_into_stability_ool_grant(
+pub fn membrane_deposit_into_stability_pool_grant(
     base: GrantBase,
     contract_addr: Addr,
     cdt_denom: &str,

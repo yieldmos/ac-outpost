@@ -55,15 +55,25 @@ pub enum OsmosisDestinationProject {
     // DaoDaoStake {
     //     dao: OsmosisDao,
     // },
+
+    /// Stake as MBRN
     MembraneStake {},
-    // MembraneDeposit {
-    //     position_id: Uint128,
-    //     asset: String,
-    // },
-    // MembraneRepay {
-    //     asset: String,
-    //     ltv_ratio_threshold: Decimal,
-    // },
+
+    /// Deposit asset(s) into the CDP
+    MembraneDepositCollateral {
+        position_id: Uint128,
+        /// optionally swap the input asset(s) to the desired asset before depositing
+        as_asset: Option<String>,
+        and_then: Option<MembraneDepositCollateralAction>,
+    },
+
+    /// Swap for CDT and repay debt
+    MembraneRepay {
+        /// repayment conditional based on the ltv ratio
+        /// if None then repay the debt regardless of the ltv ratio
+        /// if the repay threshold is hit the WHOLE compounding amount will be used to repay the debt
+        ltv_ratio_threshold: Option<RepayThreshold>,
+    },
     // MarginedRepay {
     //     asset: String,
     //     ltv_ratio_threshold: Decimal,
@@ -156,6 +166,28 @@ pub enum OsmosisDestinationProject {
     //     asset: String,
     // },
     Unallocated {},
+}
+
+#[cw_serde]
+pub enum MembraneDepositCollateralAction {
+    /// mint cdt up to the desired_ltv then leave it liquid
+    MintCDT { desired_ltv: Decimal },
+
+    /// Mint CDT and deposit it into the stability pool contract
+    EnterStabilityPool { desired_ltv: Decimal },
+
+    /// Mint CDT and enter an osmosis pool single sided
+    ProvideLiquidity {
+        desired_ltv: Decimal,
+        pool_id: u64,
+        pool_settings: OsmosisPoolSettings,
+    },
+}
+
+#[cw_serde]
+pub struct RepayThreshold {
+    ltv_ratio: Decimal,
+    otherwise: OsmosisDestinationProject,
 }
 
 #[cw_serde]
