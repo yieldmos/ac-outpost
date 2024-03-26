@@ -6,7 +6,7 @@ use crate::{
 
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Event, QuerierWrapper, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Event, QuerierWrapper, ReplyOn, Uint128};
 use membrane::{cdp, stability_pool, types::Basket};
 use outpost_utils::{
     helpers::DestProjectMsgs,
@@ -147,26 +147,37 @@ pub fn deposit_into_cdp_msgs(
     cdp_contract_addr: &Addr,
     position_id: Uint128,
     deposits: &Vec<Coin>,
+    as_submsg: Option<(u64, ReplyOn)>,
 ) -> DestinationResult {
+    let deposit_msg = CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
+        cdp_contract_addr,
+        depositor_addr,
+        &cdp::ExecuteMsg::Deposit {
+            position_id: Some(position_id),
+            position_owner: None,
+        },
+        Some(
+            deposits
+                .into_iter()
+                .map(|coin| CsdkCoin {
+                    denom: coin.denom.to_string(),
+                    amount: coin.amount.to_string(),
+                })
+                .collect::<Vec<_>>(),
+        ),
+    )?);
+
     Ok(DestProjectMsgs {
-        msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            cdp_contract_addr,
-            depositor_addr,
-            &cdp::ExecuteMsg::Deposit {
-                position_id: Some(position_id),
-                position_owner: None,
-            },
-            Some(
-                deposits
-                    .into_iter()
-                    .map(|coin| CsdkCoin {
-                        denom: coin.denom.to_string(),
-                        amount: coin.amount.to_string(),
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        )?)],
-        sub_msgs: vec![],
+        msgs: if as_submsg.is_none() {
+            vec![]
+        } else {
+            vec![deposit_msg.clone()]
+        },
+        sub_msgs: if let Some((id, reply)) = as_submsg {
+            vec![(id, vec![deposit_msg], reply)]
+        } else {
+            vec![]
+        },
         events: vec![Event::new("deposit_into_cdp")
             .add_attribute(
                 "deposits",

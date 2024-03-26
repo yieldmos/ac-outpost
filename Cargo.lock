@@ -2938,7 +2938,7 @@ checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 [[package]]
 name = "membrane"
 version = "0.1.0"
-source = "git+https://github.com/MembraneFinance/membrane-core.git#eda13577af0741a0ce21cac6667e19e7f77f5253"
+source = "git+https://github.com/MembraneFinance/membrane-core.git?branch=oracle_pricing#c46d7d928efb7a4022a815b179f0134d9088181c"
 dependencies = [
  "apollo-cw-asset",
  "cosmwasm-schema",
@@ -2946,7 +2946,7 @@ dependencies = [
  "cw-coins",
  "cw-dex",
  "cw-storage-plus 0.13.4",
- "osmosis-std 0.15.3",
+ "osmosis-std 0.16.2",
  "prost 0.11.9",
  "pyth-sdk-cw",
  "schemars",
@@ -3252,13 +3252,13 @@ dependencies = [
 
 [[package]]
 name = "osmosis-std"
-version = "0.15.3"
+version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87725a7480b98887167edf878daa52201a13322ad88e34355a7f2ddc663e047e"
+checksum = "75895e4db1a81ca29118e366365744f64314938327e4eedba8e6e462fb15e94f"
 dependencies = [
  "chrono",
  "cosmwasm-std",
- "osmosis-std-derive 0.15.3",
+ "osmosis-std-derive 0.16.2",
  "prost 0.11.9",
  "prost-types 0.11.9",
  "schemars",
@@ -3318,6 +3318,19 @@ checksum = "f4d482a16be198ee04e0f94e10dd9b8d02332dcf33bc5ea4b255e7e25eedc5df"
 dependencies = [
  "itertools 0.10.5",
  "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "osmosis-std-derive"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f47f0b2f22adb341bb59e5a3a1b464dde033181954bd055b9ae86d6511ba465b"
+dependencies = [
+ "itertools 0.10.5",
+ "proc-macro2",
+ "prost-types 0.11.9",
  "quote",
  "syn 1.0.109",
 ]

@@ -56,23 +56,6 @@ pub enum OsmosisDestinationProject {
     //     dao: OsmosisDao,
     // },
 
-    /// Stake as MBRN
-    MembraneStake {},
-
-    DepositCollateral {
-        /// swap the input asset(s) to the desired asset before depositing
-        as_asset: String,
-        protocol: OsmosisDepositCollateral,
-    },
-
-    RepayDebt {
-        /// repayment conditional based on the ltv ratio
-        /// if None then repay the debt regardless of the ltv ratio
-        /// if the repay threshold is hit the WHOLE compounding amount will be used to repay the debt
-        ltv_ratio_threshold: Option<RepayThreshold>,
-        protocol: OsmosisRepayDebt,
-    },
-
     // /// Pay back borrowed balance. Currently the first denom strings specified in the vector will be
     // /// paid back first. No order is guaranteed when no vector is passed in.
     // /// Eventually there should be an option to pay back the highest cost debt first
@@ -157,6 +140,24 @@ pub enum OsmosisDestinationProject {
     // WhiteWhaleSatellite {
     //     asset: String,
     // },
+
+    /// Stake as MBRN
+    MembraneStake {},
+
+    DepositCollateral {
+        /// swap the input asset(s) to the desired asset before depositing
+        as_asset: String,
+        protocol: OsmosisDepositCollateral,
+    },
+
+    RepayDebt {
+        /// repayment conditional based on the ltv ratio
+        /// if None then repay the debt regardless of the ltv ratio
+        /// if the repay threshold is hit the WHOLE compounding amount will be used to repay the debt
+        ltv_ratio_threshold: Option<RepayThreshold>,
+        protocol: OsmosisRepayDebt,
+    },
+
     Unallocated {},
 }
 
@@ -176,7 +177,7 @@ pub enum OsmosisDepositCollateral {
 #[cw_serde]
 pub enum OsmosisRepayDebt {
     // RedBank,
-    // MarginedRepay {
+    // Margined {
     //     // asset to repay as
     //     asset: String,
     // },
@@ -198,6 +199,16 @@ pub enum MembraneDepositCollateralAction {
         pool_id: u64,
         pool_settings: OsmosisPoolSettings,
     },
+}
+
+impl MembraneDepositCollateralAction {
+    pub fn desired_ltv(&self) -> Decimal {
+        match self {
+            MembraneDepositCollateralAction::MintCdt { desired_ltv } => *desired_ltv,
+            MembraneDepositCollateralAction::EnterStabilityPool { desired_ltv } => *desired_ltv,
+            MembraneDepositCollateralAction::ProvideLiquidity { desired_ltv, .. } => *desired_ltv,
+        }
+    }
 }
 
 #[cw_serde]
