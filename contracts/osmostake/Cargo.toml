@@ -66,6 +66,7 @@ terraswap-helpers = { workspace = true }
 white-whale = { workspace = true }
 osmosis-helpers = { workspace = true }
 withdraw-rewards-tax-grant = { workspace = true }
+membrane-helpers = { workspace = true }
 
 
 [dev-dependencies]

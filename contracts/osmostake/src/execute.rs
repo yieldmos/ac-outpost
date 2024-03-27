@@ -1,9 +1,10 @@
 use std::iter;
 
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Timestamp};
+use membrane_helpers::msg_gen::stake_mbrn_msgs;
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
-    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
+    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
     pools::MultipleStoredPools,
 };
 use osmosis_helpers::{
@@ -13,14 +14,12 @@ use osmosis_helpers::{
         generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
     },
 };
-
 use outpost_utils::{
     comp_prefs::{DestinationAction, TakeRate},
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
     msg_gen::create_exec_msg,
 };
 use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
-
 use universal_destinations::dest_project_gen::{native_staking_msg, send_tokens_msgs};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
@@ -414,6 +413,11 @@ pub fn prefs_to_msgs(
                     // OsmosisDestinationProject::MembraneDeposit { position_id, asset } => Ok(DestProjectMsgs::default()),
 
                     // OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::DepositCollateral { as_asset, protocol } => unimplemented!(),
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold,
+                        protocol,
+                    } => unimplemented!(),
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
             },

@@ -162,6 +162,12 @@ impl DestProjectMsgs {
     pub fn append_events(&mut self, events: Vec<Event>) {
         self.events.extend(events);
     }
+
+    pub fn concat_after(&mut self, other: DestProjectMsgs) {
+        self.msgs.extend(other.msgs);
+        self.sub_msgs.extend(other.sub_msgs);
+        self.events.extend(other.events);
+    }
 }
 
 /// Calculates the tax split for a given token amount and tax rate and the

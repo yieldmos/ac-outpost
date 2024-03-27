@@ -21,6 +21,9 @@ pub enum ContractError {
     #[error("Osmosis Helper Error: &{0}")]
     OsmosisHelperError(#[from] osmosis_helpers::errors::OsmosisHelperError),
 
+    #[error("Membrane Helper Error: &{0}")]
+    MembraneHelperError(#[from] membrane_helpers::errors::MembraneHelperError),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 

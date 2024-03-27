@@ -1,73 +1,46 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    coin, Addr, Coin, CosmosMsg, Decimal, QuerierWrapper, ReplyOn, Storage, Timestamp, Uint128,
+use crate::{
+    errors::MembraneHelperError,
+    msg_gen::{
+        deposit_into_cdp_msgs, deposit_into_stability_pool_msgs, mint_cdt_msgs, DestinationResult,
+    },
 };
+use cosmwasm_std::{coin, Addr, Coin, QuerierWrapper, ReplyOn, Storage, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
+use membrane::{
+    cdp,
+    types::{Basket, UserInfo},
+};
+use osmosis_destinations::comp_prefs::{
+    MembraneAddrs, MembraneDepositCollateralAction, OsmosisPoolSettings,
+};
+use osmosis_helpers::osmosis_lp::{
+    join_osmosis_cl_pool_single_side, join_osmosis_pool_single_side,
+};
 use outpost_utils::{comp_prefs::store_submsg_data, msg_gen::CosmosProtoMsg};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    comp_prefs::{MembraneAddrs, MembraneDepositCollateralAction, OsmosisPoolSettings},
-    dest_project_gen::{
-        deposit_into_cdp_msgs, deposit_into_stability_pool_msgs, mint_cdt_msgs, DestinationResult,
-    },
-    errors::OsmosisDestinationError,
-};
-use membrane::{cdp, types::UserInfo};
+/// filter out assets that are not in the CDP basket
+pub fn basket_denoms_filter(
+    querier: &QuerierWrapper,
+    cdp_contract_addr: &Addr,
+    assets: &Vec<Coin>,
+) -> Result<Vec<Coin>, MembraneHelperError> {
+    // check the currently allowed assets
+    let basket: Basket =
+        querier.query_wasm_smart(cdp_contract_addr, &cdp::QueryMsg::GetBasket {})?;
 
-#[cw_serde]
-pub enum MembraneStabilityPoolExecuteMsg {
-    /// Deposit the debt token into the pool
-    Deposit {
-        /// User address, defaults to info.sender
-        user: Option<String>,
-    },
-    /// Claim ALL liquidation revenue && MBRN incentives
-    /// Can be queried from UserClaims
-    ClaimRewards {},
-}
-
-#[cw_serde]
-pub enum MembraneStakingExecuteMsg {
-    Stake { user: Option<String> },
-}
-
-#[cw_serde]
-pub enum MembraneCDPExecuteMsg {
-    Deposit {
-        /// Position ID to deposit into.
-        /// If the user wants to create a new/separate position, no position id is passed.
-        position_id: Option<Uint128>,
-        /// Position owner.
-        /// Defaults to the sender.
-        position_owner: Option<String>,
-    },
-    // CDP Mint CDT
-    IncreaseDebt {
-        /// Position ID to increase debt of
-        position_id: Uint128,
-        /// Amount of debt to increase
-        amount: Option<Uint128>,
-        /// LTV to borrow up to
-        LTV: Option<Decimal>,
-        /// Mint debt tokens to this address
-        mint_to_addr: Option<String>,
-    },
-    // CDP Repay position debt
-    Repay {
-        /// Position ID to repay debt of
-        position_id: Uint128,
-        /// Position owner to repay debt of if not the sender
-        position_owner: Option<String>,
-        /// Send excess assets to this address if not the sender
-        send_excess_to: Option<String>,
-    },
-}
-
-#[cw_serde]
-pub enum MembraneCDPQueryMsg {
-    /// Returns the contract's Basket
-    GetBasket {},
+    Ok(assets
+        .into_iter()
+        // filter out assets that are not in the basket
+        .filter(|coin| {
+            basket
+                .collateral_types
+                .iter()
+                // very weird checking Asset against Coin.denom. might work might blow up
+                .any(|asset| asset.asset.info.to_string().eq(&coin.denom))
+        })
+        .cloned()
+        .collect())
 }
 
 /// Deposit collateral into a CDP and then do something else
@@ -92,7 +65,7 @@ where
         let mut deposit_msg =
             deposit_into_cdp_msgs(user_addr, &cdp_addr, position_id, deposit_assets, None)?;
 
-        deposit_msg.append_msgs(mint_cdt_msgs(
+        deposit_msg.concat_after(mint_cdt_msgs(
             user_addr,
             cdp_addr,
             position_id,
@@ -130,24 +103,24 @@ pub fn membrane_mint_cdt(
 ) -> DestinationResult {
     let desired_ltv = and_then.desired_ltv();
     let simulated_cdt: Uint128 = querier.query_wasm_smart(
-        membrane_addrs.cdp,
+        membrane_addrs.cdp.clone(),
         &cdp::QueryMsg::SimulateMint {
             position_info: UserInfo {
                 position_id,
-                position_owner: user_addr,
+                position_owner: user_addr.to_string(),
             },
             LTV: desired_ltv,
         },
     )?;
     // the amount of cdt we can expect to have minted based off our simulation
-    let minted_cdt = coin(simulated_cdt, cdt_denom);
+    let minted_cdt = coin(simulated_cdt.u128(), cdt_denom);
 
     let mut mint_cdt = mint_cdt_msgs(user_addr, &membrane_addrs.cdp, position_id, desired_ltv)?;
 
     match and_then {
         MembraneDepositCollateralAction::MintCdt { desired_ltv } => (),
         MembraneDepositCollateralAction::EnterStabilityPool { .. } => {
-            mint_cdt.append_msgs(deposit_into_stability_pool_msgs(
+            mint_cdt.concat_after(deposit_into_stability_pool_msgs(
                 user_addr,
                 &membrane_addrs.stability_pool,
                 minted_cdt,
@@ -179,11 +152,11 @@ pub fn membrane_mint_cdt(
                 user_addr,
                 pool_id,
                 minted_cdt,
-                bond_tokens,
                 lower_tick,
                 upper_tick,
                 token_min_amount_0,
                 token_min_amount_1,
+                current_timestamp,
             )?;
 
             mint_cdt.append_msgs(lp_msgs);

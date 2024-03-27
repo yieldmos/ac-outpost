@@ -1,13 +1,12 @@
-use cosmwasm_std::Addr;
-
+use crate::msg::ContractAddrs;
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
 use osmosis_destinations::{
     comp_prefs::MembraneDepositCollateralAction,
     pools::{StoredDenoms, StoredPools},
 };
 use outpost_utils::comp_prefs::TakeRate;
-
-use crate::msg::ContractAddrs;
 
 pub const ADMIN: Item<Addr> = Item::new("admin");
 pub const AUTHORIZED_ADDRS: Item<Vec<Addr>> = Item::new("allowed_addrs");

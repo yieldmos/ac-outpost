@@ -2957,6 +2957,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "membrane-helpers"
+version = "0.2.2"
+dependencies = [
+ "cosmos-sdk-proto 0.21.1",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-grant-spec",
+ "cw-storage-plus 1.2.0",
+ "cw20 1.1.2",
+ "membrane",
+ "osmosis-destinations",
+ "osmosis-helpers",
+ "osmosis-std 0.21.0",
+ "outpost-utils",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3207,7 +3227,6 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
- "membrane",
  "osmosis-std 0.21.0",
  "outpost-utils",
  "sail-destinations",
@@ -6018,6 +6037,7 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
+ "membrane-helpers",
  "osmosis-destinations",
  "osmosis-helpers",
  "osmosis-std 0.21.0",
@@ -6052,6 +6072,7 @@ dependencies = [
  "cw20 1.1.2",
  "cw20-stake 2.1.0",
  "cw20-vesting 1.6.0",
+ "membrane-helpers",
  "osmosis-destinations",
  "osmosis-helpers",
  "osmosis-std 0.21.0",

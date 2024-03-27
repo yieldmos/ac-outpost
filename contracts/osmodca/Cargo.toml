@@ -65,6 +65,7 @@ cw-orch = { workspace = true, optional = true }
 terraswap-helpers = { workspace = true }
 white-whale = { workspace = true }
 osmosis-helpers = { workspace = true }
+membrane-helpers = { workspace = true }
 
 
 [dev-dependencies]
