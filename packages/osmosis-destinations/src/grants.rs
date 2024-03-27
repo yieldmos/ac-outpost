@@ -1,38 +1,8 @@
-use cosmwasm_std::{Addr, Uint128};
-use cw_grant_spec::grants::{GrantBase, GrantRequirement};
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
+use cw_grant_spec::grants::{ContractExecutionAuthorizationLimit, GrantBase, GrantRequirement};
 
-use crate::{dest_project_gen::MembraneExecuteMsg, mars_types::RedBankExecuteMsgs};
-
-pub fn membrane_stake_grant(
-    base: GrantBase,
-    contract_addr: Addr,
-    mbrn_denom: &str,
-) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::contract_exec_messages_auth(
-        base,
-        contract_addr,
-        vec![&MembraneExecuteMsg::Stake { user: None }],
-        Some(mbrn_denom),
-    )]
-}
-
-pub fn membrane_deposit_grant(
-    base: GrantBase,
-    contract_addr: Addr,
-    position_id: Uint128,
-    _asset: String,
-    mbrn_denom: &str,
-) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::contract_exec_messages_auth(
-        base,
-        contract_addr,
-        vec![&MembraneExecuteMsg::CdpDeposit {
-            position_id: Some(position_id),
-            position_owner: None,
-        }],
-        Some(mbrn_denom),
-    )]
-}
+use crate::mars_types::RedBankExecuteMsgs;
 
 pub fn mint_milk_tia_grant(
     base: GrantBase,

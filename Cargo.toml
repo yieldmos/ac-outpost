@@ -44,12 +44,10 @@ wynd-stake = { git = "https://github.com/wynddao/wynddao.git", tag = "v1.7.0", f
 wyndex-factory = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0" }
 outpost-utils = { path = "./packages/utils" }
 wynd-helpers = { path = "./packages/wynd-helpers" }
+membrane-helpers = { path = "./packages/membrane-helpers" }
 terraswap-helpers = { path = "./packages/terraswap-helpers" }
-# wyndex-stake = { git = "https://github.com/wynddao/wynddex.git", tag = "v2.2.0" }
 osmosis-std = "0.21.0"
-
 osmosis-helpers = { path = "./packages/osmosis-helpers" }
-# mars-types = { git = "https://github.com/mars-protocol/contracts.git", version = "2.0.0" }
 
 white-whale = { git = "https://github.com/White-Whale-Defi-Platform/white-whale-core.git", tag = "v1.4.0-juno-1-token_factory-hotfix" }
 cw-grant-spec = { git = "https://github.com/kakucodes/authzpp", version = "0.3.2" }
@@ -59,14 +57,9 @@ withdraw-rewards-tax-grant = { git = "https://github.com/kakucodes/authzpp", ver
 balance-token-swap = { git = "https://github.com/racoon-supply-rac/balance-dao", features = [
     "library",
 ] }
-# stake-easy = { git = "https://github.com/arufa-research/stakeeasy-juno-contracts", features = [
-#     "library",
-# ], package = "staking-contract" }
-
 bond-router = { git = "https://github.com/wynddao/wynd-lsd", features = [
     "library",
 ] }
-
 furnace = { git = "https://github.com/deving-zone-community/community-furnace.git", features = [
     "library",
 ] }

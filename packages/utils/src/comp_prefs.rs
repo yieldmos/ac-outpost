@@ -1,5 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Decimal};
+use cosmwasm_std::{Addr, Api, Decimal, StdResult, Storage};
+use cw_storage_plus::{Item, Map};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::errors::OutpostError;
 
@@ -40,4 +42,21 @@ impl TakeRate {
             take_rate_addr: api.addr_validate(take_rate_address)?,
         })
     }
+}
+
+/// Helper for storing submsg data
+pub fn store_submsg_data<T>(
+    store: &mut dyn Storage,
+    data: T,
+    latest_reply_id_state: Item<u64>,
+    submsg_data: Map<&u64, T>,
+) -> StdResult<u64>
+where
+    T: Serialize + DeserializeOwned,
+{
+    let next_reply_id = latest_reply_id_state.may_load(store)?.unwrap_or(0) + 1;
+    latest_reply_id_state.save(store, &next_reply_id)?;
+    submsg_data.save(store, &next_reply_id, &data)?;
+
+    Ok(next_reply_id)
 }
