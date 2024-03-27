@@ -8,7 +8,9 @@ use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
 use membrane_helpers::grants::membrane_stake_grant;
-use osmosis_destinations::comp_prefs::{OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings};
+use osmosis_destinations::comp_prefs::{
+    OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings,
+};
 use osmosis_destinations::grants::{mint_milk_tia_grant, stake_ion_grants};
 use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
 use osmosis_helpers::osmosis_swap::osmosis_swap_grants;
@@ -193,7 +195,10 @@ pub fn gen_comp_pref_grants(
                 pool_id: _,
                 pool_settings: OsmosisPoolSettings::ConcentratedLiquidity { .. },
             } => join_cl_pool_grants(base),
-            OsmosisDestinationProject::DepositCollateral { as_asset, protocol } => unimplemented!(),
+            OsmosisDestinationProject::DepositCollateral {
+                as_asset,
+                protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
+            } => unimplemented!(),
             OsmosisDestinationProject::RepayDebt {
                 ltv_ratio_threshold,
                 protocol,

@@ -213,8 +213,8 @@ impl MembraneDepositCollateralAction {
 
 #[cw_serde]
 pub struct RepayThreshold {
-    ltv_ratio: Decimal,
-    otherwise: Box<OsmosisDestinationProject>,
+    pub ltv_ratio: Decimal,
+    pub otherwise: Box<OsmosisDestinationProject>,
 }
 
 #[cw_serde]

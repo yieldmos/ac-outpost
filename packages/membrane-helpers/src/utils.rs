@@ -11,13 +11,48 @@ use membrane::{
     types::{Basket, UserInfo},
 };
 use osmosis_destinations::comp_prefs::{
-    MembraneAddrs, MembraneDepositCollateralAction, OsmosisPoolSettings,
+    MembraneAddrs, MembraneDepositCollateralAction, OsmosisPoolSettings, RepayThreshold,
 };
 use osmosis_helpers::osmosis_lp::{
     join_osmosis_cl_pool_single_side, join_osmosis_pool_single_side,
 };
 use outpost_utils::{comp_prefs::store_submsg_data, msg_gen::CosmosProtoMsg};
 use serde::{de::DeserializeOwned, Serialize};
+
+pub fn ltv_in_range(
+    querier: &QuerierWrapper,
+    cdp_contract_addr: &Addr,
+    user_addr: &Addr,
+    position_id: Uint128,
+    desired_ltv: Option<RepayThreshold>,
+) -> bool {
+    match desired_ltv {
+        Some(RepayThreshold { ltv_ratio, .. }) => {
+            // check if the user can mint enough CDT to hit the desired LTV
+            // this indirectly checks if the LTV is within the range
+            let est_mint: Result<Uint128, _> = querier.query_wasm_smart(
+                cdp_contract_addr,
+                &cdp::QueryMsg::SimulateMint {
+                    position_info: UserInfo {
+                        position_id,
+                        position_owner: user_addr.to_string(),
+                    },
+                    LTV: ltv_ratio,
+                },
+            );
+
+            if let Ok(mintable_to_hit_ltv) = est_mint {
+                // if the user can mint any CDT to hit the desired LTV
+                // then we know the ltv is in range
+                mintable_to_hit_ltv.gt(0)
+            } else {
+                false
+            }
+            true
+        }
+        _ => true,
+    }
+}
 
 /// filter out assets that are not in the CDP basket
 pub fn basket_denoms_filter(

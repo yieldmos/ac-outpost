@@ -1,9 +1,15 @@
 use std::iter;
 
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Timestamp};
-use membrane_helpers::msg_gen::stake_mbrn_msgs;
+use membrane_helpers::{
+    msg_gen::{repay_cdt_msgs, stake_mbrn_msgs},
+    utils::ltv_in_range,
+};
 use osmosis_destinations::{
-    comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
+    comp_prefs::{
+        OsmosisCompPrefs, OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings,
+        OsmosisRepayDebt, RepayThreshold,
+    },
     dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
     pools::MultipleStoredPools,
 };
@@ -15,7 +21,7 @@ use osmosis_helpers::{
     },
 };
 use outpost_utils::{
-    comp_prefs::{DestinationAction, TakeRate},
+    comp_prefs::{CompoundPrefs, DestinationAction, TakeRate},
     helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
     msg_gen::create_exec_msg,
 };
@@ -393,31 +399,76 @@ pub fn prefs_to_msgs(
                         current_timestamp.clone(),
                     )?),
 
-                    // OsmosisDestinationProject::RedBankLendAsset {
-                    //     target_asset,
-                    //     account_id,
-                    // } => Ok(DestProjectMsgs::default()),
-                    // OsmosisDestinationProject::WhiteWhaleSatellite { asset } => Ok(white_whale_satellite_msgs(
-                    //     user_addr,
-                    //     &project_addrs.destination_projects.projects.white_whale_satellite,
-                    //     comp_token_amount,
-                    // )?),
-                    // OsmosisDestinationProject::MembraneRepay {
-                    //     asset,
-                    //     ltv_ratio_threshold,
-                    // } => Ok(DestProjectMsgs::default()),
-                    // OsmosisDestinationProject::MarginedRepay {
-                    //     asset,
-                    //     ltv_ratio_threshold,
-                    // } => Ok(DestProjectMsgs::default()),
-                    // OsmosisDestinationProject::MembraneDeposit { position_id, asset } => Ok(DestProjectMsgs::default()),
-
-                    // OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
-                    OsmosisDestinationProject::DepositCollateral { as_asset, protocol } => unimplemented!(),
-                    OsmosisDestinationProject::RepayDebt {
-                        ltv_ratio_threshold,
-                        protocol,
+                    OsmosisDestinationProject::DepositCollateral {
+                        as_asset,
+                        protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
                     } => unimplemented!(),
+                    // repaying debt when the ltv has passed the threshold or there is no threshold set
+                    // this means we should repay and be done with it
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold: threshold,
+                        protocol: OsmosisRepayDebt::Membrane { position_id },
+                    } if ltv_in_range(
+                        &deps.querier,
+                        &project_addrs.destination_projects.projects.membrane.cdp,
+                        user_addr,
+                        position_id,
+                        threshold,
+                    ) =>
+                    {
+                        // swap OSMO to CDT
+                        let (est_cdt, swap_to_cdt_msgs) = generate_known_to_known_swap_and_sim_msg(
+                            &deps.querier,
+                            deps.storage,
+                            OsmosisRoutePools {
+                                stored_denoms: KNOWN_DENOMS,
+                                stored_pools: MultipleStoredPools {
+                                    osmo: KNOWN_OSMO_POOLS,
+                                    usdc: KNOWN_USDC_POOLS,
+                                },
+                                pools: project_addrs.destination_projects.swap_routes.clone(),
+                                denoms: project_addrs.destination_projects.denoms.clone(),
+                            },
+                            user_addr,
+                            &coin(comp_token_amount.u128(), "uosmo"),
+                            &project_addrs.destination_projects.denoms.cdt,
+                            current_timestamp,
+                        )?;
+
+                        let mut repay_msgs = repay_cdt_msgs(
+                            user_addr,
+                            &project_addrs.destination_projects.projects.membrane.cdp,
+                            position_id,
+                            coin(est_cdt.u128(), project_addrs.destination_projects.denoms.cdt.clone()),
+                        )?;
+
+                        repay_msgs.prepend_msgs(swap_to_cdt_msgs);
+
+                        Ok(repay_msgs)
+                    }
+                    // repaying debt when the ltv has not passed the threshold so we do the fallback
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold: Some(RepayThreshold { otherwise, .. }),
+                        ..
+                    } => prefs_to_msgs(
+                        project_addrs,
+                        user_addr,
+                        coin("uosmo".to_string(), comp_token_amount),
+                        CompoundPrefs {
+                            relative: vec![DestinationAction {
+                                destination: otherwise.clone(),
+                                amount: 1.0,
+                            }],
+                        },
+                        deps,
+                        current_timestamp,
+                    ),
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold: None,
+                        protocol,
+                    } => unimplemented!(
+                        "this is already taken care of as the ltv in range qury is always true for 'No Threshold'"
+                    ),
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
             },
