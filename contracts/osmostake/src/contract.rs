@@ -1,11 +1,14 @@
 use crate::error::ContractError;
 use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmostakeCompoundPrefs, QueryMsg};
-use crate::state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, TAKE_RATE};
+use crate::state::{
+    SubmsgData, ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, SUBMSG_DATA,
+    TAKE_RATE,
+};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult, Timestamp,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
@@ -19,10 +22,21 @@ const CONTRACT_NAME: &str = "crates.io:ac-outpost-osmostake";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg {
         // an id of 0 means we don't care about the response
         Reply { id: 0, .. } => Ok(Response::default()),
+        Reply { id, result } => match SUBMSG_DATA.may_load(deps.as_ref(), &id) {
+            Ok(Some(SubmsgData::BondGamms { pool_id })) => unimplemented!(),
+            Ok(Some(SubmsgData::MintCdt {
+                user_addr,
+                position_id,
+                and_then,
+            })) => {
+                unimplemented!()
+            }
+            _ => unimplemented!(),
+        },
         // TODO handle non-zero ids
         _ => Err(ContractError::Unauthorized {}),
     }
