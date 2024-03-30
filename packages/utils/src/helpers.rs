@@ -223,6 +223,18 @@ impl FromIterator<DestProjectMsgs> for DestProjectMsgs {
     }
 }
 
+/// Combine multiple Responses into a single Response
+pub fn combine_responses(responses: Vec<Response>) -> Response {
+    responses
+        .into_iter()
+        .fold(Response::default(), |mut acc, response| {
+            acc.messages.extend(response.messages);
+            acc.attributes.extend(response.attributes);
+            acc.events.extend(response.events);
+            acc
+        })
+}
+
 /// Calculates the tax split for a given token amount and tax rate and the
 /// send message to move the tax amount to the tax address. Note that
 /// the tax will be in addition to the base token amount

@@ -22,7 +22,10 @@ use osmosis_helpers::{
 };
 use outpost_utils::{
     comp_prefs::{CompoundPrefs, DestinationAction, TakeRate},
-    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
+    helpers::{
+        calculate_compound_amounts, combine_responses, is_authorized_compounder, prefs_sum_to_one, sum_coins,
+        DestProjectMsgs,
+    },
     msg_gen::create_exec_msg,
 };
 use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
@@ -78,8 +81,6 @@ pub fn compound(
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
         &project_addresses,
-        // &env.block,
-        // staking_denom,
         &user_addr,
         total_rewards.clone(),
         comp_prefs,
@@ -87,55 +88,28 @@ pub fn compound(
         env.block.time,
     )?;
 
-    let combined_msgs = all_msgs.iter().fold(DestProjectMsgs::default(), |mut acc, msg| {
-        acc.msgs.append(&mut msg.msgs.clone());
-        acc.sub_msgs.append(&mut msg.sub_msgs.clone());
-        acc.events.append(&mut msg.events.clone());
-        acc
-    });
-
-    let amount_automated_event =
-        Event::new("amount_automated").add_attributes([total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
-            key: format!("amount_{}", i),
-            value: coin.to_string(),
-        }));
-
-    // the final exec message that will be broadcast and contains all the sub msgs
-    let exec_msg = create_exec_msg(&env.contract.address, combined_msgs.msgs)?;
-
-    let resp = Response::default()
+    // prepare the response to the user with the withdraw rewards and other general metadata
+    let withdraw_response = Response::default()
         .add_attribute("action", "outpost compound")
         .add_message(withdraw_msg)
-        .add_attribute("subaction", "withdraw rewards")
-        .add_attribute("user", user_addr)
-        .add_event(amount_automated_event)
-        // .add_attribute("amount_automated", to_json_binary(&[total_rewards])?.to_string())
-        .add_message(exec_msg)
-        .add_submessages(
-            combined_msgs
-                .sub_msgs
-                .into_iter()
-                .filter_map(|sub_msg| {
-                    if let (Ok(exec_msg), false) = (
-                        create_exec_msg(&env.contract.address, sub_msg.1.clone()),
-                        sub_msg.1.is_empty(),
-                    ) {
-                        Some((sub_msg.0, exec_msg, sub_msg.2))
-                    } else {
-                        None
-                    }
-                })
-                .map(|(id, msg, reply_on)| SubMsg {
-                    msg,
-                    gas_limit: None,
-                    id,
-                    reply_on,
-                })
-                .collect::<Vec<SubMsg>>(),
-        )
-        .add_events(combined_msgs.events);
+        .add_attributes(vec![("subaction", "withdraw rewards"), ("user", &user_addr.to_string())])
+        // event to track the amount of rewards that were automated
+        .add_event(
+            Event::new("amount_automated").add_attributes([total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
+                key: format!("amount_{}", i),
+                value: coin.to_string(),
+            })),
+        );
 
-    Ok(resp)
+    let resps = combine_responses(vec![
+        withdraw_response,
+        all_msgs
+            .into_iter()
+            .collect::<DestProjectMsgs>()
+            .to_response(&env.contract.address)?,
+    ]);
+
+    Ok(resps)
 }
 
 /// Converts the user's compound preferences into a list of
