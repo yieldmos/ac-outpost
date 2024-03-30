@@ -7,12 +7,17 @@ use crate::{
 use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
-use membrane_helpers::grants::{membrane_repay_cdt_grant, membrane_stake_grant};
+use membrane_helpers::grants::{
+    membrane_deposit_grant, membrane_deposit_into_stability_pool_grant, membrane_mint_cdt_grant, membrane_repay_cdt_grant,
+    membrane_stake_grant,
+};
+use membrane_helpers::msg_gen::mint_cdt_msgs;
 use osmosis_destinations::comp_prefs::{
-    OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings, OsmosisRepayDebt, RepayThreshold,
+    MembraneDepositCollateralAction, OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings,
+    OsmosisRepayDebt, RepayThreshold,
 };
 use osmosis_destinations::grants::{mint_milk_tia_grant, stake_ion_grants};
-use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
+use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants, join_osmosis_pool_grants};
 use osmosis_helpers::osmosis_swap::osmosis_swap_grants;
 use outpost_utils::comp_prefs::{CompoundPrefs, DestinationAction};
 use sail_destinations::grants::eris_lsd_grant;
@@ -204,7 +209,44 @@ pub fn gen_comp_pref_grants(
             OsmosisDestinationProject::DepositCollateral {
                 as_asset,
                 protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
-            } => unimplemented!(),
+            } => {
+                // permission for the initial deposit into the CDP
+                let deposit_grant = membrane_deposit_grant(
+                    base.clone(),
+                    project_addresses.destination_projects.projects.membrane.cdp.clone(),
+                    position_id,
+                    vec![&as_asset],
+                );
+
+                // permission for whatever the follow-up action may be requested
+                let and_then_grant = match and_then {
+                    Some(MembraneDepositCollateralAction::MintCdt { desired_ltv }) => membrane_mint_cdt_grant(
+                        base,
+                        project_addresses.destination_projects.projects.membrane.cdp.clone(),
+                        position_id.clone(),
+                        desired_ltv,
+                    ),
+                    Some(MembraneDepositCollateralAction::EnterStabilityPool { desired_ltv }) => {
+                        membrane_deposit_into_stability_pool_grant(
+                            base,
+                            project_addresses
+                                .destination_projects
+                                .projects
+                                .membrane
+                                .stability_pool
+                                .clone(),
+                            &project_addresses.destination_projects.denoms.cdt,
+                        )
+                    }
+                    Some(MembraneDepositCollateralAction::ProvideLiquidity { pool_settings, .. }) => {
+                        join_osmosis_pool_grants(base, pool_settings)
+                    }
+
+                    None => vec![],
+                };
+
+                [deposit_grant, and_then_grant].concat()
+            }
             OsmosisDestinationProject::RepayDebt {
                 ltv_ratio_threshold,
                 protocol,

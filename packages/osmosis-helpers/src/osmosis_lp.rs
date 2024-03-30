@@ -3,6 +3,7 @@ use cosmwasm_std::{
 };
 use cw_grant_spec::grants::{GrantBase, GrantRequirement};
 
+use osmosis_destinations::comp_prefs::OsmosisPoolSettings;
 use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::MsgCreatePosition;
 use osmosis_std::types::osmosis::gamm::v1beta1::MsgJoinSwapExternAmountIn;
 use osmosis_std::types::osmosis::gamm::v1beta1::Pool;
@@ -322,4 +323,16 @@ pub fn join_cl_pool_grants(base: GrantBase) -> Vec<GrantRequirement> {
         )],
     ]
     .concat()
+}
+
+pub fn join_osmosis_pool_grants(
+    base: GrantBase,
+    pool_settings: OsmosisPoolSettings,
+) -> Vec<GrantRequirement> {
+    match pool_settings {
+        OsmosisPoolSettings::Standard { bond_tokens } => {
+            join_classic_pool_grants(base, bond_tokens)
+        }
+        OsmosisPoolSettings::ConcentratedLiquidity { .. } => join_cl_pool_grants(base),
+    }
 }

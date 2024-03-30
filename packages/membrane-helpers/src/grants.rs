@@ -33,9 +33,9 @@ pub fn membrane_deposit_grant(
     base: GrantBase,
     contract_addr: Addr,
     position_id: Uint128,
-    deposits: &Vec<Coin>,
+    deposits: Vec<&str>,
 ) -> Vec<GrantRequirement> {
-    vec![GrantRequirement::contract_exec_messages_auth(
+    vec![GrantRequirement::contract_exec_messages_mutlidenoms_auth(
         base,
         contract_addr,
         vec![&cdp::ExecuteMsg::Deposit {
@@ -43,7 +43,7 @@ pub fn membrane_deposit_grant(
             position_owner: None,
         }],
         // We need to accept any basket denom, unsure if this will allow anythign or nothing
-        None,
+        deposits,
     )]
 }
 
