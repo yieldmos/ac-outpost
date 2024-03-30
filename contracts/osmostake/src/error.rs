@@ -65,6 +65,9 @@ pub enum ContractError {
 
     #[error("Contract Migration Version Mismatch: expected higher than {expected}, receieved {received}")]
     MigrationVersionMismatch { expected: String, received: String },
+
+    #[error("Submessage reply id not found {reply_id}")]
+    SubMsgReplyIdNotFound { reply_id: u64 },
 }
 
 impl From<semver::Error> for ContractError {

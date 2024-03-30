@@ -107,6 +107,7 @@ pub fn compound(
         .add_attribute("action", "outpost compound")
         .add_message(withdraw_msg)
         .add_attribute("subaction", "withdraw rewards")
+        .add_attribute("user", user_addr)
         .add_event(amount_automated_event)
         // .add_attribute("amount_automated", to_json_binary(&[total_rewards])?.to_string())
         .add_message(exec_msg)
@@ -413,7 +414,7 @@ pub fn prefs_to_msgs(
                         &project_addrs.destination_projects.projects.membrane.cdp,
                         user_addr,
                         position_id,
-                        threshold,
+                        threshold.clone(),
                     ) =>
                     {
                         // swap OSMO to CDT
@@ -450,19 +451,21 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::RepayDebt {
                         ltv_ratio_threshold: Some(RepayThreshold { otherwise, .. }),
                         ..
-                    } => prefs_to_msgs(
+                    } => Ok(prefs_to_msgs(
                         project_addrs,
                         user_addr,
-                        coin("uosmo".to_string(), comp_token_amount),
+                        coin(comp_token_amount.u128(), "uosmo"),
                         CompoundPrefs {
                             relative: vec![DestinationAction {
-                                destination: otherwise.clone(),
-                                amount: 1.0,
+                                destination: *otherwise,
+                                amount: 1u128,
                             }],
                         },
                         deps,
                         current_timestamp,
-                    ),
+                    )?
+                    .into_iter()
+                    .collect::<DestProjectMsgs>()),
                     OsmosisDestinationProject::RepayDebt {
                         ltv_ratio_threshold: None,
                         protocol,

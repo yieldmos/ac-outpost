@@ -44,11 +44,10 @@ pub fn ltv_in_range(
             if let Ok(mintable_to_hit_ltv) = est_mint {
                 // if the user can mint any CDT to hit the desired LTV
                 // then we know the ltv is in range
-                mintable_to_hit_ltv.gt(0)
+                mintable_to_hit_ltv.gt(&Uint128::zero())
             } else {
                 false
             }
-            true
         }
         _ => true,
     }
