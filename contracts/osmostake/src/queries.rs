@@ -7,13 +7,14 @@ use crate::{
 use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
 use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
-use membrane_helpers::grants::membrane_stake_grant;
+use membrane_helpers::grants::{membrane_repay_cdt_grant, membrane_stake_grant};
 use osmosis_destinations::comp_prefs::{
-    OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings,
+    OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings, OsmosisRepayDebt, RepayThreshold,
 };
 use osmosis_destinations::grants::{mint_milk_tia_grant, stake_ion_grants};
 use osmosis_helpers::osmosis_lp::{join_cl_pool_grants, join_classic_pool_grants};
 use osmosis_helpers::osmosis_swap::osmosis_swap_grants;
+use outpost_utils::comp_prefs::{CompoundPrefs, DestinationAction};
 use sail_destinations::grants::eris_lsd_grant;
 use universal_destinations::grants::{native_send_token, native_staking_grant};
 use white_whale::pool_network::asset::AssetInfo;
@@ -114,12 +115,17 @@ pub fn gen_comp_pref_grants(
         granter,
         grantee,
         expiration,
-        grant_contract: _grant_contract,
+        grant_contract,
         grant_data:
             CompPrefsWithAddresses {
-                comp_prefs: OsmostakeCompoundPrefs { comp_prefs, .. },
+                comp_prefs:
+                    OsmostakeCompoundPrefs {
+                        comp_prefs,
+                        user_address,
+                        tax_fee,
+                    },
                 project_addresses,
-                ..
+                take_rate,
             },
     }: GrantStructure<CompPrefsWithAddresses>,
 ) -> StdResult<Vec<GrantRequirement>> {
@@ -202,7 +208,45 @@ pub fn gen_comp_pref_grants(
             OsmosisDestinationProject::RepayDebt {
                 ltv_ratio_threshold,
                 protocol,
-            } => unimplemented!(),
+            } => {
+                // permission for the initial repay
+                let repay_grants = match protocol {
+                    OsmosisRepayDebt::Membrane { position_id } => membrane_repay_cdt_grant(
+                        base.clone(),
+                        project_addresses.destination_projects.projects.membrane.cdp.clone(),
+                        position_id,
+                    ),
+                };
+
+                // permission for whatever the follow-up action may be
+                let other_grants = match ltv_ratio_threshold {
+                    Some(RepayThreshold { otherwise, .. }) => gen_comp_pref_grants(GrantStructure {
+                        granter: granter.clone(),
+                        grantee: grantee.clone(),
+                        expiration: expiration.clone(),
+                        grant_contract: grant_contract.clone(),
+                        grant_data: CompPrefsWithAddresses {
+                            comp_prefs: OsmostakeCompoundPrefs {
+                                comp_prefs: CompoundPrefs {
+                                    relative: vec![DestinationAction {
+                                        amount: 1u128.into(),
+                                        destination: *otherwise,
+                                    }],
+                                },
+                                user_address: user_address.clone(),
+                                tax_fee: tax_fee.clone(),
+                            },
+                            project_addresses: project_addresses.clone(),
+                            take_rate: take_rate.clone(),
+                        },
+                    })
+                    // Normally we wouldn't unwrap but since this is solely the simulation query it should be alright
+                    .unwrap(),
+                    None => vec![],
+                };
+
+                [repay_grants, other_grants].concat()
+            }
         }
     });
 

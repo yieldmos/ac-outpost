@@ -124,7 +124,7 @@ where
 }
 
 /// Mint CDT and then do something else.
-/// This function is intended to be able to accurately query how much CDT to mint
+/// This function is intended to be able to rely on accurately querying how much CDT to mint
 /// and thus cannot be used directly after adding collateral to a CDP.
 pub fn membrane_mint_cdt(
     querier: &QuerierWrapper,
