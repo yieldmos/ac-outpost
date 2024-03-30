@@ -208,12 +208,19 @@ pub fn gen_comp_pref_grants(
                 as_asset,
                 protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
             } => {
+                // we can skip the swap if it's already in the right asset (osmo)
+                let swap_grant = if as_asset.denom != project_addresses.destination_projects.denoms.osmo {
+                    osmosis_swap_grants(base.clone())
+                } else {
+                    vec![]
+                };
+
                 // permission for the initial deposit into the CDP
                 let deposit_grant = membrane_deposit_grant(
                     base.clone(),
                     project_addresses.destination_projects.projects.membrane.cdp.clone(),
                     position_id,
-                    vec![&as_asset],
+                    vec![&as_asset.denom],
                 );
 
                 // permission for whatever the follow-up action may be requested
@@ -243,7 +250,7 @@ pub fn gen_comp_pref_grants(
                     None => vec![],
                 };
 
-                [deposit_grant, and_then_grant].concat()
+                [swap_grant, deposit_grant, and_then_grant].concat()
             }
             OsmosisDestinationProject::RepayDebt {
                 ltv_ratio_threshold,

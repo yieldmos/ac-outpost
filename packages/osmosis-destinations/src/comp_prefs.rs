@@ -146,7 +146,7 @@ pub enum OsmosisDestinationProject {
 
     DepositCollateral {
         /// swap the input asset(s) to the desired asset before depositing
-        as_asset: String,
+        as_asset: TargetAsset,
         protocol: OsmosisDepositCollateral,
     },
 

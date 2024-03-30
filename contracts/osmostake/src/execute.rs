@@ -15,7 +15,7 @@ use osmosis_helpers::{
     osmosis_lp::{gen_join_cl_pool_single_sided_msgs, gen_join_classic_pool_single_sided_msgs},
     osmosis_swap::{
         estimate_token_out_min_amount, generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
-        generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
+        generate_known_to_unknown_swap_and_sim_msg, generate_swap, generate_swap_and_sim_msg, OsmosisRoutePools,
     },
 };
 use outpost_utils::{
@@ -163,7 +163,7 @@ pub fn prefs_to_msgs(
                                 denoms: project_addrs.destination_projects.denoms.clone(),
                             },
                             "uosmo",
-                            target_asset.clone(),
+                            &target_asset,
                         )?;
 
                         Ok(DestProjectMsgs {
@@ -201,7 +201,7 @@ pub fn prefs_to_msgs(
                             },
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
-                            target_asset.clone(),
+                            &target_asset,
                             current_timestamp,
                         )?;
 
@@ -376,8 +376,24 @@ pub fn prefs_to_msgs(
                         as_asset,
                         protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
                     } => {
-                        // TODO: this needs to be a sim and swap
-                        let expected_deposits = coins(comp_token_amount.u128(), "uosmo");
+                        let (amount, swap_msgs) = generate_known_to_unknown_swap_and_sim_msg(
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
+                            OsmosisRoutePools {
+                                stored_denoms: KNOWN_DENOMS,
+                                stored_pools: MultipleStoredPools {
+                                    osmo: KNOWN_OSMO_POOLS,
+                                    usdc: KNOWN_USDC_POOLS,
+                                },
+                                pools: project_addrs.destination_projects.swap_routes.clone(),
+                                denoms: project_addrs.destination_projects.denoms.clone(),
+                            },
+                            user_addr,
+                            &coin(comp_token_amount.u128(), "uosmo"),
+                            &as_asset,
+                            current_timestamp,
+                        )?;
+                        let expected_deposits = coins(amount.u128(), as_asset.denom);
 
                         Ok(match and_then.clone() {
                             // if there is no and_then action we just deposit the collateral and be done

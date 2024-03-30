@@ -183,7 +183,7 @@ pub fn prefs_to_msgs(
                                 denoms: project_addrs.destination_projects.denoms.clone(),
                             },
                             "uosmo",
-                            target_asset.clone(),
+                            &target_asset,
                         )?;
 
                         Ok(DestProjectMsgs {
@@ -221,7 +221,7 @@ pub fn prefs_to_msgs(
                             },
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
-                            target_asset.clone(),
+                            &target_asset,
                             current_timestamp.clone(),
                         )?;
 
