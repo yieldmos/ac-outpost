@@ -1,9 +1,7 @@
-use std::iter;
-
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Timestamp};
+use cosmwasm_std::{coin, coins, Addr, Attribute, Decimal, DepsMut, Env, Event, MessageInfo, Response, Timestamp};
 use membrane_helpers::{
-    msg_gen::{repay_cdt_msgs, stake_mbrn_msgs},
-    utils::ltv_in_range,
+    msg_gen::{deposit_into_cdp_msgs, repay_cdt_msgs, stake_mbrn_msgs},
+    utils::{ltv_in_range, membrane_deposit_collateral_and_then},
 };
 use osmosis_destinations::{
     comp_prefs::{
@@ -26,31 +24,30 @@ use outpost_utils::{
         calculate_compound_amounts, combine_responses, is_authorized_compounder, prefs_sum_to_one, sum_coins,
         DestProjectMsgs,
     },
-    msg_gen::create_exec_msg,
 };
 use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
+use std::iter;
 use universal_destinations::dest_project_gen::{native_staking_msg, send_tokens_msgs};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
 use crate::{
     msg::ContractAddrs,
-    state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS},
+    state::{
+        SubmsgData, ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, SUBMSG_DATA, SUBMSG_REPLY_ID,
+    },
     ContractError,
 };
 
 pub fn compound(
-    deps: DepsMut,
+    deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
     project_addresses: ContractAddrs,
     user_address: String,
     comp_prefs: OsmosisCompPrefs,
     fee_to_charge: Option<Decimal>,
-    TakeRate {
-        max_tax_fee,
-        take_rate_addr,
-    }: TakeRate,
+    TakeRate { .. }: TakeRate,
 ) -> Result<Response, ContractError> {
     // validate that the preference quantites sum to 1
     let _ = prefs_sum_to_one(&comp_prefs)?;
@@ -84,7 +81,7 @@ pub fn compound(
         &user_addr,
         total_rewards.clone(),
         comp_prefs,
-        deps.as_ref(),
+        &mut deps.branch(),
         env.block.time,
     )?;
 
@@ -119,9 +116,10 @@ pub fn prefs_to_msgs(
     user_addr: &Addr,
     total_rewards: cosmwasm_std::Coin,
     comp_prefs: OsmosisCompPrefs,
-    deps: Deps,
+    deps_mut: &mut DepsMut<'_>,
     current_timestamp: Timestamp,
 ) -> Result<Vec<DestProjectMsgs>, ContractError> {
+    // let deps = deps_mut.branch().as_ref();
     let dca_denom = total_rewards.denom.clone();
 
     // calculates the amount of ujuno that will be used for each target project accurately.
@@ -154,7 +152,7 @@ pub fn prefs_to_msgs(
                     )?),
                     OsmosisDestinationProject::TokenSwap { target_asset } => {
                         let route = generate_known_to_unknown_route(
-                            deps.storage,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -174,7 +172,7 @@ pub fn prefs_to_msgs(
                                 user_addr,
                                 route.clone(),
                                 estimate_token_out_min_amount(
-                                    &deps.querier,
+                                    &deps_mut.as_ref().querier,
                                     &route,
                                     "uosmo".to_string(),
                                     comp_token_amount,
@@ -190,8 +188,8 @@ pub fn prefs_to_msgs(
                         target_asset,
                     } => {
                         let (sim, swap_msgs) = generate_known_to_unknown_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -210,7 +208,7 @@ pub fn prefs_to_msgs(
                         // after the swap we can send the estimated funds to the target address
                         let mut send_msgs = send_tokens_msgs(
                             user_addr,
-                            &deps.api.addr_validate(&to_address)?,
+                            &deps_mut.api.addr_validate(&to_address)?,
                             Asset {
                                 info: AssetInfo::NativeToken {
                                     denom: target_asset.denom,
@@ -234,8 +232,8 @@ pub fn prefs_to_msgs(
                     } => {
                         // swap OSMO to TIA
                         let (est_tia, swap_to_tia_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -265,8 +263,8 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::IonStaking {} => {
                         // swap OSMO to ION
                         let (est_ion, swap_to_ion_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -292,8 +290,8 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::MembraneStake {} => {
                         // swap OSMO to MBRN
                         let (est_mbrn, swap_to_mbrn_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -335,8 +333,8 @@ pub fn prefs_to_msgs(
                         pool_id,
                         pool_settings: OsmosisPoolSettings::Standard { bond_tokens },
                     } => Ok(gen_join_classic_pool_single_sided_msgs(
-                        &deps.querier,
-                        deps.storage,
+                        &deps_mut.querier,
+                        deps_mut.as_ref().storage,
                         OsmosisRoutePools {
                             stored_denoms: KNOWN_DENOMS,
                             stored_pools: MultipleStoredPools {
@@ -363,7 +361,7 @@ pub fn prefs_to_msgs(
                                 token_min_amount_1,
                             },
                     } => Ok(gen_join_cl_pool_single_sided_msgs(
-                        &deps.querier,
+                        &deps_mut.querier,
                         user_addr,
                         pool_id,
                         &coin(comp_token_amount.u128(), "uosmo"),
@@ -377,14 +375,44 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::DepositCollateral {
                         as_asset,
                         protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
-                    } => unimplemented!(),
+                    } => {
+                        // TODO: this needs to be a sim and swap
+                        let expected_deposits = coins(comp_token_amount.u128(), "uosmo");
+
+                        Ok(match and_then.clone() {
+                            // if there is no and_then action we just deposit the collateral and be done
+                            None => deposit_into_cdp_msgs(
+                                user_addr,
+                                &project_addrs.destination_projects.projects.membrane.cdp,
+                                position_id,
+                                &expected_deposits,
+                                None,
+                            ),
+                            // if there is a followup we likely will wind up spawning a submessage so there's more data to pass
+                            Some(and_then) => membrane_deposit_collateral_and_then(
+                                deps_mut.storage,
+                                user_addr,
+                                &project_addrs.destination_projects.projects.membrane.cdp,
+                                position_id,
+                                &expected_deposits,
+                                &and_then,
+                                SubmsgData::MintCdt {
+                                    user_addr: user_addr.clone(),
+                                    position_id,
+                                    and_then: and_then.clone(),
+                                },
+                                SUBMSG_REPLY_ID,
+                                SUBMSG_DATA,
+                            ),
+                        }?)
+                    }
                     // repaying debt when the ltv has passed the threshold or there is no threshold set
                     // this means we should repay and be done with it
                     OsmosisDestinationProject::RepayDebt {
                         ltv_ratio_threshold: threshold,
                         protocol: OsmosisRepayDebt::Membrane { position_id },
                     } if ltv_in_range(
-                        &deps.querier,
+                        &deps_mut.querier,
                         &project_addrs.destination_projects.projects.membrane.cdp,
                         user_addr,
                         position_id,
@@ -393,8 +421,8 @@ pub fn prefs_to_msgs(
                     {
                         // swap OSMO to CDT
                         let (est_cdt, swap_to_cdt_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -435,14 +463,14 @@ pub fn prefs_to_msgs(
                                 amount: 1u128,
                             }],
                         },
-                        deps,
+                        deps_mut,
                         current_timestamp,
                     )?
                     .into_iter()
                     .collect::<DestProjectMsgs>()),
                     OsmosisDestinationProject::RepayDebt {
                         ltv_ratio_threshold: None,
-                        protocol,
+                        ..
                     } => unimplemented!(
                         "this is already taken care of as the ltv in range qury is always true for 'No Threshold'"
                     ),

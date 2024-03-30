@@ -9,7 +9,7 @@ use crate::{execute, queries};
 use cosmwasm_std::entry_point;
 use cosmwasm_std::Event;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsgResult, Timestamp,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
@@ -28,8 +28,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
     let mut msgs = match msg {
         // an id of 0 means we don't care about the response
         Reply { id: 0, .. } => Ok(DestProjectMsgs::default()),
-        Reply { id, result } => match SUBMSG_DATA.may_load(deps.as_ref().storage, &id) {
-            Ok(Some(SubmsgData::BondGamms { pool_id })) => {
+        Reply { id, result: _result } => match SUBMSG_DATA.may_load(deps.as_ref().storage, &id) {
+            Ok(Some(SubmsgData::BondGamms { pool_id: _pool_id })) => {
                 // TODO: Implement the BondGamms submsg
                 Ok(DestProjectMsgs::default())
             }
@@ -58,8 +58,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             }
             _ => Err(ContractError::SubMsgReplyIdNotFound { reply_id: msg.id }),
         },
-        // TODO handle non-zero ids
-        _ => Err(ContractError::Unauthorized {}),
     }?;
 
     msgs.prepend_events(vec![Event::new("reply").add_attribute("id", msg.id.to_string())]);
@@ -183,7 +181,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, ContractError> {
+pub fn execute(deps: &mut DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::UpdateProjectAddresses(addresses) => {
             if info.sender != ADMIN.load(deps.storage)? {

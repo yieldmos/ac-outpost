@@ -107,7 +107,7 @@ pub fn mint_cdt_msgs(
     minter_addr: &Addr,
     cdp_contract_addr: &Addr,
     position_id: Uint128,
-    desired_ltv: Decimal,
+    desired_ltv: &Decimal,
 ) -> DestinationResult {
     Ok(DestProjectMsgs {
         msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
@@ -116,7 +116,7 @@ pub fn mint_cdt_msgs(
             &cdp::ExecuteMsg::IncreaseDebt {
                 position_id,
                 amount: None,
-                LTV: Some(desired_ltv),
+                LTV: Some(desired_ltv.clone()),
                 mint_to_addr: None,
             },
             None,

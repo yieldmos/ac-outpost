@@ -3,15 +3,13 @@ use crate::{
     msg::{AuthorizedCompoundersResponse, VersionResponse},
     state::{ADMIN, AUTHORIZED_ADDRS},
 };
-
-use cosmwasm_std::{Addr, Decimal, Deps, StdResult, Timestamp};
+use cosmwasm_std::{Addr, Deps, StdResult, Timestamp};
 use cw_grant_spec::grantable_trait::{dedupe_grant_reqs, GrantStructure, Grantable};
-use cw_grant_spec::grants::{AuthorizationType, GrantBase, GrantRequirement, RevokeRequirement};
+use cw_grant_spec::grants::{GrantBase, GrantRequirement, RevokeRequirement};
 use membrane_helpers::grants::{
     membrane_deposit_grant, membrane_deposit_into_stability_pool_grant, membrane_mint_cdt_grant, membrane_repay_cdt_grant,
     membrane_stake_grant,
 };
-use membrane_helpers::msg_gen::mint_cdt_msgs;
 use osmosis_destinations::comp_prefs::{
     MembraneDepositCollateralAction, OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings,
     OsmosisRepayDebt, RepayThreshold,
@@ -226,7 +224,7 @@ pub fn gen_comp_pref_grants(
                         position_id.clone(),
                         desired_ltv,
                     ),
-                    Some(MembraneDepositCollateralAction::EnterStabilityPool { desired_ltv }) => {
+                    Some(MembraneDepositCollateralAction::EnterStabilityPool { .. }) => {
                         membrane_deposit_into_stability_pool_grant(
                             base,
                             project_addresses

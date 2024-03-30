@@ -85,7 +85,7 @@ pub fn membrane_deposit_collateral_and_then<T>(
     cdp_addr: &Addr,
     position_id: Uint128,
     deposit_assets: &Vec<Coin>,
-    and_then: MembraneDepositCollateralAction,
+    and_then: &MembraneDepositCollateralAction,
     submsg_data: T,
     latest_reply_id_state: Item<u64>,
     submsg_state: Map<&u64, T>,
@@ -149,7 +149,7 @@ pub fn membrane_mint_cdt(
     // the amount of cdt we can expect to have minted based off our simulation
     let minted_cdt = coin(simulated_cdt.u128(), cdt_denom);
 
-    let mut mint_cdt = mint_cdt_msgs(user_addr, &membrane_addrs.cdp, position_id, desired_ltv)?;
+    let mut mint_cdt = mint_cdt_msgs(user_addr, &membrane_addrs.cdp, position_id, &desired_ltv)?;
 
     match and_then {
         MembraneDepositCollateralAction::MintCdt { desired_ltv } => (),
