@@ -178,7 +178,7 @@ pub fn join_osmosis_cl_pool_single_side(
             querier,
             user_addr,
             &pool_id,
-            coin(
+            &coin(
                 offer_asset.amount.checked_div(2u128.into())?.u128(),
                 offer_asset.denom.clone(),
             ),
