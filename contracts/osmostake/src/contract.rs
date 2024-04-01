@@ -1,17 +1,22 @@
 use crate::error::ContractError;
 use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmostakeCompoundPrefs, QueryMsg};
-use crate::state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, TAKE_RATE};
+use crate::state::{
+    SubmsgData, ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, SUBMSG_DATA,
+    TAKE_RATE,
+};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::Event;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Timestamp,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_grant_spec::grantable_trait::{GrantStructure, Grantable};
+use membrane_helpers::utils::membrane_mint_cdt;
 use osmosis_destinations::pools::PoolForEach;
-
 use outpost_utils::comp_prefs::TakeRate;
+use outpost_utils::helpers::DestProjectMsgs;
 use semver::Version;
 
 // version info for migration info
@@ -19,13 +24,45 @@ const CONTRACT_NAME: &str = "crates.io:ac-outpost-osmostake";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    match msg {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+    let mut msgs = match msg {
         // an id of 0 means we don't care about the response
-        Reply { id: 0, .. } => Ok(Response::default()),
-        // TODO handle non-zero ids
-        _ => Err(ContractError::Unauthorized {}),
-    }
+        Reply { id: 0, .. } => Ok(DestProjectMsgs::default()),
+        Reply { id, result: _result } => match SUBMSG_DATA.may_load(deps.as_ref().storage, &id) {
+            Ok(Some(SubmsgData::BondGamms { pool_id: _pool_id })) => {
+                // TODO: Implement the BondGamms submsg
+                Ok(DestProjectMsgs::default())
+            }
+            Ok(Some(SubmsgData::MintCdt {
+                user_addr,
+                position_id,
+                and_then,
+            })) => {
+                let project_addrs = PROJECT_ADDRS.load(deps.as_ref().storage)?;
+
+                let mut cdt_msgs = membrane_mint_cdt(
+                    &deps.querier,
+                    &project_addrs.destination_projects.projects.membrane,
+                    &project_addrs.destination_projects.denoms.cdt,
+                    &user_addr,
+                    position_id,
+                    and_then,
+                    env.block.time,
+                )?;
+
+                cdt_msgs.append_events(vec![Event::new("mint_cdt_reply")
+                    .add_attribute("user_addr", user_addr.to_string())
+                    .add_attribute("position_id", position_id.to_string())]);
+
+                Ok(cdt_msgs)
+            }
+            _ => Err(ContractError::SubMsgReplyIdNotFound { reply_id: msg.id }),
+        },
+    }?;
+
+    msgs.prepend_events(vec![Event::new("reply").add_attribute("id", msg.id.to_string())]);
+
+    Ok(msgs.to_response(&env.contract.address)?)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -144,7 +181,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, ContractError> {
+pub fn execute(deps: &mut DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::UpdateProjectAddresses(addresses) => {
             if info.sender != ADMIN.load(deps.storage)? {

@@ -2,10 +2,9 @@ use crate::{
     errors::OsmosisDestinationError,
     mars_types::{RedBankAction, RedBankExecuteMsgs},
 };
-
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin as CsdkCoin;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Event, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Event, QuerierWrapper, ReplyOn, Uint128};
 use outpost_utils::{
     helpers::DestProjectMsgs,
     msg_gen::{create_exec_contract_msg, CosmosProtoMsg},
@@ -94,40 +93,4 @@ pub fn fund_red_bank_acct_msgs(
             .add_attribute("fund_amount", fund_amount.to_string())
             .add_attribute("fund_and_lend", lend_asset.to_string())],
     })
-}
-
-// stake mbrn
-pub fn stake_mbrn_msgs(
-    staker_addr: &Addr,
-    membrane_staking_contract_addr: &Addr,
-    mbrn_to_stake: Coin,
-) -> DestinationResult {
-    Ok(DestProjectMsgs {
-        msgs: vec![CosmosProtoMsg::ExecuteContract(create_exec_contract_msg(
-            membrane_staking_contract_addr,
-            staker_addr,
-            &MembraneExecuteMsg::Stake { user: None },
-            Some(vec![cosmos_sdk_proto::cosmos::base::v1beta1::Coin {
-                denom: mbrn_to_stake.denom.to_string(),
-                amount: mbrn_to_stake.amount.to_string(),
-            }]),
-        )?)],
-        sub_msgs: vec![],
-        events: vec![Event::new("stake_mbrn").add_attribute("amount", mbrn_to_stake.to_string())],
-    })
-}
-
-#[cw_serde]
-pub enum MembraneExecuteMsg {
-    Stake {
-        user: Option<String>,
-    },
-    CdpDeposit {
-        /// Position ID to deposit into.
-        /// If the user wants to create a new/separate position, no position id is passed.
-        position_id: Option<Uint128>,
-        /// Position owner.
-        /// Defaults to the sender.
-        position_owner: Option<String>,
-    },
 }

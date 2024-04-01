@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("Osmosis Helper Error: &{0}")]
     OsmosisHelperError(#[from] osmosis_helpers::errors::OsmosisHelperError),
 
+    #[error("Membrane Helper Error: &{0}")]
+    MembraneHelperError(#[from] membrane_helpers::errors::MembraneHelperError),
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
@@ -62,6 +65,9 @@ pub enum ContractError {
 
     #[error("Contract Migration Version Mismatch: expected higher than {expected}, receieved {received}")]
     MigrationVersionMismatch { expected: String, received: String },
+
+    #[error("Submessage reply id not found {reply_id}")]
+    SubMsgReplyIdNotFound { reply_id: u64 },
 }
 
 impl From<semver::Error> for ContractError {

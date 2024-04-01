@@ -1,9 +1,10 @@
 use std::iter;
 
 use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Timestamp};
+use membrane_helpers::msg_gen::stake_mbrn_msgs;
 use osmosis_destinations::{
     comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
-    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
+    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
     pools::MultipleStoredPools,
 };
 use osmosis_helpers::{
@@ -182,7 +183,7 @@ pub fn prefs_to_msgs(
                                 denoms: project_addrs.destination_projects.denoms.clone(),
                             },
                             "uosmo",
-                            target_asset.clone(),
+                            &target_asset,
                         )?;
 
                         Ok(DestProjectMsgs {
@@ -220,7 +221,7 @@ pub fn prefs_to_msgs(
                             },
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
-                            target_asset.clone(),
+                            &target_asset,
                             current_timestamp.clone(),
                         )?;
 
@@ -390,6 +391,11 @@ pub fn prefs_to_msgs(
                         token_min_amount_1,
                         current_timestamp.clone(),
                     )?),
+                    OsmosisDestinationProject::DepositCollateral { as_asset, protocol } => unimplemented!(),
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold,
+                        protocol,
+                    } => unimplemented!(),
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                     _ => unimplemented!(),
                 }

@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Uint128};
+use cosmwasm_std::{Addr, Api, Decimal, Uint128};
 use outpost_utils::comp_prefs::CompoundPrefs;
 
 use crate::{
@@ -54,22 +54,6 @@ pub enum OsmosisDestinationProject {
     /// Stake token to a dao
     // DaoDaoStake {
     //     dao: OsmosisDao,
-    // },
-    MembraneStake {},
-    // MembraneDeposit {
-    //     position_id: Uint128,
-    //     asset: String,
-    // },
-    // MembraneRepay {
-    //     asset: String,
-    //     ltv_ratio_threshold: Decimal,
-    // },
-    // MarginedRepay {
-    //     asset: String,
-    //     ltv_ratio_threshold: Decimal,
-    // },
-    // NolusLendAsset {
-    //     asset: String,
     // },
 
     // /// Pay back borrowed balance. Currently the first denom strings specified in the vector will be
@@ -145,7 +129,8 @@ pub enum OsmosisDestinationProject {
 
     MintLsd {
         lsd: OsmosisLsd,
-    }, // RedBankVault {
+    },
+    // RedBankVault {
     //     vault_address: String,
     //     leverage_amount: u64,
     // },
@@ -155,7 +140,81 @@ pub enum OsmosisDestinationProject {
     // WhiteWhaleSatellite {
     //     asset: String,
     // },
+
+    /// Stake as MBRN
+    MembraneStake {},
+
+    DepositCollateral {
+        /// swap the input asset(s) to the desired asset before depositing
+        as_asset: TargetAsset,
+        protocol: OsmosisDepositCollateral,
+    },
+
+    RepayDebt {
+        /// repayment conditional based on the ltv ratio
+        /// if None then repay the debt regardless of the ltv ratio
+        /// if the repay threshold is hit the WHOLE compounding amount will be used to repay the debt
+        ltv_ratio_threshold: Option<RepayThreshold>,
+        protocol: OsmosisRepayDebt,
+    },
+
     Unallocated {},
+}
+
+#[cw_serde]
+pub enum OsmosisDepositCollateral {
+    /// Deposit asset(s) into the CDP
+    Membrane {
+        position_id: Uint128,
+        and_then: Option<MembraneDepositCollateralAction>,
+    },
+    // RedBankDepositCollateral {
+    //     account_id: String,
+    //     deposit_denom: String,
+    // },
+}
+
+#[cw_serde]
+pub enum OsmosisRepayDebt {
+    // RedBank,
+    // Margined {
+    //     // asset to repay as
+    //     asset: String,
+    // },
+    /// repaid as CDT
+    Membrane { position_id: Uint128 },
+}
+
+#[cw_serde]
+pub enum MembraneDepositCollateralAction {
+    /// mint cdt up to the desired_ltv then leave it liquid
+    MintCdt { desired_ltv: Decimal },
+
+    /// Mint CDT and deposit it into the stability pool contract
+    EnterStabilityPool { desired_ltv: Decimal },
+
+    /// Mint CDT and enter an osmosis pool single sided
+    ProvideLiquidity {
+        desired_ltv: Decimal,
+        pool_id: u64,
+        pool_settings: OsmosisPoolSettings,
+    },
+}
+
+impl MembraneDepositCollateralAction {
+    pub fn desired_ltv(&self) -> Decimal {
+        match self {
+            MembraneDepositCollateralAction::MintCdt { desired_ltv } => *desired_ltv,
+            MembraneDepositCollateralAction::EnterStabilityPool { desired_ltv } => *desired_ltv,
+            MembraneDepositCollateralAction::ProvideLiquidity { desired_ltv, .. } => *desired_ltv,
+        }
+    }
+}
+
+#[cw_serde]
+pub struct RepayThreshold {
+    pub ltv_ratio: Decimal,
+    pub otherwise: Box<OsmosisDestinationProject>,
 }
 
 #[cw_serde]
@@ -184,6 +243,7 @@ pub enum OsmosisLsd {
     Eris,
     // https://app.milkyway.zone/
     MilkyWay,
+    // Stride
 }
 
 // #[cw_serde]
@@ -234,12 +294,14 @@ impl OsmosisProjectAddresses {
 pub struct MembraneAddresses {
     pub cdp: String,
     pub staking: String,
+    pub stability_pool: String,
 }
 
 #[cw_serde]
 pub struct MembraneAddrs {
     pub cdp: Addr,
     pub staking: Addr,
+    pub stability_pool: Addr,
 }
 
 impl MembraneAddresses {
@@ -247,6 +309,7 @@ impl MembraneAddresses {
         Ok(MembraneAddrs {
             cdp: api.addr_validate(&self.cdp)?,
             staking: api.addr_validate(&self.staking)?,
+            stability_pool: api.addr_validate(&self.stability_pool)?,
         })
     }
 }

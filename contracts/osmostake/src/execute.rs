@@ -1,48 +1,53 @@
-use std::iter;
-
-use cosmwasm_std::{coin, Addr, Attribute, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Response, SubMsg, Timestamp};
+use cosmwasm_std::{coin, coins, Addr, Attribute, Decimal, DepsMut, Env, Event, MessageInfo, Response, Timestamp};
+use membrane_helpers::{
+    msg_gen::{deposit_into_cdp_msgs, repay_cdt_msgs, stake_mbrn_msgs},
+    utils::{ltv_in_range, membrane_deposit_collateral_and_then},
+};
 use osmosis_destinations::{
-    comp_prefs::{OsmosisCompPrefs, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings},
-    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs, stake_mbrn_msgs},
+    comp_prefs::{
+        OsmosisCompPrefs, OsmosisDepositCollateral, OsmosisDestinationProject, OsmosisLsd, OsmosisPoolSettings,
+        OsmosisRepayDebt, RepayThreshold,
+    },
+    dest_project_gen::{mint_milk_tia_msgs, stake_ion_msgs},
     pools::MultipleStoredPools,
 };
 use osmosis_helpers::{
     osmosis_lp::{gen_join_cl_pool_single_sided_msgs, gen_join_classic_pool_single_sided_msgs},
     osmosis_swap::{
         estimate_token_out_min_amount, generate_known_to_known_swap_and_sim_msg, generate_known_to_unknown_route,
-        generate_known_to_unknown_swap_and_sim_msg, generate_swap, OsmosisRoutePools,
+        generate_known_to_unknown_swap_and_sim_msg, generate_swap, generate_swap_and_sim_msg, OsmosisRoutePools,
     },
 };
-
 use outpost_utils::{
-    comp_prefs::{DestinationAction, TakeRate},
-    helpers::{calculate_compound_amounts, is_authorized_compounder, prefs_sum_to_one, sum_coins, DestProjectMsgs},
-    msg_gen::create_exec_msg,
+    comp_prefs::{CompoundPrefs, DestinationAction, TakeRate},
+    helpers::{
+        calculate_compound_amounts, combine_responses, is_authorized_compounder, prefs_sum_to_one, sum_coins,
+        DestProjectMsgs,
+    },
 };
 use sail_destinations::dest_project_gen::mint_eris_lsd_msgs;
-
+use std::iter;
 use universal_destinations::dest_project_gen::{native_staking_msg, send_tokens_msgs};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::SimulateExecuteResponse};
 
 use crate::{
     msg::ContractAddrs,
-    state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS},
+    state::{
+        SubmsgData, ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, SUBMSG_DATA, SUBMSG_REPLY_ID,
+    },
     ContractError,
 };
 
 pub fn compound(
-    deps: DepsMut,
+    deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
     project_addresses: ContractAddrs,
     user_address: String,
     comp_prefs: OsmosisCompPrefs,
     fee_to_charge: Option<Decimal>,
-    TakeRate {
-        max_tax_fee,
-        take_rate_addr,
-    }: TakeRate,
+    TakeRate { .. }: TakeRate,
 ) -> Result<Response, ContractError> {
     // validate that the preference quantites sum to 1
     let _ = prefs_sum_to_one(&comp_prefs)?;
@@ -73,63 +78,35 @@ pub fn compound(
     // the list of all the compounding msgs to broadcast on behalf of the user based on their comp prefs
     let all_msgs = prefs_to_msgs(
         &project_addresses,
-        // &env.block,
-        // staking_denom,
         &user_addr,
         total_rewards.clone(),
         comp_prefs,
-        deps.as_ref(),
+        &mut deps.branch(),
         env.block.time,
     )?;
 
-    let combined_msgs = all_msgs.iter().fold(DestProjectMsgs::default(), |mut acc, msg| {
-        acc.msgs.append(&mut msg.msgs.clone());
-        acc.sub_msgs.append(&mut msg.sub_msgs.clone());
-        acc.events.append(&mut msg.events.clone());
-        acc
-    });
-
-    let amount_automated_event =
-        Event::new("amount_automated").add_attributes([total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
-            key: format!("amount_{}", i),
-            value: coin.to_string(),
-        }));
-
-    // the final exec message that will be broadcast and contains all the sub msgs
-    let exec_msg = create_exec_msg(&env.contract.address, combined_msgs.msgs)?;
-
-    let resp = Response::default()
+    // prepare the response to the user with the withdraw rewards and other general metadata
+    let withdraw_response = Response::default()
         .add_attribute("action", "outpost compound")
         .add_message(withdraw_msg)
-        .add_attribute("subaction", "withdraw rewards")
-        .add_event(amount_automated_event)
-        // .add_attribute("amount_automated", to_json_binary(&[total_rewards])?.to_string())
-        .add_message(exec_msg)
-        .add_submessages(
-            combined_msgs
-                .sub_msgs
-                .into_iter()
-                .filter_map(|sub_msg| {
-                    if let (Ok(exec_msg), false) = (
-                        create_exec_msg(&env.contract.address, sub_msg.1.clone()),
-                        sub_msg.1.is_empty(),
-                    ) {
-                        Some((sub_msg.0, exec_msg, sub_msg.2))
-                    } else {
-                        None
-                    }
-                })
-                .map(|(id, msg, reply_on)| SubMsg {
-                    msg,
-                    gas_limit: None,
-                    id,
-                    reply_on,
-                })
-                .collect::<Vec<SubMsg>>(),
-        )
-        .add_events(combined_msgs.events);
+        .add_attributes(vec![("subaction", "withdraw rewards"), ("user", &user_addr.to_string())])
+        // event to track the amount of rewards that were automated
+        .add_event(
+            Event::new("amount_automated").add_attributes([total_rewards].iter().enumerate().map(|(i, coin)| Attribute {
+                key: format!("amount_{}", i),
+                value: coin.to_string(),
+            })),
+        );
 
-    Ok(resp)
+    let resps = combine_responses(vec![
+        withdraw_response,
+        all_msgs
+            .into_iter()
+            .collect::<DestProjectMsgs>()
+            .to_response(&env.contract.address)?,
+    ]);
+
+    Ok(resps)
 }
 
 /// Converts the user's compound preferences into a list of
@@ -139,9 +116,10 @@ pub fn prefs_to_msgs(
     user_addr: &Addr,
     total_rewards: cosmwasm_std::Coin,
     comp_prefs: OsmosisCompPrefs,
-    deps: Deps,
+    deps_mut: &mut DepsMut<'_>,
     current_timestamp: Timestamp,
 ) -> Result<Vec<DestProjectMsgs>, ContractError> {
+    // let deps = deps_mut.branch().as_ref();
     let dca_denom = total_rewards.denom.clone();
 
     // calculates the amount of ujuno that will be used for each target project accurately.
@@ -174,7 +152,7 @@ pub fn prefs_to_msgs(
                     )?),
                     OsmosisDestinationProject::TokenSwap { target_asset } => {
                         let route = generate_known_to_unknown_route(
-                            deps.storage,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -185,7 +163,7 @@ pub fn prefs_to_msgs(
                                 denoms: project_addrs.destination_projects.denoms.clone(),
                             },
                             "uosmo",
-                            target_asset.clone(),
+                            &target_asset,
                         )?;
 
                         Ok(DestProjectMsgs {
@@ -194,7 +172,7 @@ pub fn prefs_to_msgs(
                                 user_addr,
                                 route.clone(),
                                 estimate_token_out_min_amount(
-                                    &deps.querier,
+                                    &deps_mut.as_ref().querier,
                                     &route,
                                     "uosmo".to_string(),
                                     comp_token_amount,
@@ -210,8 +188,8 @@ pub fn prefs_to_msgs(
                         target_asset,
                     } => {
                         let (sim, swap_msgs) = generate_known_to_unknown_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -223,14 +201,14 @@ pub fn prefs_to_msgs(
                             },
                             user_addr,
                             &coin(comp_token_amount.u128(), "uosmo"),
-                            target_asset.clone(),
+                            &target_asset,
                             current_timestamp,
                         )?;
 
                         // after the swap we can send the estimated funds to the target address
                         let mut send_msgs = send_tokens_msgs(
                             user_addr,
-                            &deps.api.addr_validate(&to_address)?,
+                            &deps_mut.api.addr_validate(&to_address)?,
                             Asset {
                                 info: AssetInfo::NativeToken {
                                     denom: target_asset.denom,
@@ -254,8 +232,8 @@ pub fn prefs_to_msgs(
                     } => {
                         // swap OSMO to TIA
                         let (est_tia, swap_to_tia_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -285,8 +263,8 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::IonStaking {} => {
                         // swap OSMO to ION
                         let (est_ion, swap_to_ion_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -312,8 +290,8 @@ pub fn prefs_to_msgs(
                     OsmosisDestinationProject::MembraneStake {} => {
                         // swap OSMO to MBRN
                         let (est_mbrn, swap_to_mbrn_msgs) = generate_known_to_known_swap_and_sim_msg(
-                            &deps.querier,
-                            deps.storage,
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -355,8 +333,8 @@ pub fn prefs_to_msgs(
                         pool_id,
                         pool_settings: OsmosisPoolSettings::Standard { bond_tokens },
                     } => Ok(gen_join_classic_pool_single_sided_msgs(
-                        &deps.querier,
-                        deps.storage,
+                        &deps_mut.querier,
+                        deps_mut.as_ref().storage,
                         OsmosisRoutePools {
                             stored_denoms: KNOWN_DENOMS,
                             stored_pools: MultipleStoredPools {
@@ -383,7 +361,7 @@ pub fn prefs_to_msgs(
                                 token_min_amount_1,
                             },
                     } => Ok(gen_join_cl_pool_single_sided_msgs(
-                        &deps.querier,
+                        &deps_mut.querier,
                         user_addr,
                         pool_id,
                         &coin(comp_token_amount.u128(), "uosmo"),
@@ -394,26 +372,124 @@ pub fn prefs_to_msgs(
                         current_timestamp.clone(),
                     )?),
 
-                    // OsmosisDestinationProject::RedBankLendAsset {
-                    //     target_asset,
-                    //     account_id,
-                    // } => Ok(DestProjectMsgs::default()),
-                    // OsmosisDestinationProject::WhiteWhaleSatellite { asset } => Ok(white_whale_satellite_msgs(
-                    //     user_addr,
-                    //     &project_addrs.destination_projects.projects.white_whale_satellite,
-                    //     comp_token_amount,
-                    // )?),
-                    // OsmosisDestinationProject::MembraneRepay {
-                    //     asset,
-                    //     ltv_ratio_threshold,
-                    // } => Ok(DestProjectMsgs::default()),
-                    // OsmosisDestinationProject::MarginedRepay {
-                    //     asset,
-                    //     ltv_ratio_threshold,
-                    // } => Ok(DestProjectMsgs::default()),
-                    // OsmosisDestinationProject::MembraneDeposit { position_id, asset } => Ok(DestProjectMsgs::default()),
+                    OsmosisDestinationProject::DepositCollateral {
+                        as_asset,
+                        protocol: OsmosisDepositCollateral::Membrane { position_id, and_then },
+                    } => {
+                        let (amount, swap_msgs) = generate_known_to_unknown_swap_and_sim_msg(
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
+                            OsmosisRoutePools {
+                                stored_denoms: KNOWN_DENOMS,
+                                stored_pools: MultipleStoredPools {
+                                    osmo: KNOWN_OSMO_POOLS,
+                                    usdc: KNOWN_USDC_POOLS,
+                                },
+                                pools: project_addrs.destination_projects.swap_routes.clone(),
+                                denoms: project_addrs.destination_projects.denoms.clone(),
+                            },
+                            user_addr,
+                            &coin(comp_token_amount.u128(), "uosmo"),
+                            &as_asset,
+                            current_timestamp,
+                        )?;
+                        let expected_deposits = coins(amount.u128(), as_asset.denom);
 
-                    // OsmosisDestinationProject::DaoDaoStake { dao } => Ok(DestProjectMsgs::default()),
+                        Ok(match and_then.clone() {
+                            // if there is no and_then action we just deposit the collateral and be done
+                            None => deposit_into_cdp_msgs(
+                                user_addr,
+                                &project_addrs.destination_projects.projects.membrane.cdp,
+                                position_id,
+                                &expected_deposits,
+                                None,
+                            ),
+                            // if there is a followup we likely will wind up spawning a submessage so there's more data to pass
+                            Some(and_then) => membrane_deposit_collateral_and_then(
+                                deps_mut.storage,
+                                user_addr,
+                                &project_addrs.destination_projects.projects.membrane.cdp,
+                                position_id,
+                                &expected_deposits,
+                                &and_then,
+                                SubmsgData::MintCdt {
+                                    user_addr: user_addr.clone(),
+                                    position_id,
+                                    and_then: and_then.clone(),
+                                },
+                                SUBMSG_REPLY_ID,
+                                SUBMSG_DATA,
+                            ),
+                        }?)
+                    }
+                    // repaying debt when the ltv has passed the threshold or there is no threshold set
+                    // this means we should repay and be done with it
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold: threshold,
+                        protocol: OsmosisRepayDebt::Membrane { position_id },
+                    } if ltv_in_range(
+                        &deps_mut.querier,
+                        &project_addrs.destination_projects.projects.membrane.cdp,
+                        user_addr,
+                        position_id,
+                        threshold.clone(),
+                    ) =>
+                    {
+                        // swap OSMO to CDT
+                        let (est_cdt, swap_to_cdt_msgs) = generate_known_to_known_swap_and_sim_msg(
+                            &deps_mut.querier,
+                            deps_mut.as_ref().storage,
+                            OsmosisRoutePools {
+                                stored_denoms: KNOWN_DENOMS,
+                                stored_pools: MultipleStoredPools {
+                                    osmo: KNOWN_OSMO_POOLS,
+                                    usdc: KNOWN_USDC_POOLS,
+                                },
+                                pools: project_addrs.destination_projects.swap_routes.clone(),
+                                denoms: project_addrs.destination_projects.denoms.clone(),
+                            },
+                            user_addr,
+                            &coin(comp_token_amount.u128(), "uosmo"),
+                            &project_addrs.destination_projects.denoms.cdt,
+                            current_timestamp,
+                        )?;
+
+                        let mut repay_msgs = repay_cdt_msgs(
+                            user_addr,
+                            &project_addrs.destination_projects.projects.membrane.cdp,
+                            position_id,
+                            coin(est_cdt.u128(), project_addrs.destination_projects.denoms.cdt.clone()),
+                        )?;
+
+                        repay_msgs.prepend_msgs(swap_to_cdt_msgs);
+
+                        Ok(repay_msgs)
+                    }
+                    // repaying debt when the ltv has not passed the threshold so we do the fallback
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold: Some(RepayThreshold { otherwise, .. }),
+                        ..
+                    } => Ok(prefs_to_msgs(
+                        project_addrs,
+                        user_addr,
+                        coin(comp_token_amount.u128(), "uosmo"),
+                        CompoundPrefs {
+                            relative: vec![DestinationAction {
+                                destination: *otherwise,
+                                amount: 1u128,
+                            }],
+                        },
+                        deps_mut,
+                        current_timestamp,
+                    )?
+                    .into_iter()
+                    .collect::<DestProjectMsgs>()),
+                    OsmosisDestinationProject::RepayDebt {
+                        ltv_ratio_threshold: None,
+                        ..
+                    } => unimplemented!(
+                        "this is already taken care of as the ltv in range qury is always true for 'No Threshold'"
+                    ),
                     OsmosisDestinationProject::Unallocated {} => Ok(DestProjectMsgs::default()),
                 }
             },

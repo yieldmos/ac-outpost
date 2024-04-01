@@ -1,12 +1,14 @@
 use cosmos_sdk_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin as CsdkCoin};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, Decimal, Deps, Event, ReplyOn, Timestamp, Uint128};
+use cosmwasm_std::{
+    Addr, Coin, Decimal, Deps, Event, ReplyOn, Response, SubMsg, Timestamp, Uint128,
+};
 use cw_storage_plus::Item;
 
 use crate::{
     comp_prefs::{CompoundPrefs, DestinationAction},
     errors::OutpostError,
-    msg_gen::CosmosProtoMsg,
+    msg_gen::{create_exec_msg, CosmosProtoMsg},
 };
 
 #[cw_serde]
@@ -162,6 +164,75 @@ impl DestProjectMsgs {
     pub fn append_events(&mut self, events: Vec<Event>) {
         self.events.extend(events);
     }
+
+    pub fn concat_after(&mut self, other: DestProjectMsgs) {
+        self.msgs.extend(other.msgs);
+        self.sub_msgs.extend(other.sub_msgs);
+        self.events.extend(other.events);
+    }
+}
+
+impl DestProjectMsgs {
+    pub fn to_response(&self, grantee_addr: &Addr) -> Result<Response, OutpostError> {
+        Ok(Response::default()
+            .add_message(create_exec_msg(grantee_addr, self.msgs.clone())?)
+            .add_submessages(
+                self.sub_msgs
+                    .clone()
+                    .into_iter()
+                    .filter_map(|sub_msg| {
+                        if let (Ok(exec_msg), false) = (
+                            create_exec_msg(grantee_addr, sub_msg.1.clone()),
+                            sub_msg.1.is_empty(),
+                        ) {
+                            Some((sub_msg.0, exec_msg, sub_msg.2))
+                        } else {
+                            None
+                        }
+                    })
+                    .map(|(id, msg, reply_on)| SubMsg {
+                        msg,
+                        gas_limit: None,
+                        id,
+                        reply_on,
+                    })
+                    .collect::<Vec<SubMsg>>(),
+            )
+            .add_events(self.events.clone()))
+    }
+}
+
+/// Implementing FromIterator for DestProjectMsgs allows us to collect
+impl FromIterator<DestProjectMsgs> for DestProjectMsgs {
+    fn from_iter<I: IntoIterator<Item = DestProjectMsgs>>(iter: I) -> Self {
+        let mut msgs = vec![];
+        let mut sub_msgs = vec![];
+        let mut events = vec![];
+
+        for item in iter {
+            msgs.extend(item.msgs);
+            sub_msgs.extend(item.sub_msgs);
+            events.extend(item.events);
+        }
+
+        DestProjectMsgs {
+            msgs,
+            sub_msgs,
+            events,
+        }
+    }
+}
+
+/// Combine multiple Responses into a single Response
+pub fn combine_responses(responses: Vec<Response>) -> Response {
+    responses
+        .into_iter()
+        .fold(Response::default(), |mut acc, response| {
+            acc.messages.extend(response.messages);
+            acc.attributes.extend(response.attributes);
+            acc.events.extend(response.events);
+            acc
+        })
 }
 
 /// Calculates the tax split for a given token amount and tax rate and the
