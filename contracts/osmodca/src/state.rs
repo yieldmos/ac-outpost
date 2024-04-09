@@ -13,3 +13,5 @@ pub const TAKE_RATE: Item<TakeRate> = Item::new("take_rate");
 pub const KNOWN_OSMO_POOLS: StoredPools = Map::new("known_osmo_pools");
 pub const KNOWN_USDC_POOLS: StoredPools = Map::new("known_usdc_pools");
 pub const KNOWN_DENOMS: StoredDenoms = Map::new("known_denoms");
+
+pub const TWAP_DURATION: Item<u64> = Item::new("twap_duration");

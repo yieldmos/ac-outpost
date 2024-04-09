@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Api, Coin, Decimal, Timestamp};
+use cosmwasm_std::{Addr, Api, Coin, Decimal, Timestamp, Uint64};
 use cw_grant_spec::grants::{GrantRequirement, RevokeRequirement};
 
 use osmosis_destinations::comp_prefs::{
@@ -23,6 +23,9 @@ pub struct InstantiateMsg {
 
     /// The address that the take rate should be sent to
     pub take_rate_address: String,
+
+    /// The duration of the twap used for estimating the amount out for osmosis swaps
+    pub twap_duration: Uint64,
 }
 
 #[cw_serde]
@@ -51,6 +54,9 @@ pub enum QueryMsg {
 
     #[returns(Vec<RevokeRequirement>)]
     RevokeSpec { comp_prefs: OsmodcaCompoundPrefs },
+
+    #[returns(Uint64)]
+    TwapDuration,
 }
 
 #[cw_serde]
@@ -71,6 +77,8 @@ pub enum ExecuteMsg {
     RemoveAuthorizedCompounder(String),
     Compound(OsmodcaCompoundPrefs),
     UpdateProjectAddresses(Box<ContractAddresses>),
+    /// Update the number of seconds used for twap based osmosis swap estimates
+    ChangeTwapDuration(Uint64),
 }
 
 #[cw_serde]

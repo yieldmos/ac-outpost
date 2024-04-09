@@ -27,7 +27,7 @@ use withdraw_rewards_tax_grant::{client::WithdrawRewardsTaxClient, msg::Simulate
 
 use crate::{
     msg::ContractAddrs,
-    state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS},
+    state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, TWAP_DURATION},
     ContractError,
 };
 
@@ -195,6 +195,7 @@ pub fn prefs_to_msgs(
                                 route.clone(),
                                 estimate_token_out_min_amount(
                                     &deps.querier,
+                                    &TWAP_DURATION.load(deps.storage)?,
                                     &route,
                                     "uosmo".to_string(),
                                     comp_token_amount,
@@ -212,6 +213,7 @@ pub fn prefs_to_msgs(
                         let (sim, swap_msgs) = generate_known_to_unknown_swap_and_sim_msg(
                             &deps.querier,
                             deps.storage,
+                            &TWAP_DURATION.load(deps.storage)?,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -256,6 +258,7 @@ pub fn prefs_to_msgs(
                         let (est_tia, swap_to_tia_msgs) = generate_known_to_known_swap_and_sim_msg(
                             &deps.querier,
                             deps.storage,
+                            &TWAP_DURATION.load(deps.storage)?,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -287,6 +290,7 @@ pub fn prefs_to_msgs(
                         let (est_ion, swap_to_ion_msgs) = generate_known_to_known_swap_and_sim_msg(
                             &deps.querier,
                             deps.storage,
+                            &TWAP_DURATION.load(deps.storage)?,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -314,6 +318,7 @@ pub fn prefs_to_msgs(
                         let (est_mbrn, swap_to_mbrn_msgs) = generate_known_to_known_swap_and_sim_msg(
                             &deps.querier,
                             deps.storage,
+                            &TWAP_DURATION.load(deps.storage)?,
                             OsmosisRoutePools {
                                 stored_denoms: KNOWN_DENOMS,
                                 stored_pools: MultipleStoredPools {
@@ -357,6 +362,7 @@ pub fn prefs_to_msgs(
                     } => Ok(gen_join_classic_pool_single_sided_msgs(
                         &deps.querier,
                         deps.storage,
+                        &TWAP_DURATION.load(deps.storage)?,
                         OsmosisRoutePools {
                             stored_denoms: KNOWN_DENOMS,
                             stored_pools: MultipleStoredPools {
@@ -384,6 +390,7 @@ pub fn prefs_to_msgs(
                             },
                     } => Ok(gen_join_cl_pool_single_sided_msgs(
                         &deps.querier,
+                        &TWAP_DURATION.load(deps.storage)?,
                         user_addr,
                         pool_id,
                         &coin(comp_token_amount.u128(), "uosmo"),

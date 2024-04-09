@@ -318,6 +318,7 @@ pub fn simulate_swap(
 pub fn generate_known_to_known_swap_and_sim_msg(
     querier: &QuerierWrapper,
     store: &dyn Storage,
+    twap_duration_seconds: &u64,
     pool_routes: OsmosisRoutePools,
     user_addr: &Addr,
     from_asset: &CWCoin,
@@ -326,6 +327,7 @@ pub fn generate_known_to_known_swap_and_sim_msg(
 ) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
+        twap_duration_seconds,
         user_addr,
         from_asset,
         to_denom.to_string(),
@@ -337,6 +339,7 @@ pub fn generate_known_to_known_swap_and_sim_msg(
 pub fn generate_known_to_unknown_swap_and_sim_msg(
     querier: &QuerierWrapper,
     store: &dyn Storage,
+    twap_duration_seconds: &u64,
     pool_routes: OsmosisRoutePools,
     user_addr: &Addr,
     from_asset: &CWCoin,
@@ -345,6 +348,7 @@ pub fn generate_known_to_unknown_swap_and_sim_msg(
 ) -> Result<(Uint128, Vec<CosmosProtoMsg>), OsmosisHelperError> {
     generate_swap_and_sim_msg(
         querier,
+        twap_duration_seconds,
         user_addr,
         from_asset,
         to_asset.denom.clone(),
@@ -356,6 +360,7 @@ pub fn generate_known_to_unknown_swap_and_sim_msg(
 /// Generates the swap message and the simulated response given a route
 pub fn generate_swap_and_sim_msg(
     querier: &QuerierWrapper,
+    twap_duration_seconds: &u64,
     user_address: &Addr,
     from_asset: &CWCoin,
     to_denom: String,
@@ -376,6 +381,7 @@ pub fn generate_swap_and_sim_msg(
         route.clone(),
         estimate_token_out_min_amount(
             querier,
+            twap_duration_seconds,
             &route,
             from_asset.denom.clone(),
             from_asset.amount,
@@ -388,6 +394,7 @@ pub fn generate_swap_and_sim_msg(
 
 pub fn estimate_token_out_min_amount(
     querier: &QuerierWrapper,
+    twap_duration_seconds: &u64,
     route: &Vec<SwapAmountInRoute>,
     denom_in: String,
     amount_in: Uint128,
@@ -398,7 +405,7 @@ pub fn estimate_token_out_min_amount(
     let mut in_denom = denom_in;
     let mut token_out_min_amount = amount_in;
     for route_section in route.iter() {
-        let twap_start = current_time.minus_seconds(60u64);
+        let twap_start = current_time.minus_seconds(twap_duration_seconds.to_owned());
         // get the twap for this section of the multihop route
         let resp = twap.arithmetic_twap_to_now(
             route_section.pool_id,

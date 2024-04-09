@@ -1,6 +1,8 @@
 use crate::error::ContractError;
 use crate::msg::{CompPrefsWithAddresses, ExecuteMsg, InstantiateMsg, MigrateMsg, OsmodcaCompoundPrefs, QueryMsg};
-use crate::state::{ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, TAKE_RATE};
+use crate::state::{
+    ADMIN, AUTHORIZED_ADDRS, KNOWN_DENOMS, KNOWN_OSMO_POOLS, KNOWN_USDC_POOLS, PROJECT_ADDRS, TAKE_RATE, TWAP_DURATION,
+};
 use crate::{execute, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -37,6 +39,7 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
         project_addresses,
         max_tax_fee,
         take_rate_address,
+        twap_duration,
     } = msg;
 
     let admin_addr = match admin {
@@ -53,6 +56,8 @@ pub fn instantiate(deps: DepsMut, _env: Env, info: MessageInfo, msg: Instantiate
     AUTHORIZED_ADDRS.save(deps.storage, &vec![])?;
     let validated_addrs = project_addresses.validate_addrs(deps.api)?;
     PROJECT_ADDRS.save(deps.storage, &validated_addrs)?;
+
+    TWAP_DURATION.save(deps.storage, &twap_duration.u64())?;
 
     // store all the denoms in a map
     validated_addrs
@@ -203,6 +208,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> R
 
             execute::compound(deps, env, info, addresses, user_address, prefs, fee_to_charge, take_rate)
         }
+
+        ExecuteMsg::ChangeTwapDuration(new_duration) => {
+            if info.sender != ADMIN.load(deps.storage)? {
+                return Err(ContractError::Unauthorized {});
+            }
+            TWAP_DURATION.save(deps.storage, &new_duration.u64())?;
+            Ok(Response::default())
+        }
     }
 }
 
@@ -212,6 +225,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Version {} => to_json_binary(&queries::query_version()),
         QueryMsg::AuthorizedCompounders {} => to_json_binary(&queries::query_authorized_compounders(deps)),
+        QueryMsg::TwapDuration => to_json_binary(&TWAP_DURATION.load(deps.storage)?),
         QueryMsg::GrantSpec {
             comp_prefs,
             frequency,

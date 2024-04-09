@@ -9,6 +9,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::Pool;
 use osmosis_std::types::osmosis::lockup::MsgLockTokens;
 
 use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
+use osmosis_std::types::osmosis::twap;
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin as OsmosisCoin, osmosis::poolmanager::v1beta1::PoolmanagerQuerier,
 };
@@ -47,6 +48,7 @@ pub struct SingleSidedJoinSwap {
 pub fn classic_pool_join_single_side_prepratory_swap(
     querier: &QuerierWrapper,
     store: &dyn Storage,
+    twap_duration_seconds: &u64,
     user_addr: &Addr,
     pool_id: u64,
     offer_asset: &Coin,
@@ -83,6 +85,7 @@ pub fn classic_pool_join_single_side_prepratory_swap(
             let (sim, swap_msgs) = generate_known_to_known_swap_and_sim_msg(
                 querier,
                 store,
+                twap_duration_seconds,
                 pool_routes,
                 user_addr,
                 offer_asset,
@@ -135,6 +138,7 @@ pub fn join_osmosis_pool_single_side(
 
 pub fn join_osmosis_cl_pool_single_side(
     querier: &QuerierWrapper,
+    twap_duration_seconds: &u64,
     user_addr: &Addr,
     pool_id: u64,
     offer_asset: Coin,
@@ -185,6 +189,7 @@ pub fn join_osmosis_cl_pool_single_side(
             &coin_b.denom,
             estimate_token_out_min_amount(
                 querier,
+                twap_duration_seconds,
                 &vec![SwapAmountInRoute {
                     pool_id,
                     token_out_denom: coin_b.denom.clone(),
@@ -226,6 +231,7 @@ pub fn join_osmosis_cl_pool_single_side(
 
 pub fn gen_join_cl_pool_single_sided_msgs(
     querier: &QuerierWrapper,
+    twap_duration_seconds: &u64,
     user_addr: &Addr,
     pool_id: u64,
     offer_token: &Coin,
@@ -237,6 +243,7 @@ pub fn gen_join_cl_pool_single_sided_msgs(
 ) -> Result<DestProjectMsgs, OsmosisHelperError> {
     let join_pool_msgs = join_osmosis_cl_pool_single_side(
         querier,
+        twap_duration_seconds,
         user_addr,
         pool_id,
         offer_token.clone(),
@@ -259,6 +266,7 @@ pub fn gen_join_cl_pool_single_sided_msgs(
 pub fn gen_join_classic_pool_single_sided_msgs(
     querier: &QuerierWrapper,
     store: &dyn Storage,
+    twap_duration_seconds: &u64,
     route_pools: OsmosisRoutePools,
     user_addr: &Addr,
     pool_id: u64,
@@ -272,6 +280,7 @@ pub fn gen_join_classic_pool_single_sided_msgs(
     } = classic_pool_join_single_side_prepratory_swap(
         querier,
         store,
+        twap_duration_seconds,
         user_addr,
         pool_id,
         offer_token,
