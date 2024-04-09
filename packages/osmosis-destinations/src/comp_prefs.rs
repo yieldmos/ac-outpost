@@ -177,10 +177,10 @@ pub enum OsmosisDepositCollateral {
 #[cw_serde]
 pub enum OsmosisRepayDebt {
     // RedBank,
-    // Margined {
-    //     // asset to repay as
-    //     asset: String,
-    // },
+    Margined {
+        // asset to repay as
+        asset: String,
+    },
     /// repaid as CDT
     Membrane { position_id: Uint128 },
 }
